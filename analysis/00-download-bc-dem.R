@@ -3,6 +3,8 @@ library('dplyr')        # for data wrangling
 library('canadianmaps') # for shapefile of BC
 library('elevatr')      # for downloading DEM (using version 0.99.0)
 library('terra')        # for working with rasters
+library('purrr')        # for functional programming
+library('ctmm')         # for movement modeling
 source('data/bc-shapefile.R')
 
 ZOOM <- 3 #' resolution level for the DEM (see `?get_elev_raster`)
@@ -41,9 +43,9 @@ bc_unproj_buff <- bc_unproj %>%
 # check ranges
 plot(bc_unproj_buff)
 plot(bc_unproj, add = TRUE)
-if(file.exists('models/movement-models-akdes-2024-03-18.rds')) {
+if(file.exists('models/movement-models-akdes-2024-06-06.rds')) {
   akdes <-
-    readRDS('models/movement-models-akdes-2024-03-18.rds') %>%
+    readRDS('models/movement-models-akdes-2024-06-06.rds') %>%
     # remove animals that are not range resident (invalid weights)
     filter(! animal %in% c('SCEK014', 'SCEK014b', 'BW028')) %>%
     pull(akde) %>%
@@ -59,7 +61,12 @@ if(file.exists('models/movement-models-akdes-2024-03-18.rds')) {
     st_make_valid() %>%
     st_union() %>%
     st_as_sf()
-  plot(akdes, add = TRUE, col = '#ff000030')
+  
+  ggplot() +
+    geom_sf(data = bc_unproj_buff) +
+    geom_sf(data = bc_unproj, fill = '#654321') +
+    geom_sf(data = akdes, fill = 'forestgreen') +
+    theme_map()
 }
 
 get_elev_raster(locations = bc_unproj_buff, z = ZOOM, clip = 'bbox') %>%
@@ -67,5 +74,5 @@ get_elev_raster(locations = bc_unproj_buff, z = ZOOM, clip = 'bbox') %>%
   terra::writeRaster(paste0('data/resource-rasters/bc-buffered-dem-z',
                             ZOOM, '.tif'))
 
-terra::plot(rast('data/resource-rasters/bc-buffered-dem-z6.tif'))
-if(exists('akdes')) plot(akdes, add = TRUE, col = '#ff000080')
+terra::plot(rast('data/resource-rasters/bc-buffered-dem-z3.tif'))
+if(exists('akdes')) plot(akdes, add = TRUE, col = '#00000080')
