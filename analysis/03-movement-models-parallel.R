@@ -9,6 +9,16 @@ library('ctmm')  # for movement models
 goat_uere <-
   as.telemetry('data/tracking-data/goat-calibration-data.csv') %>%
   uere.fit()
+summary(goat_uere) # only one error class
+
+# some goats had mortality events
+goat_info <-
+  read.csv('data/tracking-data/oreamnos-americanus/goat_info.csv') %>%
+  transmute(collar_id = as.character(collar_id),
+            goat_id,
+            capture_date = as.Date(capture_date),
+            mortality_date = as.Date(mortality_date)) %>%
+  as_tibble()
 
 # running models separately to avoid having to re-run previous code
 plan(multisession, workers = 10)
@@ -26,7 +36,41 @@ if(FALSE) {
                                'Puma_concolor_4',
                                'Ursus_arctos_horribilis'))) %>%
     arrange(dataset_name) %>% # to fit boreal caribou first
+    left_join(goat_info, by = c('animal' = 'collar_id')) %>%
+    # one collar used for two separate goats, but the correct animal ID was lost
+    mutate(animal = case_when(
+      species != 'Oreamnos americanus' ~ animal,
+      animal == '30613' & mortality_date == Sys.Date() ~ 'CA12',
+      animal == '30613' & ! is.na(mortality_date) ~ 'CA03',
+      species == 'Oreamnos americanus' ~ goat_id),
+      tel = imap(tel, \(.tel, .i) {
+        if(species[.i] == 'Oreamnos americanus') {
+          # remove data prior to capture
+          .tel <- filter(.tel, as.Date(timestamp) > capture_date[.i])
+          
+          # remove data post mortality (if occurred)
+          .date <- mortality_date[.i]
+          .tel <- filter(.tel, as.Date(timestamp) < mortality_date[.i])
+        }
+        return(.tel)
+      })) %>%
+    mutate(tel = imap(tel, \(.tel, .i) {
+      if(is.na(mortality_date[.i])) {
+        .tel
+      } else {
+        filter(.tel, as.Date(timestamp) < mortality_date[.i])
+      }
+    })) %>%
+    select(- goat_id, - mortality_date) %>%
     mutate(
+      # drop unnecessary columns for goat data
+      tel = imap(tel, \(x, .i) {
+        if(species[.i] == 'Oreamnos americanus') {
+          x <- select(x, - c(fix, pdop, dop, gps.fix.type.raw))
+        }
+        
+        return(x)
+      }),
       # convert data frames to telemetry objects
       tel = map(tel, \(x) as.telemetry(x, mark.rm = TRUE)),
       # add calibration-informed error or a reasonable guess
@@ -69,7 +113,7 @@ d <- mutate(d,
               }
             }))
 
-# find misssing models
+# find missing models
 missing_models <- which(map_chr(d$movement_model, class) == 'NULL')
 
 # number of models left to fit
@@ -103,9 +147,18 @@ if(! dir.exists('models/akdes')) dir.create('models/akdes')
 
 d <- mutate(d,
             akde_file_name = paste0('models/akdes/akde-', dataset_name,
-                      '-', d$animal, '-', Sys.Date(), '.rds'))
+                                    '-', d$animal, '-', Sys.Date(), '.rds'))
 
-future_map(.x = 1:nrow(d),
+# find missing models
+missing_akdes <- which(! file.exists(d$akde_file_name))
+
+# number of akdes left to fit
+length(missing_akdes)
+
+# proportion of akdes fit
+round(1 - length(missing_akdes) / nrow(d), 2)
+
+future_map(.x = missing_akdes,
            \(i) akde(data = d$tel[[i]], CTMM = d$movement_model[[i]],
                      weights = TRUE) %>%
              saveRDS(d$akde_file_name[[i]]),
@@ -114,13 +167,14 @@ future_map(.x = 1:nrow(d),
 d <- mutate(d,
             akde = future_map(akde_file_name, readRDS))
 
-# got 10 warnings:
-#' `In CTMM$error > 0 & !is.na(UERE.DOF) :`
-#' `  longer object length is not a multiple of shorter object length`
-
 saveRDS(d, paste0('models/movement-models-akdes-', Sys.Date(), '.rds'))
 
 # check computation time ----
 T_END <- Sys.time()
 
 T_END - T_START
+
+# save goat data for Aimee Chhen ----
+filter(d, species == 'Oreamnos americanus') %>%
+  select(animal, species, tel, variogram, movement_model, akde) %>%
+  saveRDS(paste0('models/movement-models-akdes-goats-', Sys.Date(), '.rds'))
