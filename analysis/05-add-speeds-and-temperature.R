@@ -36,7 +36,7 @@ if(FALSE) {
     mutate(
       # estimate speeds
       tel = future_imap(tel, \(.tel, i) {
-        detrend.speeds(DATA = .tel, CTMM = movement_model[[i]]) %>%
+        detrend_speeds(DATA = .tel, CTMM = movement_model[[i]]) %>%
           transmute(speed_lwr = low, speed_est = est, speed_upr = high) %>%
           bind_cols(data.frame(.tel), .) %>%
           # add AKDE weights
@@ -54,7 +54,8 @@ if(FALSE) {
   d <- readRDS(paste0('data/movement-models-speed-weights-2024-06-10.rds'))
 }
 
-# extract temperature values (takes about 8 hours on my lab machine) ----
+# extract temperature (takes about ~1 hour on lab machine w 11 cores) ----
+plan(multisession, workers = CORES)
 d2 <-
   d %>%
   # round to the nearest hour
@@ -67,7 +68,7 @@ d2 <-
   # split data by year (one nc file for each year)
   mutate(year = year(nearest_hour)) %>%
   nest(yearly_data = ! year) %>%
-  mutate(yearly_data = map2(year, yearly_data, \(.y, .d) {
+  mutate(yearly_data = future_map2(year, yearly_data, \(.y, .d) {
     r <- rast(paste0('data/ecmwf-era5-2m-temperature/epsg-4326/',
                      'ecmwf-era5-2m-temp-', .y, '-epsg-4326.nc'))
     
@@ -76,18 +77,19 @@ d2 <-
       nest(hourly_data = ! c(nearest_hour)) %>%
       mutate(
         layer = map_int(nearest_hour, \(nh)
-                        which2(as.POSIXct(r@pnt$time, tz = 'UTC') == nh)),
+                        which2(as.POSIXct(r@cpp$time, tz = 'UTC') == nh)),
         hourly_data = map2(
           layer, hourly_data,
           \(.l, hourly_d) {
             if(is.na(.l)) {
               hourly_d$temperature_K <- NA_real_
             } else {
-            hourly_d$temperature_K <-
-              extract(x = r[[.l]],
-                      y = select(hourly_d, longitude, latitude),
-                      ID = FALSE) %>%
-              unlist()
+              hourly_d$temperature_K <-
+                extract(x = r[[.l]],
+                        y = select(hourly_d, longitude, latitude),
+                        ID = FALSE) %>%
+                unlist() %>%
+                unname()
             }
             return(hourly_d)
           })
@@ -106,10 +108,10 @@ group_by(d2, dataset_name) %>%
 filter(d2, is.na(temperature_C))
 
 saveRDS(d2, paste0('data/movement-models-speed-weights-temperature-',
-                  Sys.Date(), '.rds'))
+                   Sys.Date(), '.rds'))
 
 # check ranges in temperature
-range(d$temp_c)
+range(d2$temperature_C)
 
 # make sure times are reasonable
 slice_sample(d2, n = 5e3) %>%
