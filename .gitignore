@@ -52,3 +52,7 @@ rsconnect/
 data/
 models/
 figures/outlier-diagnostics
+
+# allow readmes to be pushed
+! data/README.md
+! models/README.md
