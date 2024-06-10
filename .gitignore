@@ -47,3 +47,8 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+
+# all folders containing data (majority of the telemetry data are private)
+data/
+models/
+figures/outlier-diagnostics

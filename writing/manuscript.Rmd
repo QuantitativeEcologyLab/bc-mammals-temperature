@@ -1,0 +1,208 @@
+---
+title: "Predicting how climate change and short-term weather will affect terrestrial mammals' movement and habitat selection"
+author:
+  - name: Stefano Mezzini
+    email: stefano.mezzini@ubc.ca
+    institute: [braes, biol]
+  - name: Chris H. Fleming
+    institute: [ucf, smith]
+  - name: Kirk Safford
+    institute: bcp
+  - name: Michael J. Noonan
+    email: michael.noonan@ubc.ca
+    institute: [braes, biol, cmps]
+institute:
+  - braes: Okanagan Institute for Biodiversity, Resilience, and Ecosystem Services, The University of British Columbia Okanagan, Kelowna, British Columbia, Canada.
+  - biol: Department of Biology, The University of British Columbia Okanagan, Kelowna, British Columbia, Canada.
+  - ucf: Department of Biology, University of Central Florida, Orlando, Florida 32816, United States.
+  - smith: Smithsonian Conservation Biology Institute, National Zoological Park, 1500 Remount Rd., Front Royal, VA 22630, United States.
+  - bcp: BC Parks
+  - cmps: Department of Computer Science, Math, Physics, and Statistics, The University of British Columbia Okanagan, Kelowna, British Columbia, Canada.
+bibliography: 'bc-mammal-speeds.bib'
+# csl: 'csl.csl'
+fontsize: 12pt
+indent: true
+header-includes:
+    - \usepackage{setspace}\doublespacing # for double-spaced text
+    - \usepackage{indentfirst} # for indenting first line of each paragraph
+    - \usepackage[small]{titlesec} # for smaller font for headings
+    - \usepackage{caption} # for more customization of captions
+    - \captionsetup[figure]{font=scriptsize, aboveskip=4pt, belowskip=-15pt}
+    - \usepackage{hanging} # for hanging indents in references
+subparagraph: true # needed for \usepackage[small]{titlesec}
+output:
+  bookdown::pdf_document2:
+    pandoc_args:
+      - '--lua-filter=scholarly-metadata.lua'
+      - '--lua-filter=author-info-blocks.lua'
+    toc: false
+    number_sections: false
+editor_options: 
+  chunk_output_type: console
+---
+
+<!-- place table of contents on a new page -->
+\newpage
+
+\singlespacing
+
+\tableofcontents
+
+<!-- start main body on a new page -->
+\newpage
+
+\doublespacing
+*
+```{r setup, include=FALSE}
+# set chunk defaults: don't print code, images text width and centered
+knitr::opts_chunk$set(echo = FALSE, out.width = '\\textwidth',
+                      fig.align = 'center', cache = TRUE)
+```
+
+```{r packages, warning=FALSE, message=FALSE}
+library('dplyr') # for data wrangling
+library('purrr') # for data wrangling
+library('tidyr') # for data wrangling
+library('ctmm')  # for movement models
+```
+
+# Abstract
+
+# To do
+
+Intro:
+
+* add references:
+  * McNabb 1960s
+  * Hirt 2022
+  * Moose speed and temp (just @alston_temperature_2020 or are there others?)
+  * Lots of work on fish
+  * Brown temp constant for all biological processes
+  * Andean hummingbird and temp
+* address any questions answered in the discussion
+
+Methods:
+
+* add headers
+
+Write abstract
+
+\clearpage
+
+# Introduction
+
+The rate at which chemical reactions occur within an organism [metabolism, see @brown_toward_2004] depends strongly on the temperature reactions occur at. However, organisms experience different ranges of external temperatures and, consequently, exhibit specific thermal optima. These depend on many factors, including body size [@taylor_energetics_1982; @reiss_scaling_1988; @fjelldal_nightly_2021], physiological adaptations [@schmidt_interplay_2020; @mohr_cellular_2020], and behavior [@arechavala-lopez_common_2019]. In the case of heterothermic organisms, low temperatures increase energetic costs [@melin_effect_2023; @ref; @fish; @andean_hummingbird], while high temperatures increase the risk of overheating [@ref; @cheetas; @alston_temperature_2020].
+
+At extremely cold temperatures, the metabolic costs of movement and homeothermy increase energetic expenditures, which can constrain an animal's ability to move, lowering encounter rates with food [@hou_cold_2020], fitness [@ref], and, ultimately, chance of survival [@berger_climate_2018]. Mammals reduce the adverse effects of cold through a combination of both behavioral adaptations [e.g., searching for shelter: @ref; reducing movement rates: @ref] and physiological adaptations [e.g., fur: @ref; circulation: @ref]. At extremely hot temperatures, excessively high body temperatures ***XXXX*** [@alston_temperature_2020; @refs].
+
+Evolutional constraints limit mammals' ability to respond temperature extremes, which results in phylogenetically-constrained temperature optima for different species and populations [@caribou-ref]. Thus, while animals are adapted to fluctuations around average conditions [@ref], strong and consistent temperature anomalies can decrease an animal's energetic stability [@ref], reproductive success [@schmidt_interplay_2020], and ability to move [@ref]. Recent changes in climate have resulted in widespread warming, milder and shorter winters, hotter and longer summers, and a greater risk of extremely high temperatures [@ref_2021_heat_dome]. These changes are expected to affect mammals' fitness, movement behavior, and habitat selection as they cope with growing heat stress [@weststrate_how_2024].
+
+This paper provides a BC-focused analysis on the effects of proximate weather and long-term climate on mammal movement. Using more than a decade of telemetry data and proximal 3-hour weather data, we estimate how animals altered their movement frequency, movement speed, and habitat selection in response to air temperature. We then pair these responses with climate change projections to forecast changes mammals movement in the current century under different climate change scenarios [@riahi_shared_2017]. The analyses include data from six species (*Canis lupus*, *Cervus elaphus*, *Oreamnos americanus*, *Puma concolor*, boreal and southern mountain *Rangifer tarandus*, *Ursus arctos horribilis*; see Table \@ref(tab:data-table)) across a large spatial range of British Columbia (Fig. \@ref(fig:bc-map)). We discuss the consequences of changes in mammalian movement in relationship to energetics, food encounter rates, and the incidences of human-wildlife.
+
+```{r bc-map, fig.cap="GPS telemetry data and autocorrelated kernel density utilization distributions for the six species included in this study."}
+knitr::include_graphics('../figures/tels-and-uds-map.png')
+```
+
+```{r data-table}
+readRDS('../models/movement-models-2024-03-18.rds') %>%
+  transmute(Dataset = if_else(grepl('Puma', dataset_name),
+                                'Puma concolor', dataset_name) %>%
+              stringr::str_replace_all('_', ' ') %>%
+              stringr::str_replace_all(' boreal', ' (boreal)') %>%
+              stringr::str_replace_all(' southern mountain',
+                                       ' (southern mountain)'),
+            animal,
+            tel = purrr::map(tel, data.frame)) %>%
+  unnest(tel) %>%
+  group_by(animal) %>%
+  mutate(dt = timestamp - lag(timestamp)) %>%
+  group_by(Dataset) %>%
+  summarize(Start = min(as.Date(timestamp)),
+            End = max(as.Date(timestamp)),
+            dt = as.numeric(median(dt, na.rm = TRUE))) %>%
+  mutate(dt = round('hours' %#% dt, 2)) %>%
+  rename(`Median sampling interval (hours)` = dt) %>%
+  knitr::kable(format = 'pipe', caption = 'Start and end of the GPS telemetries along with the median sampling interval for each of the six species included in this study.') %>%
+  kableExtra::column_spec(1, italic = TRUE) %>%
+  kableExtra::kable_styling(font_size = 10)
+```
+
+# Methods
+
+## Data acquisition
+
+### GPS telemetry data
+
+Animal telemetry datasets were obtained from multiple sources. Elk tracking data were obtained from Movebank [@kays_movebank_2022; study name: Elk in southwestern Alberta, see @study_ref], while the boreal caribou and wolf data were obtained from a public BC Oil and Gas Research and Innovation Society repository ([https://www.bcogris.ca/projects/boreal-caribou-telemetry-data/](https://www.bcogris.ca/projects/boreal-caribou-telemetry-data/)). ***All other tracking data were obtained from private collaborators*** [@refs_to_studies]. Outlier GPS locations were removed following diagnostic analyses of the location of each point as well as straight-line displacement and turning angle between consecutive points. Particular attention was paid to points with large turning angles ($\gtrapprox 170^\circ$), especially if points before or after the potential outlier indicated stationary behavior. The script used to clean the data and all custom functions used are available on GitHub ([https://github.com/QuantitativeEcologyLab/bc-mammals-speeds](https://github.com/QuantitativeEcologyLab/bc-mammals-speeds)).
+
+### Historical temperature data
+
+Rasters of three-hour reanalyzed air temperature data were downloaded from the ERA5 dataset [@copernicus_climate_change_service_era5_2019] from the European Center for Medium-range Weather Forecasting server (ECMWF; [www.ecmwf.int](www.ecmwf.int); [https://cds.climate.copernicus.eu](https://cds.climate.copernicus.eu)). Proximal weather conditions were then estimated for each location by extracting the values from the corresponding cell from the temporally nearest raster using the `extract()` function from the `terra` package for `R` [version 1.7-46, @hijmans_terra_2023].
+
+## Data modeling
+
+### Estimating mammals' instantaneous speeds
+
+Animal movement models were fit using the `ctmm` package [version 1.1.0, @fleming_ctmm_2021] for `R` [@r_core_team_r_2023]. Mammals' speeds were then estimated using the `ctmm::speeds()` function on all models with speed estimates [@noonan_scale-insensitive_2019]. Most telemetries (416 of 433) had sufficiently frequent locations to provide appropriate speed estimates. All 17 telemetries with insufficiently fine sampling were for caribou (15 boreal and 2 souther mountain).
+
+Since `ctmm`'s movement models allow for stochastic speeds but assume constant movement, speeds were set to zero if they were not significantly different from zero ($\alpha = 0.05$), under the assumption of a $\chi$-distributed speeds. ***NOT SURE IF THIS IS CORRECT*** The function used is available on GitHub ([https://github.com/QuantitativeEcologyLab/bc-mammals-speeds/blob/main/functions/detrend_speeds.R](https://github.com/QuantitativeEcologyLab/bc-mammals-speeds/blob/main/functions/detrend_speeds.R)). To avoid artifacts due to excessively small, non-zero speeds, estimated speeds were then clustered into two groups using a $k$-means algorithm with two centers (see Appendix A).
+
+### Effects of temperature on mammals' movement
+
+We estimated the effects of hourly temperature on mammals' movement using two Hierarchical Generalized Additive Models [HGAMs, see @pedersen_pedersen_hierarchical_2019] via `mgcv` package for `R`. The first HGAM had a binomial family of distribution and estimated the probability of a mammal moving as a function of time of day, day of year, and temperature. Since there was substantial variation in the direction and wiggliness of each species' trends, the effects were modeled independently `by` smooths for each species [see model I in Figure 4 of @pedersen_hierarchical_2019]. The model accounted for the cyclicity of time of day and day of year using cyclic cubic splines, which provide continuity in the smooth term by ensuring the function and its slope (first derivative) and curvature (second derivative) are continuous between consecutive cycles. The second HGAM had the same structure, but it used a Gamma family of distributions to estimate the speed of an animal given that it was moving. Together, the two HGAMs inform us on an animal's long-term speed (i.e., distance traveled per unit time), since it is the product of probability that the animal is moving and the speed it moves at, given that it is moving.
+
+### Effects of temperature on mammals' habitat selection
+
+An animal's habitat selection is proportional to the number of times one can observe it in an environment. Consequently, one can view the spatial distributions of an animal in space as a poisson process whose mean depends on the amount of space, $\Delta u$, and time, $\Delta t$, the observation takes place over, which we can write as $\lambda(\Delta u, \Delta t)$. If we shrink both $\Delta u$ and $\Delta t$ to a single point in space and a single moment in time, we now have $\lambda(u, t) \le 1$, since we cannot observe more than one animal in a given point in time and spce $(u, t)$. Additional theoretical background is provided by @aarts_estimating_2008 and @alson_mitingting_2022 and in Appendix B.
+
+Under the asumption of a Poisson family of distributions, we estimated the effects of temperature on each species' habitat selection by fitting a Resource Selection Function (RSF) via an HGAM using the `mgcv` package. ***here***
+
+## Predicting changes in animal movement during the current century
+
+### Climate change projections
+
+Rasters of monthly average temperature in BC during the next 80 years were obtained via the `climatenaR` package [version XXX; @burnett_climatenar_2023] for `R`. Since the climate projections of monthly average temperatures did not provide a measure of temperature variance for each month, we estimated within-month variance using a Generalized Additive Model with a Gamma family of distributions fit via the `mgcv` package for `R` [@wood_generalized_2017]. Additional details are provided in Appendix C.
+
+
+
+# Results
+
+### Effects of temperature on mammals' movement
+
+
+
+### Effects of temperature on mammals' habitat selection
+
+
+
+
+**should predict for the area the animals are in only**
+
+# Discussion
+
+<!-- - how results answer central question -->
+
+### Effects of temperature on mammals' movement
+
+
+
+### Effects of temperature on mammals' habitat selection
+
+
+
+<!-- - what it tells us about the broader field -->
+
+* energetics
+* encounter rates
+* HWI
+
+<!-- - address any questions presented in the discussion -->
+
+
+\clearpage <!-- to prevent figures from floating to the references -->
+
+\newpage <!-- place references on a separate page -->
+
+# References
+
+\hangparas{1em}{1} <!-- paragraphs hanging by width equal to font height -->
