@@ -12,7 +12,7 @@ library('purrr')      # for functional programming
 #' change the working directory as required by `climatenaR`
 setwd('ClimateNA_v742')
 
-if(! file.exists('bc-dem-z3.csv')) {
+if(! file.exists('bc-buffered-dem-z3.csv')) {
   #' convert the bc DEM to a csv as required by `climatenaR`
   demToCSV(file = '../data/resource-rasters/bc-buffered-dem-z3.tif',
            outdir = '.', # save in climateBC folder
@@ -39,6 +39,25 @@ map(2011:2100,
                     ssp = c('S1', 'S2', 'S3', 'S5'), # SSP 4 not available
                     years = as.character(y)) # can only do one year at a time
     })
+
+# check extent
+if(FALSE) {
+  library('ggplot2')
+  library('dplyr')
+  library('sf')
+  theme_set(cowplot::theme_map())
+  
+  read.csv('bc-buffered-dem-z3/8GCMs_ensemble_ssp126@2011.csv') %>%
+    ggplot() +
+    geom_raster(aes(Longitude, Latitude, fill = Tave01)) +
+    geom_sf(data = readRDS('../data/movement-models-speed-weights-temperature-2024-06-10.rds') %>%
+              select(longitude, latitude) %>%
+              st_as_sf(coords = c('longitude', 'latitude')) %>%
+              st_bbox() %>%
+              st_as_sfc() %>%
+              st_as_sf(), fill = '#BBBBBB60') +
+    scale_fill_distiller(type = 'div', palette = 5, limits = c(-40, 40))
+}
 
 # download historical climate data ----
 if(! dir.exists('bc-buffered-dem-z3/historical-data')) {
