@@ -1,162 +1,181 @@
 library('dplyr')     # for data wrangling
 library('tidyr')     # for data wrangling
+library('purrr')     # for functional programming
 library('lubridate') # for smother date wrangling
 library('mgcv')      # for Generalized Additive Models
+library('gratia')    # for ggplot-based figures for GAMs
 library('ggplot2')   # for fancy plots
 library('khroma')    # for colorblind-friendly color palettes
 library('cowplot')   # for fancy multi-panel plots
 source('analysis/figures/default-ggplot-theme.R') # bold text and no grids
+plot_scheme(PAL, colours = TRUE)
 
-#' clipping temperature data to the 0.8 quantile doesn't fix the high
-#' probabilities for goats
+# using Pacific Time for time of day
+with_tz(as.POSIXct('2024-01-01 12:00'), 'America/Vancouver')
+with_tz(as.POSIXct('2024-01-01 12:00'), 'UTC')
+
+# import data
 d <-
-  readRDS('data/movement-models-speed-weights-temperature-2024-04-05.rds') %>%
+  readRDS('data/movement-models-speed-weights-temperature-2024-06-10.rds') %>%
   filter(! is.na(speed_est), is.finite(speed_est)) %>%
-  mutate(speed_est = round(speed_est, 2), # some values are ~1e-10
-         animal = factor(animal),
+  mutate(animal = factor(animal),
          species = if_else(grepl('Rangifer', dataset_name),
                            dataset_name,
                            species),
          species = stringr::str_replace_all(species, '_', ' ') %>%
-           factor(),
-         # using a higher limit doesn't change much
-         moving = factor(if_else(speed_est == 0, 'no', 'yes')),
-         timestamp_bc = with_tz(timestamp, tz = 'America/Vancouver'),
-         tod = (hour(timestamp) / 24 +
-                  minute(timestamp) / 60 / 24 +
-                  second(timestamp) / 60 / 60 / 24),
-         doy = yday(timestamp)) %>%
+           stringr::str_replace_all('boreal', '(boreal)') %>%
+           stringr::str_replace_all('southern mountain',
+                                    '(southern mountain)') %>%
+           factor()) %>%
+  #' cluster speeds using `kmeans()`
+  nest(speeds = ! species) %>%
+  mutate(speeds = map(speeds, \(.d) {
+    km <- kmeans(.d$speed_est, centers = 2)
+    
+    moving_id <- which.max(km$centers)
+    
+    .d <- mutate(.d,
+                 moving = km$cluster == moving_id)
+    
+    return(.d)
+  })) %>%
+  unnest(speeds) %>%
+  mutate(tod_pdt = (hour(timestamp) +
+                      minute(timestamp) / 60 +
+                      second(timestamp) / 60 / 60),
+         # UTC to PDT
+         tod_pdt = if_else(tod_pdt < 8, tod_pdt + 16, tod_pdt - 8), 
+         doy = yday(timestamp)) %>% # using UTC doy
   rename(temp_c = temperature_C)
 
 SPECIES <- unique(d$species)
 N_SPECIES <- length(SPECIES)
 
+# check speed classification for each species
+d %>%
+  group_by(species) %>%
+  summarise(prop_moving = mean(moving),
+            min_speed = min(speed_est[moving]))
+
+ggplot(d) +
+  facet_wrap(~ species + moving, scales = 'free', ncol = 2) +
+  geom_density(aes(speed_est), fill = 'grey')
+
 # drop single data point in February for bears
 plot(as.numeric(moving) ~ doy,
      filter(d, species == 'Ursus arctos horribilis'))
 d <- filter(d, ! (species == 'Ursus arctos horribilis' & doy < 50))
+points(as.numeric(moving) ~ doy,
+       filter(d, species == 'Ursus arctos horribilis'), col = 'red')
 
-# drop extreme temperatures ----
-# some species have data with extreme temperatures but little data
+# some species have data with extreme temperatures but little data ----
+# but clipping temperature data to the 0.8 quantile doesn't change the high
+# P(moving) at cold temperatures for goats
 ggplot(d, aes(temp_c)) +
   facet_wrap(~ species, scales = 'free') +
-  geom_histogram(color = 'black', binwidth = 1) +
+  geom_histogram(color = 'black', binwidth = 1, fill = 'grey') +
   geom_vline(aes(xintercept = value), color = 'red',
              d %>%
                group_by(species) %>%
                summarize(lwr = quantile(temp_c, 0.025),
                          upr = quantile(temp_c, 0.975)) %>%
                pivot_longer(-species)) +
-  ylim(c(0, NA))
-
-if(FALSE) {
-  # add some observations where bears are not moving in winter to inform
-  # the model better
-  quantile(filter(d, species == 'Ursus arctos horribilis')$doy,
-           c(0, 0.01, 0.02, 0.05, 0.95, 0.98, 0.99, 1))
-  
-  # fraction of added data points
-  N_HYB <- 100
-  N_HYB / sum(d$species == 'Ursus arctos horribilis')
-  
-  set.seed(1)
-  d <- d %>%
-    bind_rows(tibble(moving = FALSE,
-                     speed_est = 0,
-                     species = factor('Ursus arctos horribilis',
-                                      levels = levels(d$species)),
-                     animal = 'winter_prior',
-                     temp_c = -20,
-                     tod = runif(N_HYB),
-                     doy = sample(x = c(1:127, 290:365), size = N_HYB)))
-}
-
-range(d$speed_est)
-layout(t(1:3))
-hist(d$speed_est, breaks = 100)
-hist(log10(d$speed_est), breaks = 5000)
-hist(log10(d$speed_est), breaks = 5000, xlim = c(-3, 1))
-layout(1)
-mean(d$moving == 'yes')
+  ylim(c(0, NA)) +
+  xlab(paste0('Temperature (\U00B0', 'C)'))
 
 # model P(movement) ----
 #' using `bs = 'fs'` rather than `by` smooths because to keep the models
 #' reasonably constrained. Using `by` gives extremely high `P(moving)`
 #' in spring for grizzly bears
-#' fits in ~90 s
-if(FALSE) {
+#' fits in 6 minutes
+if(file.exists('models/binomial-gam-2024-06-11rds')) {
+  m_1 <- readRDS('models/binomial-gam-2024-06-11.rds')
+} else {
+  #' `ti(doy, temp_c)` does not increase BIC or AIC
   m_1 <-
     bam(moving ~
           # random effect for each animal
           s(animal, bs = 're') +
-          # fixed intercept of species without one species as a default
-          species +
           # to account for changes in behavior within days
-          s(tod, by = species, k = 10, bs = 'cc') +
+          s(tod_pdt, species, k = 10, bs = 'fs', xt = list(bs = 'cc')) +
           # to account for changes in behavior within years
-          s(doy, by = species, k = 10, bs = 'cc') +
+          s(doy, species, k = 10, bs = 'fs', xt = list(bs = 'cc')) +
           # species-level effect of temperature
-          s(temp_c, by = species, k = 6, bs = 'tp'),
+          s(temp_c, species, k = 5, bs = 'fs', xt = list(bs = 'tp')) +
+          # to account for seasonal changes in day length
+          ti(doy, tod_pdt, species, k = 5, bs = c('cc', 'cc', 're')) +
+          # to account for changes in day nocturnality with temperature
+          ti(temp_c, tod_pdt, species, k = 5, bs = c('cc', 'cc', 're')),
         family = binomial(link = 'logit'),
         data = d,
         method = 'fREML', # fast REML
-        discrete = TRUE,  # discretize the posterior for faster computation
-        select = TRUE, # perform model shrinkage
-        knots = list(tod = c(0, 1), doy = c(0.5, 366.5)),# for bs = 'cc'
+        discrete = TRUE, # discretize the posterior for faster computation
+        knots = list(tod_pdt = c(0, 1), doy = c(0.5, 366.5)),# for bs = 'cc'
         control = gam.control(trace = TRUE))
-  saveRDS(m_1, paste0('models/binomial-hgam-', Sys.Date(), '.rds'))
+  saveRDS(m_1, paste0('models/binomial-gam-', Sys.Date(), '.rds'))
   
   # southern mountain and boreal caribou move differently
-  layout(matrix(c(rep(0, 6), 1:29), ncol = 7, byrow = TRUE))
-  plot(m_1, scheme = 3, scale = 0)
-  layout(1)
+  draw(m_1, contour = FALSE, rug = FALSE,
+       discrete_colour = scale_color_manual(values = PAL))
   
   summary(m_1)
   
-  layout(matrix(1:4, ncol = 2))
-  gam.check(m_1, type = 'pearson') # good q-q plot
-  layout(1)
-} else {
-  m_1 <- readRDS('models/binomial-hgam-2024-05-03.rds')
+  qq.gam(m_1, type = 'pearson') # good q-q plot
 }
 
-# s(tod) ----
+# check predictions
+transmute(d,
+          species,
+          moving,
+          est = predict(m_1, type = 'response') %>%
+            round(2)) %>%
+  group_by(species, est) %>%
+  summarise(empirical_mean = mean(moving),
+            n = n(),
+            .groups = 'drop') %>%
+  ggplot(aes(est, empirical_mean, color = log2(n))) +
+  facet_wrap(~ species) +
+  geom_abline(slope = 1, intercept = 0, color = 'red') +
+  geom_point() +
+  lims(x = c(0, 1), y = c(0, 1)) +
+  scale_color_viridis_c(breaks = 4 * (0:4),
+                        labels = 2^(2^(0:4)))
+
+# s(tod_pdt) ----
 d %>%
   group_by(species) %>%
-  summarize(min_tod = round(min(tod), 2),
-            max_tod = round(max(tod), 2))
+  summarize(min_tod = round(min(tod_pdt), 2),
+            max_tod = round(max(tod_pdt), 2))
 
 newd_tod <- expand_grid(animal = 'new animal',
                         species = SPECIES,
-                        tod = seq(0, 1, length.out = 1e3),
+                        tod_pdt = seq(0, 24, length.out = 1e3),
                         doy = 0,
-                        temp_c = 0) %>%
-  mutate(bc_tod = tod * 24 - 7,
-         bc_tod = if_else(bc_tod < 0, bc_tod + 24, bc_tod))
+                        temp_c = 0)
 
 p_mov_tod <-
   bind_cols(newd_tod,
             predict(m_1, newdata = newd_tod,
-                    terms = c('species',
-                              paste0('s(tod):species', SPECIES)),
+                    terms = 's(tod_pdt,species)',
                     type = 'link', se.fit = TRUE, discrete = FALSE)) %>%
   mutate(mu = m_1$family$linkinv(fit),
          lwr = m_1$family$linkinv(fit - 1.96 * se.fit),
          upr = m_1$family$linkinv(fit + 1.96 * se.fit)) %>%
   ggplot() +
   coord_polar() +
-  facet_wrap(~ species, nrow = 2) +
-  geom_ribbon(aes(bc_tod, ymin = lwr, ymax = upr, fill = species),
-              alpha = 0.2) +
-  geom_area(aes(x, y), tibble(x = seq(0, 6, by = 0.001), y = 1),
+  facet_wrap(~ species, nrow = 1) +
+  geom_area(aes(x, y), tibble(x = seq(0, 6, by = 0.01), y = 1),
             fill = 'black', alpha = 0.3) +
-  geom_area(aes(x, y), tibble(x = seq(18, 24, by = 0.001), y = 1),
+  geom_area(aes(x, y), tibble(x = seq(18, 24, by = 0.01), y = 1),
             fill = 'black', alpha = 0.3) +
-  geom_area(aes(bc_tod, mu, color = species, fill = species), linewidth = 1,
+  geom_area(aes(tod_pdt, mu, color = species, fill = species), linewidth = 1,
             alpha = 0.5) +
+  geom_ribbon(aes(tod_pdt, ymin = lwr, ymax = upr, fill = species),
+              alpha = 0.2) +
   scale_color_manual('Species', values = PAL,
                      aesthetics = c('color', 'fill')) +
-  scale_x_continuous(expand = c(0, 0), breaks = c(0, 6, 12, 18),
+  scale_x_continuous(expand = c(0, 0), limits = c(0, 24),
+                     breaks = c(0, 6, 12, 18),
                      labels = c('00:00', '06:00', '12:00', '18:00')) +
   scale_y_continuous(limits = c(0, 1), expand = c(0, 0)) +
   labs(x = 'Time of day', y = 'P(moving)') +
@@ -167,7 +186,7 @@ p_mov_tod <-
         panel.grid.major.y = element_line(colour = c(rep('grey', 5), NA)))
 
 ggsave('figures/p-moving-tod.png', p_mov_tod,
-       width = 15, height = 7.5, dpi = 600, bg = 'white')
+       width = 25, height = 4, dpi = 600, bg = 'white')
 
 # s(doy) ----
 seasons <- tibble(x = seq(1, 366, by = 0.1),
@@ -184,6 +203,7 @@ seasons <- tibble(x = seq(1, 366, by = 0.1),
 
 PAL_SEASONS <- c('forestgreen', 'goldenrod', 'darkorange4', 'white', 'white')
 
+# ensure smoooth for grizzly bears is reasonable
 d %>%
   group_by(species) %>%
   summarize(min_doy = round(min(doy), 2),
@@ -191,22 +211,21 @@ d %>%
 
 newd_doy <- expand_grid(animal = 'new animal',
                         species = SPECIES,
-                        tod = 12,
+                        tod_pdt = 12,
                         doy = seq(1, 366, by = 0.1),
                         temp_c = 0)
 
 p_mov_doy <-
   bind_cols(newd_doy,
             predict(m_1, newdata = newd_doy,
-                    terms = c('species',
-                              paste0('s(doy):species', SPECIES)),
+                    terms = 's(doy,species)',
                     type = 'link', se.fit = TRUE, discrete = FALSE)) %>%
   mutate(mu = m_1$family$linkinv(fit),
          lwr = m_1$family$linkinv(fit - 1.96 * se.fit),
          upr = m_1$family$linkinv(fit + 1.96 * se.fit)) %>%
   ggplot() +
   coord_polar(start = 11 / 366 * 2 * pi) + # offset to make axes vertical
-  facet_wrap(~ species, nrow = 2) +
+  facet_wrap(~ species, nrow = 1) +
   geom_area(aes(x, y, fill = season), seasons, alpha = 0.3,
             show.legend = FALSE) +
   scale_fill_manual(values = PAL_SEASONS) +
@@ -229,12 +248,12 @@ p_mov_doy <-
         panel.grid.major.y = element_line(colour = c(rep('grey', 5), NA)))
 
 ggsave('figures/p-moving-doy.png', p_mov_doy,
-       width = 15, height = 7.5, dpi = 600, bg = 'white')
+       width = 25, height = 4, dpi = 600, bg = 'white')
 
 # s(temp_c) ----
 newd_temp_c <- tibble(animal = 'new animal',
                       species = SPECIES,
-                      tod = 12,
+                      tod_pdt = 12,
                       doy = 0) %>%
   mutate(temp_data = purrr::map(species, \(.s) {
     .temp <- filter(d, species == .s)$temp_c
@@ -248,14 +267,13 @@ newd_temp_c <- tibble(animal = 'new animal',
 p_mov_temp <-
   bind_cols(newd_temp_c,
             predict(m_1, newdata = newd_temp_c,
-                    terms = c('species',
-                              paste0('s(temp_c):species', SPECIES)),
+                    terms = 's(temp_c,species)',
                     type = 'link', se.fit = TRUE, discrete = FALSE)) %>%
   mutate(mu = m_1$family$linkinv(fit),
          lwr = m_1$family$linkinv(fit - 1.96 * se.fit),
          upr = m_1$family$linkinv(fit + 1.96 * se.fit)) %>%
   ggplot() +
-  facet_wrap(~ species, nrow = 2) +
+  facet_wrap(~ species, nrow = 1) +
   geom_ribbon(aes(temp_c, ymin = lwr, ymax = upr, fill = species),
               alpha = .2) +
   geom_line(aes(temp_c, mu, color = species), linewidth =  1) +
@@ -264,74 +282,123 @@ p_mov_temp <-
   scale_x_continuous(paste0('Temperature (', '\U00B0', 'C)'))+
   scale_y_continuous('P(moving)', expand = c(0, 0), limits = c(0, 1)) +
   theme(legend.position = 'none',
-        strip.text = element_text(face = 'italic'))
+        strip.text = element_text(face = 'bold.italic'))
 
 ggsave('figures/p-moving-temperature.png', p_mov_temp,
-       width = 15, height = 7.5, dpi = 600, bg = 'white')
+       width = 25, height = 4, dpi = 600, bg = 'white')
 
-# full figure ----
-p_mov <- plot_grid(p_mov_temp,
-                   plot_grid(p_mov_tod, p_mov_doy, labels = c('B', 'C'),
-                             nrow = 1),
-                   labels = c('A', ''), nrow = 2)
+# full figure for P(moving) ----
+p_mov <- plot_grid(p_mov_temp, p_mov_tod, p_mov_doy, labels = 'AUTO',
+                   ncol = 1)
 
 ggsave('figures/p-moving-all.png', p_mov,
-       width = 30, height = 15, dpi = 600, bg = 'white')
+       width = 25, height = 12, dpi = 600, bg = 'white')
 
 # model mean speed given that animals are moving ----
-d_2 <- filter(d, moving == 'yes')
+d_2 <- filter(d, moving)
 
-if(FALSE) {
-  # takes <1 minute to fit
-  # non-gaussian residuals for single species, too
+if(file.exists('models/gamma-gam-2024-05-03.rds')) {
+  m_2 <- readRDS('models/gamma-gam-2024-05-03.rds')
+} else {
+  # regular HGAM has non-gaussian residuals each species
   m_2 <-
     bam(speed_est ~
           # random effect for each animal
           s(animal, bs = 're') +
-          # fixed effect of species without one species as the default
-          species +
           # to account for changes in behavior within days
-          s(tod, by = species, k = 10, bs = 'cc') +
+          s(tod_pdt, species, k = 10, bs = 'fs', xt = list(bs = 'cc')) +
           # to account for changes in behavior within years
-          s(doy, by = species, k = 10, bs = 'cc') +
+          s(doy, species, k = 10, bs = 'fs', xt = list(bs = 'cc')) +
           # species-level effect of temperature
-          s(temp_c, by = species, k = 6, bs = 'tp'),
+          s(temp_c, species, k = 5, bs = 'fs', xt = list(bs = 'tp')) +
+          # to account for seasonal changes in day length
+          ti(doy, tod_pdt, species, k = 5, bs = c('cc', 'cc', 're')) +
+          # to account for changes in day nocturnality with temperature
+          ti(temp_c, tod_pdt, species, k = 5, bs = c('cc', 'cc', 're')),
         family = Gamma(link = 'log'), # can use Gamma because no zeros
         data = d_2,
         method = 'fREML', # fast REML
         discrete = TRUE, # discretize the posterior for faster computation
-        knots = list(tod = c(0, 1), doy = c(0.5, 366.5)),
+        knots = list(tod_pdt = c(0, 1), doy = c(0.5, 366.5)),
         control = gam.control(trace = TRUE))
   
-  saveRDS(m_2, paste0('models/gamma-hgam-', Sys.Date(), '.rds'))
-  
-  layout(matrix(c(rep(0, 6), 1:22), ncol = 7, byrow = TRUE))
-  plot(m_2, scheme = 1, scale = 0)
+  draw(m_2, contour = FALSE, rug = FALSE,
+       discrete_colour = scale_color_manual(values = PAL))
   
   summary(m_2)
+  
+  mutate(d_2, e = resid(m_2)) %>%
+    ggplot(aes(e, fill = species)) +
+    facet_wrap(~ species, scales = 'free') +
+    geom_histogram(show.legend = FALSE) +
+    scale_fill_manual('Species', values = PAL)
+  
+  m_2 <-
+    gam(list(
+      speed_est ~
+          # random effect for each animal
+          s(animal, bs = 're') +
+          # to account for changes in behavior within days
+          s(tod_pdt, species, k = 10, bs = 'fs', xt = list(bs = 'cc')) +
+          # to account for changes in behavior within years
+          s(doy, species, k = 10, bs = 'fs', xt = list(bs = 'cc')) +
+          # species-level effect of temperature
+          s(temp_c, species, k = 5, bs = 'fs', xt = list(bs = 'tp')) +
+          # to account for seasonal changes in day length
+          ti(doy, tod_pdt, species, k = 5, bs = c('cc', 'cc', 're')) +
+          # to account for changes in day nocturnality with temperature
+          ti(temp_c, tod_pdt, species, k = 5, bs = c('cc', 'cc', 're')),
+      ~
+        # to account for changes in behavior within days
+        s(tod_pdt, species, k = 10, bs = 'fs', xt = list(bs = 'cc')) +
+        # to account for changes in behavior within years
+        s(doy, species, k = 10, bs = 'fs', xt = list(bs = 'cc')) +
+        # species-level effect of temperature
+        s(temp_c, species, k = 5, bs = 'fs', xt = list(bs = 'tp')) +
+        # to account for seasonal changes in day length
+        ti(doy, tod_pdt, species, k = 5, bs = c('cc', 'cc', 're')) +
+        # to account for changes in day nocturnality with temperature
+        ti(temp_c, tod_pdt, species, k = 5, bs = c('cc', 'cc', 're'))),
+        family = gammals(),
+        data = d_2,
+        method = 'REML', # cannot use fREML
+        knots = list(tod_pdt = c(0, 1), doy = c(0.5, 366.5)),
+        control = gam.control(trace = TRUE))
+  
+  saveRDS(m_2, paste0('models/gammals-gam-', Sys.Date(), '.rds'))
+  
+  draw(m_2, contour = FALSE, rug = FALSE,
+       discrete_colour = scale_color_manual(values = PAL))
+  
+  summary(m_2)
+  
+  mutate(d_2, e = resid(m_2)) %>%
+    ggplot(aes(e, fill = species)) +
+    facet_wrap(~ species, scales = 'free') +
+    geom_histogram(show.legend = FALSE) +
+    scale_fill_manual('Species', values = PAL)
   
   layout(matrix(1:4, ncol = 2))
   gam.check(m_2)
   layout(1)
-} else {
-  m_2 <- readRDS('models/gamma-hgam-2024-04-26.rds')
 }
 
-# s(tod) ----
+# s(tod_pdt) ----
 p_s_tod <-
   bind_cols(newd_tod,
             predict(m_2, newdata = newd_tod,
                     terms = c('species',
-                              paste0('s(tod):species', SPECIES)),
+                              paste0('s(tod_pdt):species', SPECIES)),
                     type = 'link', se.fit = TRUE, discrete = FALSE)) %>%
   mutate(mu = m_2$family$linkinv(fit),
          lwr = m_2$family$linkinv(fit - 1.96 * se.fit),
          upr = m_2$family$linkinv(fit + 1.96 * se.fit)) %>%
   ggplot() +
-  facet_wrap(~ species, nrow = 2, scales = 'free_y') +
-  geom_ribbon(aes(bc_tod, ymin = lwr, ymax = upr, fill = species),
+  facet_wrap(~ species, nrow = 1, scales = 'free_y') +
+  # geom_point(aes(tod_pdt, speed_est), d_2, alpha = 0.01) +
+  geom_ribbon(aes(tod_pdt, ymin = lwr, ymax = upr, fill = species),
               alpha = 0.2) +
-  geom_line(aes(bc_tod, mu, color = species), linewidth = 1) +
+  geom_line(aes(tod_pdt, mu, color = species), linewidth = 1) +
   scale_color_manual('Species', values = PAL,
                      aesthetics = c('color', 'fill')) +
   scale_x_continuous(expand = c(0, 0), limits = c(0, 24),
@@ -341,7 +408,7 @@ p_s_tod <-
   theme(legend.position = 'none')
 
 ggsave('figures/speed-tod.png', p_s_tod,
-       width = 15, height = 7.5, dpi = 600, bg = 'white')
+       width = 25, height = 4, dpi = 600, bg = 'white')
 
 # s(doy) ----
 p_s_doy <-
@@ -354,7 +421,8 @@ p_s_doy <-
          lwr = m_2$family$linkinv(fit - 1.96 * se.fit),
          upr = m_2$family$linkinv(fit + 1.96 * se.fit)) %>%
   ggplot() +
-  facet_wrap(~ species, nrow = 2, scales = 'free_y') +
+  facet_wrap(~ species, nrow = 1, scales = 'free_y') +
+  # geom_point(aes(doy, speed_est), d_2, alpha = 0.01) +
   geom_ribbon(aes(doy, ymin = lwr, ymax = upr, fill = species),
               alpha = 0.2) +
   geom_line(aes(doy, mu, color = species), linewidth = 1) +
@@ -367,7 +435,7 @@ p_s_doy <-
   theme(legend.position = 'none')
 
 ggsave('figures/speed-doy.png', p_s_doy,
-       width = 15, height = 7.5, dpi = 600, bg = 'white')
+       width = 25, height = 4, dpi = 600, bg = 'white')
 
 # s(temp_c) ----
 p_s_temp <-
@@ -380,7 +448,8 @@ p_s_temp <-
          lwr = m_2$family$linkinv(fit - 1.96 * se.fit),
          upr = m_2$family$linkinv(fit + 1.96 * se.fit)) %>%
   ggplot() +
-  facet_wrap(~ species, nrow = 2, scales = 'free_y') +
+  facet_wrap(~ species, nrow = 1, scales = 'free_y') +
+  # geom_point(aes(temp_c, speed_est), d_2, alpha = 0.01) +
   geom_ribbon(aes(temp_c, ymin = lwr, ymax = upr, fill = species),
               alpha = .2) +
   geom_line(aes(temp_c, mu, color = species), linewidth =  1) +
@@ -391,13 +460,45 @@ p_s_temp <-
   theme(legend.position = 'none')
 
 ggsave('figures/speed-temperature.png', p_s_temp,
-       width = 15, height = 7.5, dpi = 600, bg = 'white')
+       width = 25, height = 4, dpi = 600, bg = 'white')
 
-# full figure ----
-p_s <- plot_grid(p_s_temp,
-                 plot_grid(p_s_tod, p_s_doy, labels = c('B', 'C'),
-                           nrow = 1),
-                 labels = c('A', ''), nrow = 2)
+# full figure for speed | moving ----
+p_s <- plot_grid(p_s_temp, p_s_tod, p_s_doy,
+                 labels = 'AUTO', ncol = 1)
 
 ggsave('figures/speed-all.png',
-       p_s, width = 30, height = 15, dpi = 600, bg = 'white')
+       width = 25, height = 12, dpi = 600, bg = 'white')
+
+# caribou plots only
+filter(newd_tod, species == 'Rangifer tarandus (boreal)') %>%
+  bind_cols(.,
+            predict(m_1, newdata = .,
+                    terms = c('species',
+                              paste0('s(tod_pdt):species', SPECIES),
+                              paste0('ti(doy:tod_pdt):species', SPECIES)),
+                    type = 'link', se.fit = TRUE, discrete = FALSE)) %>%
+  mutate(mu = m_1$family$linkinv(fit),
+         lwr = m_1$family$linkinv(fit - 1.96 * se.fit),
+         upr = m_1$family$linkinv(fit + 1.96 * se.fit)) %>%
+  ggplot() +
+  coord_polar() +
+  # geom_area(aes(x, y), tibble(x = seq(0, 6, by = 0.01), y = 1),
+  #           fill = 'black', alpha = 0.3) +
+  # geom_area(aes(x, y), tibble(x = seq(18, 24, by = 0.01), y = 1),
+  #           fill = 'black', alpha = 0.3) +
+  geom_area(aes(tod_pdt, mu, color = species, fill = species), linewidth = 1,
+            alpha = 0.5) +
+  geom_ribbon(aes(tod_pdt, ymin = lwr, ymax = upr, fill = species),
+              alpha = 0.2) +
+  scale_color_manual('Species', values = PAL,
+                     aesthetics = c('color', 'fill')) +
+  scale_x_continuous(expand = c(0, 0), limits = c(0, 24),
+                     breaks = c(0, 6, 12, 18),
+                     labels = c('00:00', '06:00', '12:00', '18:00')) +
+  scale_y_continuous(expand = c(0, 0)) +
+  labs(x = 'Time of day', y = 'P(moving)') +
+  theme(legend.position = 'none',
+        strip.text = element_text(face = 'bold.italic'),
+        panel.border = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(colour = c(rep('grey', 5), NA)))
