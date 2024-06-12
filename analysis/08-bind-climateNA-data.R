@@ -8,7 +8,7 @@ library('lubridate') # for working with dates
 d <-
   # import all files
   map_dfr(
-    list.files('H:/GitHub/bc-mammals-speeds/ClimateNA_v742/bc-dem-z3',
+    list.files('H:/GitHub/bc-mammals-temperature/ClimateNA_v742/bc-buffered-dem-z3/',
       full.names = TRUE, # include folder names in file name
       pattern = '@'), # only every 10 years
     \(.fname) {
@@ -33,7 +33,6 @@ d <-
 
 #' mean temperature is measured as `Tave = (Tmax + Tmin) / 2`
 #' `https://www.prism.oregonstate.edu/documents/PRISM_datasets.pdf`
-#' *can simulate hourly temperature using a smooth sinusoidal function*
 with(slice_sample(d, n = 5e4),
      plot(Tave01 - Tmin01, Tmax01 - Tave01, col = '#00000050', pch = '.'))
 for(a in c(-0.1, 0, 0.1)) abline(a = a, b = 1, col = '#FF000040'); rm(a)
@@ -75,4 +74,4 @@ d <- d %>%
   relocate(c(month, dec_date), .after = year)
 
 # save the output for later use
-saveRDS(d, paste0('../data/climate-yearly-projections-', Sys.Date(), '.rds'))
+saveRDS(d, paste0('data/climate-yearly-projections-', Sys.Date(), '.rds'))
