@@ -58,4 +58,8 @@ figures/outlier-diagnostics
 ! models/README.md
 
 # ignore climateNA files
-/ClimateNA_v742
+ClimateNA_v742
+
+# manuscript files from Rmd file other than the PDF
+writing/manuscript_files
+writing/manuscript.log
