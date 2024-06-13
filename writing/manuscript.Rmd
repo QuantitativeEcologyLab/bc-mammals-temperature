@@ -169,41 +169,31 @@ readRDS('../models/movement-models-2024-06-06.rds') %>%
 
 # Methods
 
-## Data acquisition
+## GPS telemetry data
 
-### GPS telemetry data
+Elk (*Cervus elaphus*) data from @ciuti_human_2012 were downloaded from Movebank [study name: Elk in southwestern Alberta, see @kays_movebank_2022], while boreal caribou (*Rangifer tarandus*) and wolf (*Canis lupus*) telemetries were acquired via a public BC Oil and Gas Research and Innovation Society repository ([https://www.bcogris.ca/projects/boreal-caribou-telemetry-data/](https://www.bcogris.ca/projects/boreal-caribou-telemetry-data/)), and the mountain goat (*Oreamnos americanus*) locations were provided by BC Parks. All other tracking data were obtained from private collaborators. Outlier GPS locations were removed following diagnostic analyses of the distance from the median location as well as straight-line displacement, turning angle, and time interval between consecutive points. Particular attention was paid to points with large turning angles ($\gtrapprox 170^\circ$) and high straight-line displacement, especially if antecedent and subsequent points indicated stationary behavior. The script used to clean the data and all custom functions used are available on GitHub ([https://github.com/QuantitativeEcologyLab/bc-mammals-temperature](https://github.com/QuantitativeEcologyLab/bc-mammals-temperature)).
 
-Animal telemetry datasets were obtained from multiple sources. Elk tracking data were obtained from Movebank [@kays_movebank_2022; study name: Elk in southwestern Alberta, see @ciuti_human_2012], while the boreal caribou and wolf data were obtained from a public BC Oil and Gas Research and Innovation Society repository ([https://www.bcogris.ca/projects/boreal-caribou-telemetry-data/](https://www.bcogris.ca/projects/boreal-caribou-telemetry-data/)). ***All other tracking data were obtained from private collaborators*** [@refs_to_studies]. Outlier GPS locations were removed following diagnostic analyses of the location of each point as well as straight-line displacement and turning angle between consecutive points. Particular attention was paid to points with large turning angles ($\gtrapprox 170^\circ$), especially if points before or after the potential outlier indicated stationary behavior. The script used to clean the data and all custom functions used are available on GitHub ([https://github.com/QuantitativeEcologyLab/bc-mammals-temperature](https://github.com/QuantitativeEcologyLab/bc-mammals-temperature)).
+## Historical temperature data
 
-### Historical temperature data
+Rasters of hourly reanalyzed air temperature data were downloaded from the ERA5 dataset [@hersbach_era5_2023] from the European Center for Medium-range Weather Forecasting server (ECMWF; [www.ecmwf.int](www.ecmwf.int); [https://cds.climate.copernicus.eu](https://cds.climate.copernicus.eu)). Proximal weather conditions were estimated for each location by extracting the values from the corresponding raster cell from the temporally nearest raster using the `extract()` function from the `terra` package [version 1.7-46, @hijmans_terra_2023] for `R`  [@r_core_team_r_2024].
 
-Rasters of three-hour reanalyzed air temperature data were downloaded from the ERA5 dataset [@hersbach_era5_2023] from the European Center for Medium-range Weather Forecasting server (ECMWF; [www.ecmwf.int](www.ecmwf.int); [https://cds.climate.copernicus.eu](https://cds.climate.copernicus.eu)). Proximal weather conditions were then estimated for each location by extracting the values from the corresponding cell from the temporally nearest raster using the `extract()` function from the `terra` package for `R` [version 1.7-46, @hijmans_terra_2023].
+## Estimating mammals' instantaneous speeds
 
-## Data modeling
+We estimated modeled each animal's movement using continuous-time movement models [@fleming_fine-scale_2014] via the `ctmm` package [version 1.2.0, @fleming_ctmm_2023] for `R`. We then estimated mammals' instantaneouus speeds by applying the `ctmm::speeds()` function on all models with finite speed estimates [416 of 433, see @fleming_fine-scale_2014; @noonan_scale-insensitive_2019]. All 17 telemetries with insufficiently fine sampling were for caribou (15 boreal and 2 southern mountain). Since `ctmm`'s movement models assume stochastic but non-zero speeds (i.e., a single, stochastic moving state), speeds were set to zero if they were not significantly different from zero ($\alpha = 0.05$), under the assumption of a $\chi$-distributed speeds. ***NOT SURE IF THIS IS CORRECT*** The function used is available on GitHub ([https://github.com/QuantitativeEcologyLab/bc-mammals-temperature/blob/main/functions/detrend_speeds.R](https://github.com/QuantitativeEcologyLab/bc-mammals-temperature/blob/main/functions/detrend_speeds.R)). To avoid artifacts due to excessively small, non-zero speeds, we determined whether an animal was moving or not by applying the `stats::kmeans()` function with 2 centers (Appendix A).
 
-### Estimating mammals' instantaneous speeds
+## Estimating the effects of temperature on mammals' movement
 
-Animal movement models were fit using the `ctmm` package [version 1.1.0, @fleming_ctmm_2021] for `R` [@r_core_team_r_2023]. Mammals' speeds were then estimated using the `ctmm::speeds()` function on all models with speed estimates [@noonan_scale-insensitive_2019]. Most telemetries (416 of 433) had sufficiently frequent locations to provide appropriate speed estimates. All 17 telemetries with insufficiently fine sampling were for caribou (15 boreal and 2 souther mountain).
+We estimated the effects of temperature on mammals' state (moving or not) and speed (given that it was moving) using two Hierarchical Generalized Additive Models [HGAMs, see @pedersen_hierarchical_2019] via the `mgcv` package for `R` [version 1.9-1, @wood_generalized_2017]. The first HGAM had a binomial family of distribution and estimated the probability of a mammal moving as a function of time of day, day of year, and temperature, with separate smooths (but common smoothness parameter) for each species [model S in Figure 4 of @pedersen_hierarchical_2019]. In addition, the model also included a random effect for each animal, a tensor interaction product of time of day and day of year to account for changes in day length, and a tensor interaction product of time of day and temperature to account for changes in daily activity levels with temperature, for each species. Due to the substantial latitudinal separation between boreal and southern mountain caribou, we considered the two gropus as separate species for the sake of modeling. The model accounted for the cyclicity of time of day and day of year using cyclic cubic splines, which provide continuity in the smooth term by ensuring the function and its slope (first derivative) and curvature (second derivative) are continuous between consecutive cycles. The second HGAM had the same structure, but it used a Gamma family of distributions to estimate the speed of an animal, given that it was moving. Together, the two HGAMs inform us on an animal's long-term speed (i.e., distance traveled per unit time), since it is the product of probability that the animal is moving and its average speed when moving. Additional details are provided in Appendix A.
 
-Since `ctmm`'s movement models allow for stochastic speeds but assume constant movement, speeds were set to zero if they were not significantly different from zero ($\alpha = 0.05$), under the assumption of a $\chi$-distributed speeds. ***NOT SURE IF THIS IS CORRECT*** The function used is available on GitHub ([https://github.com/QuantitativeEcologyLab/bc-mammals-temperature/blob/main/functions/detrend_speeds.R](https://github.com/QuantitativeEcologyLab/bc-mammals-temperature/blob/main/functions/detrend_speeds.R)). To avoid artifacts due to excessively small, non-zero speeds, estimated speeds were then clustered into two groups using a $k$-means algorithm with two centers (see Appendix A).
-
-### Effects of temperature on mammals' movement
-
-We estimated the effects of hourly temperature on mammals' movement using two Hierarchical Generalized Additive Models [HGAMs, see @pedersen_hierarchical_2019] via `mgcv` package for `R`. The first HGAM had a binomial family of distribution and estimated the probability of a mammal moving as a function of time of day, day of year, and temperature. Since there was substantial variation in the direction and wiggliness of each species' trends, the effects were modeled independently `by` smooths for each species [see model I in Figure 4 of @pedersen_hierarchical_2019]. The model accounted for the cyclicity of time of day and day of year using cyclic cubic splines, which provide continuity in the smooth term by ensuring the function and its slope (first derivative) and curvature (second derivative) are continuous between consecutive cycles. The second HGAM had the same structure, but it used a Gamma family of distributions to estimate the speed of an animal given that it was moving. Together, the two HGAMs inform us on an animal's long-term speed (i.e., distance traveled per unit time), since it is the product of probability that the animal is moving and the speed it moves at, given that it is moving.
-
-### Effects of temperature on mammals' habitat selection
-
-An animal's habitat selection is proportional to the number of times one can observe it in an environment. Consequently, one can view the spatial distributions of an animal in space as a poisson process whose mean depends on the amount of space, $\Delta u$, and time, $\Delta t$, the observation takes place over, which we can write as $\lambda(\Delta u, \Delta t)$. If we shrink both $\Delta u$ and $\Delta t$ to a single point in space and a single moment in time, we now have $\lambda(u, t) \le 1$, since we cannot observe more than one animal in a given point in time and spce $(u, t)$. Additional theoretical background is provided by @aarts_estimating_2008 and @alston_mitigating_2022 and in Appendix B.
-
-Under the asumption of a Poisson family of distributions, we estimated the effects of temperature on each species' habitat selection by fitting a Resource Selection Function (RSF) via an HGAM using the `mgcv` package. ***here***
+We estimated the effects of temperature on each species' selection for percent forest cover, elevation, and distance from fresh water using an HGAM with a Poisson family of distributions [Appendix B, also see @aarts_estimating_2008; @alston_mitigating_2022]. While we recognize there are other important drivers of habitat selection, we decided to only use these three proxies to ensure results were relatively comparable between species and to make province-wide predictions simpler.
 
 ## Predicting changes in animal movement during the current century
 
-### Climate change projections
+***HERE***
 
-Rasters of monthly average temperature in BC during the next 80 years were obtained via the `climatenaR` package [version XXX; @burnett_climatenar_2023] for `R`. Since the climate projections of monthly average temperatures did not provide a measure of temperature variance for each month, we estimated within-month variance using a Generalized Additive Model with a Gamma family of distributions fit via the `mgcv` package for `R` [@wood_generalized_2017]. Additional details are provided in Appendix C.
+Rasters of projected monthly average temperature in BC during the next 80 years were obtained via the `climatenaR` package [version 1.0, @burnett_climatenar_2023] for `R`. Since the climate projections did not provide a measure of variation in temperature within each month due to weather, we estimated within-month variance by fitting a Generalized Additive Model with a Gamma family of distributions to the square-root precision ($\sqrt{\rho}$) in temperature for each month using the ERA5 data for BC during 1998-2024. The model included... (Appendix C).
 
-
+***model currently uses weights = sqrt(n); fitting a new one with uniform weights***
 
 # Results
 
@@ -216,7 +206,7 @@ Rasters of monthly average temperature in BC during the next 80 years were obtai
 
 
 
-**should predict for the area the animals are in only**
+***should predict for the area the animals are in only***
 
 # Discussion
 
