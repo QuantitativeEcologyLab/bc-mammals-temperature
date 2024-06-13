@@ -53,7 +53,7 @@ if(FALSE) {
   FIT <- ctmm.fit(TRACK, GUESS, control = list(method = "pNewton",
                                                cores = -1))
   EST <- speeds(TRACK, FIT, fast=TRUE, level=NULL)
-  TEST <- detrend.speeds(TRACK, FIT)
+  TEST <- detrend_speeds(TRACK, FIT)
   
   TEST$time2 <- hour(TEST$time) + (minute(TEST$time)/60)
   EST$time2 <- hour(EST$timestamp) + (minute(EST$timestamp)/60)
