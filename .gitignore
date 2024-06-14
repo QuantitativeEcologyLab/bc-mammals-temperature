@@ -49,13 +49,12 @@ po/*~
 rsconnect/
 
 # all folders containing data (majority of the telemetry data are private)
-data/
-models/
+data/*
+models/*
 figures/outlier-diagnostics
 
 # allow readmes to be pushed
-! data/README.md
-! models/README.md
+!*/README.md
 
 # ignore climateNA files
 ClimateNA_v742
@@ -63,3 +62,15 @@ ClimateNA_v742
 # manuscript files from Rmd file other than the PDF
 writing/manuscript_files
 writing/manuscript.log
+
+# do not ignore sharable data files
+!data/climate-anomalies/*
+!data/climate-anomalies/data.csv
+!data/climate-anomalies/download-link.txt
+
+!data/ecmwf-era5-2m-temperature
+data/ecmwf-era5-2m-temperature/*
+!data/ecmwf-era5-2m-temperature/aggregated-data.rds
+
+!data/resource-rasters
+!bc-shapefile.R
