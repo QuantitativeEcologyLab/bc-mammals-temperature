@@ -6,8 +6,9 @@ library('data.table') # for memory-efficient data.frames
 detrend_speeds <- function(DATA, CTMM, units = FALSE) {
   
   # check if model is OUF
-  if(! grepl('OUF', toupper(summary(CTMM)$name))) {
-    warning('Found a non-OUF/OUf model; cannot estimate speeds.\n')
+  if(! (grepl('OUF', toupper(summary(CTMM)$name)) |
+        grepl('IOU', toupper(summary(CTMM)$name)))) {
+    warning('Found a model with non-finite speed.\n')
     
     SPEEDS <- data.frame(low = NA_real_,
                          est = NA_real_,
