@@ -51,7 +51,7 @@ if(FALSE) {
   plan(sequential)
   saveRDS(d, paste0('data/movement-models-speed-weights-', Sys.Date(), '.rds'))
 } else {
-  d <- readRDS(paste0('data/movement-models-speed-weights-2024-06-10.rds'))
+  d <- readRDS('data/movement-models-speed-weights-2024-06-10.rds')
 }
 
 # extract temperature (takes about ~1 hour on lab machine w 11 cores) ----
