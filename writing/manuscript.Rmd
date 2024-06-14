@@ -98,48 +98,25 @@ Michael J. Noonan: michael.noonan@ubc.ca
 --> 
 
 
-# Abstract
+# Abstract {-}
 
 \noindent `r abstract`
 
-\newpage
-
-# To do
+# To do {-}
 
 \clearpage
 
 # Introduction
 
-Animals' energetic costs depend strongly on ambient temperature [@brown_toward_2004]. Cold temperatures increase the metabolic costs of movement [@taylor_energetics_1982] and homeothermy [@melin_effect_2023], which can constrain an animal's ability to move [@schwerdt_ecological_2024], its fitness [@walker_global_2019], and, ultimately, its odds of survival [@berger_climate_2018]. Hot temperatures tend to lower energetic needs [@taylor_energetics_1982], but they also cause animals to overheat, which lowers their ability to move [@powers_hovering_2017; @alston_temperature_2020; @dyer_travel_2023].
+Animals' energetic costs depend strongly on ambient temperature [@brown_toward_2004]. Cold temperatures increase the metabolic costs of movement [@taylor_energetics_1982] and homeothermy [@melin_effect_2023], which can constrain an animal's ability to move [@schwerdt_ecological_2024], its fitness [@walker_global_2019], and, ultimately, its odds of survival [@berger_climate_2018]. Hot temperatures tend to lower energetic needs [@taylor_energetics_1982], but they also cause animals to overheat, which lowers their ability to move [@powers_hovering_2017; @alston_temperature_2020; @dyer_travel_2023]. Fluctuations in ambient temperature, and particularly extreme cold events, lead to the evolution of eurythermy and endothermy [@portner_climate_2004].
 
-Mammals reduce the adverse effects of extreme temperatures through both physiological and behavioral adaptations [@jessen_temperature_2001; @mota-rojas_physiological_2021], but their ability to respond through physiological adaptations is limited by their evolutionary history, since their optimal temperature and range of tolerable temperatures (Fig. \@ref(fig:temperature-optima)) depend on the environment they live in [@levins_evolution_1974]. In contrast, changes in movement rates and space use allow mammals to respond to stressors immediately [@alston_temperature_2020; @dyer_travel_2023; @attias_effects_2018; @alston_temperature_2020; @giroux_activity_2023; @verzuh_behavioural_2023]. 
+Mammals reduce the adverse effects of extreme temperatures through both physiological and behavioral adaptations [@jessen_temperature_2001; @mota-rojas_physiological_2021]. Long-term exposure to consistent ranges of temperatures allow species to evolve for higher efficiency within specific temperature ranges [@levins_evolution_1974], but physiological adaptations are limited by a species' experienced temperatures, so such adaptations are less effective during periods of rapid change [@huey_predicting_2012] or extreme changes [@sherwood_adaptability_2010]. In contrast, mammals can respond to changes in temperature much more rapidly and efficiently by altering their movement rates and space use [@alston_temperature_2020; @dyer_travel_2023; @attias_effects_2018; @alston_temperature_2020; @giroux_activity_2023; @verzuh_behavioural_2023].
 
-```{r temperature-optima, fig.width=6, fig.height=4, out.width='50%', fig.cap="Hypothetical ranges in fitness as a consequence of ambient temperature for a cold-adapted mammal (blue), temperate-adapted mammal (yellow), and hot-adapted mammal (red). Contrast the differences in fitness gains at different temperatures, as well as differences in the height and spead of the three curves."}
-library('dplyr')
-library('tidyr')
-library('ggplot2')
-library('khroma')
-theme_set(theme_bw() + theme(panel.grid = element_blank()))
-
-tibble(x = seq(-30, 30, by = 0.01),
-       cold = rev(dgamma(x + 12, shape = 10, rate = 0.5)),
-       mid = dnorm(x, mean = 5, sd = 5),
-       warm = dgamma(x, shape = 56, rate = 2.8)) %>%
-  pivot_longer(-c(x)) %>%
-  ggplot() +
-  geom_area(aes(x, value, color = name, fill = name), alpha = 0.2,
-            show.legend = FALSE, position = 'identity') +
-  scale_fill_highcontrast() +
-  scale_color_highcontrast() +
-  scale_x_continuous(paste0('Temperature \U00B0', 'C'), expand = c(0, 0)) +
-  scale_y_continuous('Fitness', breaks = NULL, limits = c(0, 0.16), expand = c(0, 0))
-```
-
-During the last century, changes in climate in British Columbia (BC), Canada, have resulted in widespread warming, milder and shorter winters, hotter and longer summers, and a greater risk of extremely high temperatures [@eberle_technical_2022]. These changes are expected continue over the next 100 years and compound their effects on mammals' fitness, movement behavior, and habitat selection as they cope with growing heat stress and human pressure [@deb_modelling_2020; @woo-durand_increasing_2020; @weststrate_how_2024].
+During the last century, changes in climate in British Columbia (BC), Canada, have resulted in widespread warming, milder and shorter winters, hotter and longer summers [@bunnell_global_2011; @deb_modelling_2020; @woo-durand_increasing_2020], which, combined, result in a greater risk of extremely high temperatures [@eberle_technical_2022]. These changes are expected continue over the next 100 years and compound their effects on mammals' fitness, movement behavior, and habitat selection as they cope with growing heat stress [@deb_modelling_2020; @woo-durand_increasing_2020] and anthopogenic pressure [@sih_evolution_2011; @weststrate_how_2024].
 
 This paper provides a BC-focused analysis on the effects of proximate weather and long-term climate on the movement of terrestrial mammal species. Using over two decades of telemetry data and proximal hourly weather data, we estimate how animals altered their movement frequency, movement speed, and habitat selection in response to air temperature. We then pair these responses with climate change projections to forecast changes mammals movement in the current century under different climate change scenarios [@riahi_shared_2017]. The analyses include data from six species (*Canis lupus*, *Cervus elaphus*, *Oreamnos americanus*, *Puma concolor*, boreal and southern mountain *Rangifer tarandus*, and *Ursus arctos horribilis*; see Table \@ref(tab:data-table)) across a large spatial range of British Columbia (Fig. \@ref(fig:bc-map)). We discuss the consequences of changes in mammalian movement in relationship to energetics, food encounter rates, and the incidences of human-wildlife.
 
-```{r bc-map, fig.cap="GPS telemetry data and autocorrelated kernel density utilization distributions for the six species included in this study."}
+```{r bc-map, fig.cap="GPS telemetry data and 95% autocorrelated kernel density utilization distributions for the six species in this study."}
 knitr::include_graphics('../figures/tels-and-uds-map.png')
 ```
 
@@ -162,16 +139,17 @@ readRDS('../models/movement-models-2024-06-06.rds') %>%
             dt = as.numeric(median(dt, na.rm = TRUE))) %>%
   mutate(dt = round('hours' %#% dt, 2)) %>%
   rename(`Median sampling interval (hours)` = dt) %>%
-  knitr::kable(format = 'pipe', caption = 'Start and end of the GPS telemetries along with the median sampling interval for each of the six species included in this study.') %>%
+  knitr::kable(format = 'pipe', caption = 'Start and end of the GPS telemetries along with the median sampling interval for each of the six species in this study.') %>%
   kableExtra::column_spec(1, italic = TRUE) %>%
   kableExtra::kable_styling(font_size = 10)
 ```
+
 
 # Methods
 
 ## GPS telemetry data
 
-Elk (*Cervus elaphus*) data from @ciuti_human_2012 were downloaded from Movebank [study name: Elk in southwestern Alberta, see @kays_movebank_2022], while boreal caribou (*Rangifer tarandus*) and wolf (*Canis lupus*) telemetries were acquired via a public BC Oil and Gas Research and Innovation Society repository ([https://www.bcogris.ca/projects/boreal-caribou-telemetry-data/](https://www.bcogris.ca/projects/boreal-caribou-telemetry-data/)), and the mountain goat (*Oreamnos americanus*) locations were provided by BC Parks. All other tracking data were obtained from private collaborators. Outlier GPS locations were removed following diagnostic analyses of the distance from the median location as well as straight-line displacement, turning angle, and time interval between consecutive points. Particular attention was paid to points with large turning angles ($\gtrapprox 170^\circ$) and high straight-line displacement, especially if antecedent and subsequent points indicated stationary behavior. The script used to clean the data and all custom functions used are available on GitHub ([https://github.com/QuantitativeEcologyLab/bc-mammals-temperature](https://github.com/QuantitativeEcologyLab/bc-mammals-temperature)).
+Elk (*Cervus elaphus*) data from @ciuti_human_2012 were downloaded from Movebank [study name: Elk in southwestern Alberta, see @kays_movebank_2022], while boreal caribou (*Rangifer tarandus*) and wolf (*Canis lupus*) telemetries were acquired via a public BC Oil and Gas Research and Innovation Society repository ([https://www.bcogris.ca/projects/boreal-caribou-telemetry-data](https://www.bcogris.ca/projects/boreal-caribou-telemetry-data)), and the mountain goat (*Oreamnos americanus*) locations were provided by BC Parks. All other tracking data were obtained from private collaborators. Outlier GPS locations were removed following diagnostic analyses of the distance from the median location as well as straight-line displacement, turning angle, and time interval between consecutive points. Particular attention was paid to points with large turning angles ($\gtrapprox 170^\circ$) and high straight-line displacement, especially if antecedent and subsequent points indicated stationary behavior. The script used to clean the data and all custom functions used are available on GitHub ([https://github.com/QuantitativeEcologyLab/bc-mammals-temperature](https://github.com/QuantitativeEcologyLab/bc-mammals-temperature)).
 
 ## Historical temperature data
 
@@ -179,7 +157,9 @@ Rasters of hourly reanalyzed air temperature data were downloaded from the ERA5 
 
 ## Estimating mammals' instantaneous speeds
 
-We estimated modeled each animal's movement using continuous-time movement models [@fleming_fine-scale_2014] via the `ctmm` package [version 1.2.0, @fleming_ctmm_2023] for `R`. We then estimated mammals' instantaneouus speeds by applying the `ctmm::speeds()` function on all models with finite speed estimates [416 of 433, see @fleming_fine-scale_2014; @noonan_scale-insensitive_2019]. All 17 telemetries with insufficiently fine sampling were for caribou (15 boreal and 2 southern mountain). Since `ctmm`'s movement models assume stochastic but non-zero speeds (i.e., a single, stochastic moving state), speeds were set to zero if they were not significantly different from zero ($\alpha = 0.05$), under the assumption of a $\chi$-distributed speeds. ***NOT SURE IF THIS IS CORRECT*** The function used is available on GitHub ([https://github.com/QuantitativeEcologyLab/bc-mammals-temperature/blob/main/functions/detrend_speeds.R](https://github.com/QuantitativeEcologyLab/bc-mammals-temperature/blob/main/functions/detrend_speeds.R)). To avoid artifacts due to excessively small, non-zero speeds, we determined whether an animal was moving or not by applying the `stats::kmeans()` function with 2 centers (Appendix A).
+We estimated modeled each animal's movement using continuous-time movement models [@fleming_fine-scale_2014] via the `ctmm` package [version 1.2.0, @fleming_ctmm_2023] for `R`. We then estimated mammals' instantaneouus speeds by applying the `ctmm::speeds()` function on all models with finite speed estimates [416 of 433, see @fleming_fine-scale_2014; @noonan_scale-insensitive_2019]. All 17 telemetries with insufficiently fine sampling were for caribou (15 boreal and 2 southern mountain).
+
+Since `ctmm`'s movement models assume stochastic but non-zero speeds (i.e., a single, stochastic moving state), data-informed speeds needed to be corrected so that the minimum instantaneous speed was 0. We performed this correction by subtracting the data-independent, background minimum speed while assuming speeds were $\chi^2$-distributed (which arises from assuming the X and Y components of the speed vectors are Gaussian). ***NOT SURE IF THIS IS CORRECT*** The function used is available on GitHub ([https://github.com/QuantitativeEcologyLab/bc-mammals-temperature/blob/main/functions/detrend_speeds.R](https://github.com/QuantitativeEcologyLab/bc-mammals-temperature/blob/main/functions/detrend_speeds.R)). To avoid artifacts due to excessively small, non-zero speeds, we determined whether an animal was moving or not by applying the `stats::kmeans()` function with 2 centers (Appendix A).
 
 ## Estimating the effects of temperature on mammals' movement
 
@@ -199,12 +179,32 @@ Rasters of projected monthly average temperature in BC during the next 80 years 
 
 ### Effects of temperature on mammals' movement
 
+Both movement frequency and speed when moving decreased with temperature for all species (Fig. \@ref(fig:temp-marginal)), but the there were some differences among species in the intensity of the effect (Figs. \@ref(fig:p-move) and \@ref(fig:speed)).
+
+```{r temp-marginal, fig.cap="Estimated mean (black) and species-specifit (colored) effect of temperature on movement frequency (A) and speed when moving (B)."}
+layout(t(1:2))
+plot(1)
+plot(1)
+# knitr::include_graphics('../figures/p-moving-all.png')
+```
+
+***move the figures with seasonal and daily effects to Appendix A***
+
+```{r p-move, fig.cap="Estimated probability of moving as a function of tempeature (A), time of day (B), and day of year (C)."}
+knitr::include_graphics('../figures/p-moving-all.png')
+```
+
+```{r speed, fig.cap="Estimated speed as a function of tempeature (A), time of day (B), and day of year (C)."}
+knitr::include_graphics('../figures/speed-all.png')
+```
+
 
 
 ### Effects of temperature on mammals' habitat selection
 
+***should predict for the area the animals are in only***
 
-
+### Predicted changes in movement during the current century
 
 ***should predict for the area the animals are in only***
 
@@ -233,6 +233,6 @@ Rasters of projected monthly average temperature in BC during the next 80 years 
 
 \newpage <!-- place references on a separate page -->
 
-# References
+# References {-}
 
 \hangparas{1em}{1} <!-- paragraphs hanging by width equal to font height -->

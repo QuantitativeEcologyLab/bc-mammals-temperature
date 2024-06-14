@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.26 (TeX Live 2024) (preloaded format=pdflatex 2024.6.12)  13 JUN 2024 13:50
+This is pdfTeX, Version 3.141592653-2.6-1.40.26 (TeX Live 2024) (preloaded format=pdflatex 2024.6.12)  14 JUN 2024 15:12
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -541,61 +541,85 @@ File: t1lmtt.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 
 [3]
 
-[4]
-<manuscript_files/figure-latex/temperature-optima-1.pdf, id=60, 433.62pt x 289.08pt>
-File: manuscript_files/figure-latex/temperature-optima-1.pdf Graphic file (type pdf)
-<use manuscript_files/figure-latex/temperature-optima-1.pdf>
-Package pdftex.def Info: manuscript_files/figure-latex/temperature-optima-1.pdf  used on input line 167.
-(pdftex.def)             Requested size: 234.87912pt x 156.58607pt.
+[4
 
-
-[5
-
- <./manuscript_files/figure-latex/temperature-optima-1.pdf>]
-<../figures/tels-and-uds-map.png, id=76, 722.7pt x 722.7pt>
+]
+<../figures/tels-and-uds-map.png, id=60, 722.7pt x 722.7pt>
 File: ../figures/tels-and-uds-map.png Graphic file (type png)
 <use ../figures/tels-and-uds-map.png>
-Package pdftex.def Info: ../figures/tels-and-uds-map.png  used on input line 180.
+Package pdftex.def Info: ../figures/tels-and-uds-map.png  used on input line 171.
 (pdftex.def)             Requested size: 469.76045pt x 469.76045pt.
 
 
-[6]
+[5]
 
-[7 <../figures/tels-and-uds-map.png>]
+[6 <../figures/tels-and-uds-map.png>]
 
-[8{c:/Users/stefa/AppData/Roaming/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-rm.enc}{c:/Users/stefa/AppData/Roaming/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-mathsy.enc}]
+[7{c:/Users/stefa/AppData/Roaming/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-rm.enc}{c:/Users/stefa/AppData/Roaming/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-mathsy.enc}]
+Underfull \hbox (badness 1348) in paragraph at lines 211--212
+\T1/lmr/m/n/12 ing the data-independent, back-ground min-i-mum speed while as-sum-ing speeds were
+ []
 
-[9{c:/Users/stefa/AppData/Roaming/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-mathit.enc}]
 
-[10]
-LaTeX Font Info:    Trying to load font information for TS1+lmr on input line 251.
+Underfull \hbox (badness 1163) in paragraph at lines 211--212
+\T1/lmr/m/n/12 vec-tors are Gaus-sian). \T1/lmr/bx/it/12 NOT SURE IF THIS IS COR-RECT \T1/lmr/m/n/12 The func-tion
+ []
+
+
+
+[8{c:/Users/stefa/AppData/Roaming/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-mathit.enc}]
+
+[9]
+<manuscript_files/figure-latex/temp-marginal-1.pdf, id=103, 469.755pt x 325.215pt>
+File: manuscript_files/figure-latex/temp-marginal-1.pdf Graphic file (type pdf)
+<use manuscript_files/figure-latex/temp-marginal-1.pdf>
+Package pdftex.def Info: manuscript_files/figure-latex/temp-marginal-1.pdf  used on input line 235.
+(pdftex.def)             Requested size: 469.75386pt x 325.2142pt.
+<../figures/p-moving-all.png, id=104, 1806.75pt x 867.24pt>
+File: ../figures/p-moving-all.png Graphic file (type png)
+<use ../figures/p-moving-all.png>
+Package pdftex.def Info: ../figures/p-moving-all.png  used on input line 246.
+(pdftex.def)             Requested size: 469.74393pt x 225.47708pt.
+<../figures/speed-all.png, id=105, 2168.1pt x 1084.05pt>
+File: ../figures/speed-all.png Graphic file (type png)
+<use ../figures/speed-all.png>
+Package pdftex.def Info: ../figures/speed-all.png  used on input line 255.
+(pdftex.def)             Requested size: 469.73842pt x 234.8692pt.
+
+
+[10 <./manuscript_files/figure-latex/temp-marginal-1.pdf>]
+
+[11 <../figures/p-moving-all.png> <../figures/speed-all.png>]
+LaTeX Font Info:    Trying to load font information for TS1+lmr on input line 279.
 (c:/Users/stefa/AppData/Roaming/TinyTeX/texmf-dist/tex/latex/lm/ts1lmr.fd
 File: ts1lmr.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
 
-[11{c:/Users/stefa/AppData/Roaming/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-ts1.enc}]
+[12{c:/Users/stefa/AppData/Roaming/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-ts1.enc}]
 
-[12
+[13
 
 ]
 
-[13]
-
 [14]
-Underfull \hbox (badness 2213) in paragraph at lines 347--348
+
+[15]
+Underfull \hbox (badness 2213) in paragraph at lines 385--386
 []\T1/lmr/m/n/12 Riahi, Key-wan, Detlef P. van Vu-uren, El-mar Kriegler, Jae Ed-monds, Brian C.
  []
 
 
-Underfull \hbox (badness 1496) in paragraph at lines 347--348
+Underfull \hbox (badness 1496) in paragraph at lines 385--386
 \T1/lmr/m/n/12 nomic Path-ways and Their En-ergy, Land Use, and Green-house Gas Emis-sions
  []
 
 
 
-[15]
+[16]
 
-[16] (./manuscript.aux)
+[17]
+
+[18] (./manuscript.aux)
  ***********
 LaTeX2e <2024-06-01>
 L3 programming layer <2024-05-27>
@@ -605,18 +629,18 @@ LaTeX Warning: There were multiply-defined labels.
 
  ) 
 Here is how much of TeX's memory you used:
- 13449 strings out of 475560
- 215756 string characters out of 5776370
+ 13487 strings out of 475560
+ 216801 string characters out of 5776370
  1937894 words of memory out of 5000000
- 35791 multiletter control sequences out of 15000+600000
+ 35822 multiletter control sequences out of 15000+600000
  617920 words of font info for 81 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
  89i,10n,93p,1753b,523s stack positions out of 10000i,1000n,20000p,200000b,200000s
 <c:/Users/stefa/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmbx12.pfb><c:/Users/stefa/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmbxi10.pfb><c:/Users/stefa/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmmi12.pfb><c:/Users/stefa/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr10.pfb><c:/Users/stefa/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr12.pfb><c:/Users/stefa/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr17.pfb><c:/Users/stefa/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr8.pfb><c:/Users/stefa/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmri10.pfb><c:/Users/stefa/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmri12.pfb><c:/Users/stefa/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmsy10.pfb><c:/Users/stefa/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmsy8.pfb><c:/Users/stefa/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmtt12.pfb><c:/Users/stefa/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/amsfonts/symbols/msam10.pfb>
-Output written on manuscript.pdf (16 pages, 2443720 bytes).
+Output written on manuscript.pdf (18 pages, 9562700 bytes).
 PDF statistics:
- 345 PDF objects out of 1000 (max. 8388607)
- 293 compressed objects within 3 object streams
- 71 named destinations out of 1000 (max. 500000)
- 139 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 377 PDF objects out of 1000 (max. 8388607)
+ 319 compressed objects within 4 object streams
+ 78 named destinations out of 1000 (max. 500000)
+ 157 words of extra memory for PDF output out of 10000 (max. 10000000)
 
