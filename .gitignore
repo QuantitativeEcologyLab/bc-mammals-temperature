@@ -74,3 +74,4 @@ data/ecmwf-era5-2m-temperature/*
 
 !data/resource-rasters
 !bc-shapefile.R
+/figures/movement-model-diagnostics
