@@ -205,7 +205,7 @@ wolves <-
          timestamp = force_tz(FixDateTime, tz = bc_tz),
          timezone = bc_tz,
          animal = individual.local.identifier,
-         species = 'Canis_lupus',
+         species = 'Canis lupus',
          dataset_name = 'Canis_lupus_boreal',
          outlier = FALSE,
          temperature = Temperature) %>%
