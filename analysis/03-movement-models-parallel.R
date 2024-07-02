@@ -95,7 +95,7 @@ if(FALSE) {
       mm_file_name = paste0('models/movement-models/ctmm-', dataset_name,
                             '-', animal, '-', Sys.Date(), '.rds'))
 } else {
-  d <- readRDS('models/movement-models-2024-03-03.rds')
+  d <- readRDS('models/movement-models-2024-06-06.rds')
 }
 
 # fit movement models ----
@@ -178,3 +178,44 @@ T_END - T_START
 filter(d, species == 'Oreamnos americanus') %>%
   select(animal, species, tel, variogram, movement_model, akde) %>%
   saveRDS(paste0('models/movement-models-akdes-goats-', Sys.Date(), '.rds'))
+
+# make a spreadsheet of metadata ----
+d %>%
+  arrange(paste0(dataset_name, '-', animal)) %>%
+  transmute(
+    animal, species, dataset_name, # keep some columns
+    n_locations = map_int(tel, nrow),
+    median_sampling_freq_hours = map_dbl(tel, \(.t) {
+      median(diff(.t$timestamp, units = 'hours'))
+    }),
+    sampling_duration_days = map_dbl(tel, \(.t) {
+      diff(range(.t$timestamp), units = 'days')
+    }) %>%
+      round(2),
+    model_class = map_chr(movement_model, \(.m) {
+      return(summary(.m)$name)
+    }),
+    has_speed = grepl('OUF', toupper(model_class)) |
+      grepl('IOU', model_class),
+    guild = case_when(species == 'Canis lupus' ~ 'Carnivore',
+                      species == 'Cervus elaphus' ~ 'Ungulate',
+                      species == 'Oreamnos americanus' ~ 'Ungulate',
+                      species == 'Puma concolor' ~ 'Carnivore',
+                      species == 'Rangifer tarandus' ~ 'Ungulate',
+                      species == 'Ursus arctos horribilis' ~ 'Carnivore'),
+    # mass estimates from EltonTraits 1.0 database: https://esajournals.onlinelibrary.wiley.com/doi/10.1890/13-1917.1
+    mass_g = case_when(species == 'Canis lupus' ~ 32183.33,
+                       species == 'Cervus elaphus' ~ 2e5, # C. canadensis
+                       species == 'Oreamnos americanus' ~ 72500.33,
+                       species == 'Puma concolor' ~ 51600.04,
+                       species == 'Rangifer tarandus' ~ 86033.98,
+                       species == 'Ursus arctos horribilis' ~ 180520.42),
+    range_resident = '') %>%
+  write.csv('data/tracking-data/telemetry-metadata.csv', row.names = FALSE)
+
+# readr::read_csv('data/Species_Trait_Data.csv', show_col_types = FALSE) %>%
+#   rename(species = BINOMIAL,
+#          percent_grass = per.grass,
+#          percent_browse = per.browse,
+#          percent_fruit = per.fruit) %>%
+#   select(- c(Genus, Species, Animal, Mass_Old))
