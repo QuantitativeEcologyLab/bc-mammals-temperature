@@ -40,8 +40,8 @@ if(FALSE) {
     # one collar used for two separate goats, but the correct animal ID was lost
     mutate(animal = case_when(
       species != 'Oreamnos americanus' ~ animal,
-      animal == '30613' & mortality_date == Sys.Date() ~ 'CA12',
-      animal == '30613' & ! is.na(mortality_date) ~ 'CA03',
+      animal == '30613' & mortality_date == '2019-08-24' ~ 'CA03',
+      animal == '30613' & ! is.na(mortality_date) ~ 'CA12',
       species == 'Oreamnos americanus' ~ goat_id),
       tel = imap(tel, \(.tel, .i) {
         if(species[.i] == 'Oreamnos americanus') {
@@ -50,7 +50,9 @@ if(FALSE) {
           
           # remove data post mortality (if occurred)
           .date <- mortality_date[.i]
-          .tel <- filter(.tel, as.Date(timestamp) < mortality_date[.i])
+          if(! is.na(mortality_date[.i])) {
+            .tel <- filter(.tel, as.Date(timestamp) < mortality_date[.i])
+          }
         }
         return(.tel)
       })) %>%
@@ -88,7 +90,8 @@ if(FALSE) {
                     })),
       variogram = future_map(tel, \(x) ctmm.guess(data = x,
                                                   CTMM = ctmm(error = TRUE),
-                                                  interactive = FALSE),
+                                                  interactive = FALSE) %>%
+                               list(),
                              .progress = TRUE,
                              .options = furrr_options(seed = TRUE)),
       # movement model file name
@@ -174,6 +177,8 @@ T_END <- Sys.time()
 
 T_END - T_START
 
+d <- readRDS('models/movement-models-akdes-2024-06-06.rds')
+
 # save goat data for Aimee Chhen ----
 filter(d, species == 'Oreamnos americanus') %>%
   select(animal, species, tel, variogram, movement_model, akde) %>%
@@ -219,3 +224,21 @@ d %>%
 #          percent_browse = per.browse,
 #          percent_fruit = per.fruit) %>%
 #   select(- c(Genus, Species, Animal, Mass_Old))
+
+# check range residency for each animal
+imap(d$animal, \(.a, .i) {
+  date_min <- as.Date(min(d$tel[[.i]]$timestamp))
+  date_max <- as.Date(max(d$tel[[.i]]$timestamp))
+  
+  png(paste0('figures/movement-model-diagnostics/', d$dataset_name[.i],
+             '-', .a, '-movement-model-diagnostics.png'),
+      width = 12, height = 6, units = 'in', bg = 'white', res = 600)
+  layout(t(1:2))
+  plot(variogram(d$tel[[.i]]), d$movement_model[[.i]], fraction = 0.5)
+  title(paste0(d$dataset_name[.i], '; ', d$animal[.i]))
+  plot(d$tel[[.i]], d$akde[[.i]])
+  title(paste0('Start: ', date_min, '; ', 'End: ', date_max, '; ',
+               'Duration: ', difftime(date_max, date_min, units = 'days'),
+               ' days'))
+  dev.off()
+}, .progress = TRUE)
