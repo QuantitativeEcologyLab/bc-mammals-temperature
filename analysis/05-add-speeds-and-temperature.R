@@ -55,6 +55,7 @@ if(FALSE) {
 }
 
 # extract temperature (takes about ~1 hour on lab machine w 11 cores) ----
+CORES <- future::availableCores(logical = FALSE) - 1
 plan(multisession, workers = CORES)
 d2 <-
   d %>%
@@ -99,23 +100,23 @@ d2 <-
       return()
   }, .progress = TRUE)) %>%
   unnest(yearly_data) %>%
-  mutate(temperature_C = temperature_K - 273.15) %>% # Kelvin to Celsius
+  mutate(temp_c = temperature_K - 273.15) %>% # Kelvin to Celsius
   select(! temperature_K) # to keep < 100 MB
 
 # ensure no temperature values are NA
 group_by(d2, dataset_name) %>%
-  summarize(prop = mean(is.na(temperature_C)))
-filter(d2, is.na(temperature_C))
+  summarize(prop = mean(is.na(temp_c)))
+filter(d2, is.na(temp_c))
 
 saveRDS(d2, paste0('data/movement-models-speed-weights-temperature-',
                    Sys.Date(), '.rds'))
 
 # check ranges in temperature
-range(d2$temperature_C)
+range(d2$temp_c)
 
 # make sure times are reasonable
 slice_sample(d2, n = 5e3) %>%
   mutate(hour = hour(timestamp)) %>%
-  ggplot(aes(hour, temperature_C)) +
+  ggplot(aes(hour, temp_c)) +
   geom_smooth(method = 'gam', formula = y ~ s(x, k = 5), color = 'red3') +
   labs(x = 'Time of day', y = 'Temperature (\u00B0C)')
