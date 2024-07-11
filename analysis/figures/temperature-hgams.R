@@ -10,21 +10,226 @@ library('cowplot')   # for fancy multi-panel plots
 source('analysis/figures/default-ggplot-theme.R') # bold text and no grids
 plot_scheme(PAL, colours = TRUE)
 
+# import data
+d <- readRDS('data/hgam-speed-data.rds')
+
 # import models
-m_1 <- readRDS('models/binomial-gam-2024-06-13.rds')
-m_2 <- readRDS('models/gammals-gam-2024-06-15.rds')
+m_1 <- readRDS('models/binomial-gam.rds')
+m_2 <- readRDS('models/gammals-gam.rds')
 
 # find unique species
 SPECIES <- unique(m_1$model$species)
 N_SPECIES <- length(SPECIES)
 
-# crete new data for predictions for each species
-newd_sp <- tibble(animal = 'new animal',
-                  species = c(SPECIES),
-                  tod_pdt = 12,
-                  doy = 0) %>%
+# backgrounds for plots ----
+tod <- tibble(x = c(seq(0, 6, by = 0.01),
+                    seq(18, 24, by = 0.01)),
+              g = c(rep(1, 601), rep(2, 601)))
+
+seasons <- tibble(x = seq(1, 366, by = 0.1),
+                  y = 0.49,
+                  season = case_when(x < 80 ~ 'w2',
+                                     x < 172 ~ 'sp',
+                                     x < 266 ~ 'su',
+                                     x < 356 ~ 'f',
+                                     TRUE ~ 'w1') %>%
+                    factor(levels = c('sp', 'su', 'f', 'w1', 'w2')))
+
+PAL_SEASONS <- c('forestgreen', 'goldenrod', 'darkorange4', 'grey90', 'grey90')
+
+season_breaks <-
+  as.Date(paste0('2024-', c('03-20', '06-20', '09-22', '12-21'))) + 45
+
+# make predictions ----
+marginal <- function(newd, term) {
+  preds_1 <-
+    predict(object = m_1, newdata = newd, type = 'link', se.fit = TRUE,
+            terms = c('(Intercept)', 's(species)',
+                      paste0('s(', term, ',species)')),
+            discrete = FALSE) %>%
+    as.data.frame() %>%
+    transmute(p_mu = m_1$family$linkinv(fit),
+              p_lwr = m_1$family$linkinv(fit - 1.96 * se.fit),
+              p_upr = m_1$family$linkinv(fit + 1.96 * se.fit))
+  
+  preds_2 <-
+    predict(object = m_2, newdata = newd, type = 'link', se.fit = TRUE,
+            terms = paste0('s(', term, ',species)'),
+            discrete = FALSE) %>%
+    as.data.frame() %>%
+    transmute(s_mu = exp(fit.1),
+              s_lwr = exp(fit.1 - 1.96 * se.fit.1),
+              s_upr = exp(fit.1 + 1.96 * se.fit.1))
+  
+  # add columns of distance travelled
+  bind_cols(newd, preds_1, preds_2) %>%
+    mutate(species = gsub(' ', '~', species),
+           species = gsub('~\\(', '\\)~bold\\((', species),
+           species = paste0('bolditalic(', species, ')'),
+           d_mu = p_mu * s_mu,
+           d_lwr = p_lwr * s_lwr,
+           d_upr = p_upr * s_upr) %>%
+    group_by(species) %>%
+    mutate(across(c(s_mu, s_lwr, s_upr), \(.col) .col / mean(s_mu)),
+           across(c(d_mu, d_lwr, d_upr), \(.col) .col / mean(d_mu))) %>%
+    ungroup() %>%
+    return()
+}
+
+# s(tod_pdt) ----
+d %>%
+  group_by(species) %>%
+  summarize(min_tod = round(min(tod_pdt), 2),
+            max_tod = round(max(tod_pdt), 2))
+
+newd_tod <-
+  expand_grid(animal = 'new animal',
+              species = SPECIES,
+              tod_pdt = seq(0, 24, length.out = 1e3),
+              doy = 0,
+              temp_c = 0)
+
+preds_tod <- marginal(newd = newd_tod, term = 'tod_pdt')
+
+p_mov_tod <-
+  ggplot(preds_tod) +
+  coord_polar() +
+  facet_wrap(~ species, nrow = 1, labeller = label_parsed) +
+  geom_area(aes(x, 0.4, group = g), tod, fill = 'black', alpha = 0.2) +
+  geom_line(aes(tod_pdt, p_mu, color = species), linewidth = 1) +
+  geom_ribbon(aes(tod_pdt, ymin = p_lwr, ymax = p_upr, fill = species),
+              alpha = 0.2) +
+  scale_color_manual('Species', values = PAL,
+                     aesthetics = c('color', 'fill')) +
+  scale_x_continuous(expand = c(0, 0), limits = c(0, 24),
+                     breaks = c(0, 6, 12, 18),
+                     labels = c('00:00', '06:00', '12:00', '18:00')) +
+  scale_y_continuous(limits = c(0, NA), expand = c(0, 0)) +
+  labs(x = 'Time of day', y = 'P(moving)') +
+  theme(legend.position = 'none',
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(colour = c(rep('grey', 5), NA)))
+
+speed_tod <-
+  ggplot(preds_tod) +
+  coord_polar() +
+  facet_wrap(~ species, nrow = 1, labeller = label_parsed) +
+  geom_area(aes(x, 2, group = g), tod, fill = 'black', alpha = 0.2) +
+  geom_line(aes(tod_pdt, s_mu, color = species), linewidth = 1) +
+  geom_ribbon(aes(tod_pdt, ymin = s_lwr, ymax = s_upr, fill = species),
+              alpha = 0.2) +
+  scale_color_manual('Species', values = PAL,
+                     aesthetics = c('color', 'fill')) +
+  scale_x_continuous(expand = c(0, 0), limits = c(0, 24),
+                     breaks = c(0, 6, 12, 18),
+                     labels = c('00:00', '06:00', '12:00', '18:00')) +
+  scale_y_continuous(limits = c(0, 2), expand = c(0, 0)) +
+  labs(x = 'Time of day', y = 'Relative change in speed') +
+  theme(legend.position = 'none',
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(colour = c(rep('grey', 5), NA)))
+
+distance_tod <-
+  ggplot(preds_tod) +
+  coord_polar() +
+  facet_wrap(~ species, nrow = 1, labeller = label_parsed) +
+  geom_area(aes(x, 8, group = g), tod, fill = 'black', alpha = 0.2) +
+  geom_line(aes(tod_pdt, d_mu, color = species), linewidth = 1) +
+  geom_ribbon(aes(tod_pdt, ymin = d_lwr, ymax = d_upr, fill = species),
+              alpha = 0.2) +
+  scale_color_manual('Species', values = PAL,
+                     aesthetics = c('color', 'fill')) +
+  scale_x_continuous(expand = c(0, 0), limits = c(0, 24),
+                     breaks = c(0, 6, 12, 18),
+                     labels = c('00:00', '06:00', '12:00', '18:00')) +
+  scale_y_continuous(limits = c(0, 8), expand = c(0, 0)) +
+  labs(x = 'Time of day', y = 'Relative change in distance travelled') +
+  theme(legend.position = 'none',
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(colour = c(rep('grey', 5), NA)))
+
+# s(doy) ----
+newd_doy <- expand_grid(animal = 'new animal',
+                        species = SPECIES,
+                        tod_pdt = 12,
+                        doy = seq(1, 366, by = 0.1),
+                        temp_c = 0)
+
+preds_doy <- marginal(newd = newd_doy, term = 'doy')
+
+p_mov_doy <-
+  ggplot(preds_doy) +
+  coord_polar(start = 11 / 366 * 2 * pi) + # offset to make axes vertical
+  facet_wrap(~ species, nrow = 1, labeller = label_parsed) +
+  geom_area(aes(x, 0.5, fill = season), seasons, alpha = 0.3,
+            show.legend = FALSE) +
+  scale_fill_manual(values = PAL_SEASONS) +
+  ggnewscale::new_scale('fill') + # to remove the season scale for fill
+  geom_ribbon(aes(doy, ymin = p_lwr, ymax = p_upr, fill = species),
+              alpha = 0.2) +
+  geom_line(aes(doy, p_mu, color = species), linewidth = 1) +
+  scale_color_manual('Species', values = PAL,
+                     aesthetics = c('color', 'fill')) +
+  scale_x_continuous(breaks = yday(season_breaks),
+                     labels = c('Spring', 'Summer', 'Fall', 'Winter')) +
+  scale_y_continuous(limits = c(0, 0.5), expand = c(0, 0)) +
+  labs(x = 'Day of year', y = 'P(moving)') +
+  theme(legend.position = 'none',
+        axis.ticks.x = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(colour = c(rep('grey', 6), NA)))
+
+speed_doy <-
+  ggplot(preds_doy) +
+  coord_polar(start = 11 / 366 * 2 * pi) + # offset to make axes vertical
+  facet_wrap(~ species, nrow = 1, labeller = label_parsed) +
+  geom_area(aes(x, 2, fill = season), seasons, alpha = 0.3,
+            show.legend = FALSE) +
+  scale_fill_manual(values = PAL_SEASONS) +
+  ggnewscale::new_scale('fill') + # to remove the season scale for fill
+  geom_ribbon(aes(doy, ymin = s_lwr, ymax = s_upr, fill = species),
+              alpha = 0.2) +
+  geom_line(aes(doy, s_mu, color = species), linewidth = 1) +
+  scale_color_manual('Species', values = PAL,
+                     aesthetics = c('color', 'fill')) +
+  scale_x_continuous(breaks = yday(season_breaks),
+                     labels = c('Spring', 'Summer', 'Fall', 'Winter')) +
+  scale_y_continuous(limits = c(0, 2), expand = c(0, 0)) +
+  labs(x = 'Day of year', y = 'Relative change in speed') +
+  theme(legend.position = 'none',
+        axis.ticks.x = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(colour = c(rep('grey', 5), NA)))
+
+distance_doy <-
+  ggplot(preds_doy) +
+  coord_polar(start = 11 / 366 * 2 * pi) + # offset to make axes vertical
+  facet_wrap(~ species, nrow = 1, labeller = label_parsed) +
+  geom_area(aes(x, 8, fill = season), seasons, alpha = 0.3,
+            show.legend = FALSE) +
+  scale_fill_manual(values = PAL_SEASONS) +
+  ggnewscale::new_scale('fill') + # to remove the season scale for fill
+  geom_ribbon(aes(doy, ymin = d_lwr, ymax = d_upr, fill = species),
+              alpha = 0.2) +
+  geom_line(aes(doy, d_mu, color = species), linewidth = 1) +
+  scale_color_manual('Species', values = PAL,
+                     aesthetics = c('color', 'fill')) +
+  scale_x_continuous(breaks = yday(season_breaks),
+                     labels = c('Spring', 'Summer', 'Fall', 'Winter')) +
+  scale_y_continuous(limits = c(0, 8), expand = c(0, 0)) +
+  labs(x = 'Day of year', y = 'Relative change in distance travelled') +
+  theme(legend.position = 'none',
+        axis.ticks.x = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(colour = c(rep('grey', 5), NA)))
+
+# s(temp_c) ----
+newd_temp_c <- tibble(animal = 'new animal',
+                      species = SPECIES,
+                      tod_pdt = 12,
+                      doy = 0) %>%
   mutate(temp_data = purrr::map(species, \(.s) {
-    .temp <- filter(m_1$model, species == .s)$temp_c
+    .temp <- filter(d, species == .s)$temp_c
     
     tibble(temp_c = seq(quantile(.temp, 0, na.rm = TRUE),
                         quantile(.temp, 1, na.rm = TRUE),
@@ -32,122 +237,288 @@ newd_sp <- tibble(animal = 'new animal',
   })) %>%
   unnest(temp_data)
 
-pred_1_sp <- bind_cols(
-  newd_sp,
-  predict(m_1, newdata = newd_sp,
-          terms = c('s(temp_c,species)', 's(temp_c)'),
-          type = 'link', se.fit = TRUE, discrete = FALSE)) %>%
-  mutate(mu = m_1$family$linkinv(fit),
-         lwr = m_1$family$linkinv(fit - 1.96 * se.fit),
-         upr = m_1$family$linkinv(fit + 1.96 * se.fit)) %>%
-  mutate(species = if_else(species == 'Rangifer tarandus (southern mountain)',
-                           'Rangifer tarandus (s. m.)', species))
+preds_temp_c <- marginal(newd = newd_temp_c, term = 'temp_c')
 
-pred_2_sp <- bind_cols(
-  newd_sp,
-  predict(m_2, newdata = newd_sp,
-          terms = c('s(temp_c,species)', 's(temp_c)'),
-          type = 'link', se.fit = TRUE, discrete = FALSE) %>%
-    as.data.frame()) %>%
-  mutate(mu = exp(fit.1),
-         lwr = exp(fit.1 - 1.96 * se.fit.1),
-         upr = exp(fit.1 + 1.96 * se.fit.1)) %>%
-  mutate(species = if_else(species == 'Rangifer tarandus (southern mountain)',
-                           'Rangifer tarandus (s. m.)', species))
-
-# total distance travelled
-pred_3_sp <- mutate(pred_2_sp,
-                    mu = pred_1_sp$mu * pred_2_sp$mu,
-                    lwr = pred_1_sp$lwr * pred_2_sp$lwr,
-                    upr = pred_1_sp$upr * pred_2_sp$upr)
-
-# predictions for the average trend across species
-newd_ave <- expand_grid(
-  animal = 'new animal',
-  species = 'Average',
-  tod_pdt = 12,
-  doy = 0,
-  temp_c = seq(quantile(m_1$model$temp_c, 0, na.rm = TRUE),
-               quantile(m_1$model$temp_c, 1, na.rm = TRUE),
-               length.out = 400))
-
-pred_1_ave <- bind_cols(
-  newd_ave,
-  predict(m_1, newdata = newd_ave,
-          terms = 's(temp_c)',
-          type = 'link', se.fit = TRUE, discrete = FALSE)) %>%
-  mutate(mu = m_1$family$linkinv(fit),
-         lwr = m_1$family$linkinv(fit - 1.96 * se.fit),
-         upr = m_1$family$linkinv(fit + 1.96 * se.fit))
-
-pred_2_ave <- bind_cols(
-  newd_ave,
-  predict(m_2, newdata = newd_ave,
-          terms = 's(temp_c)',
-          type = 'link', se.fit = TRUE, discrete = FALSE) %>%
-    as.data.frame()) %>%
-  mutate(mu = exp(fit.1),
-         lwr = exp(fit.1 - 1.96 * se.fit.1),
-         upr = exp(fit.1 + 1.96 * se.fit.1))
-
-pred_3_ave <- mutate(pred_2_ave,
-                     mu = pred_1_ave$mu * pred_2_ave$mu,
-                     lwr = pred_1_ave$lwr * pred_2_ave$lwr,
-                     upr = pred_1_ave$upr * pred_2_ave$upr)
-
-# figures ----
-p_1 <-
-  ggplot() +
-  facet_wrap( ~ species, ncol = 4) +
-  geom_ribbon(aes(temp_c, ymin = lwr, ymax = upr, fill = species),
-              pred_1_sp, alpha = .1) +
-  geom_ribbon(aes(temp_c, ymin = lwr, ymax = upr),
-              pred_1_ave, alpha = .1) +
-  geom_line(aes(temp_c, mu, color = species), pred_1_sp, linewidth =  1) +
-  geom_line(aes(temp_c, mu), pred_1_ave, linewidth =  1) +
-  scale_color_manual('Species', values = c(PAL),
+p_mov_temp <-
+  ggplot(preds_temp_c) +
+  coord_cartesian(ylim = c(0, 0.4)) +
+  facet_wrap(~ species, nrow = 1, labeller = label_parsed) +
+  geom_ribbon(aes(temp_c, ymin = p_lwr, ymax = p_upr, fill = species),
+              alpha = .2) +
+  geom_line(aes(temp_c, p_mu, color = species), linewidth =  1) +
+  scale_color_manual('Species', values = PAL,
                      aesthetics = c('color', 'fill')) +
   scale_x_continuous(paste0('Temperature (', '\U00B0', 'C)'))+
-  scale_y_continuous('P(moving)', expand = c(0, 0), limits = c(0, 1)) +
-  theme(legend.position = 'none',
-        strip.text = element_text(face = 'bold.italic')); p_1
+  scale_y_continuous('P(moving)') +
+  theme(legend.position = 'none')
 
-p_2 <-
-  ggplot() +
-  facet_wrap( ~ species, ncol = 4) +
+speed_temp <-
+  ggplot(preds_temp_c) +
+  facet_wrap(~ species, nrow = 1, labeller = label_parsed) +
   geom_hline(yintercept = 1, color = 'grey') +
-  geom_ribbon(aes(temp_c, ymin = lwr, ymax = upr, fill = species),
-              pred_2_sp, alpha = .1) +
-  geom_ribbon(aes(temp_c, ymin = lwr, ymax = upr),
-              pred_2_ave, alpha = .1) +
-  geom_line(aes(temp_c, mu, color = species), pred_2_sp, linewidth =  1) +
-  geom_line(aes(temp_c, mu), pred_2_ave, linewidth =  1) +
-  scale_color_manual('Species', values = c(PAL),
+  geom_ribbon(aes(temp_c, ymin = s_lwr, ymax = s_upr, fill = species),
+              alpha = .2) +
+  geom_line(aes(temp_c, s_mu, color = species), linewidth =  1) +
+  scale_color_manual('Species', values = PAL,
                      aesthetics = c('color', 'fill')) +
   scale_x_continuous(paste0('Temperature (', '\U00B0', 'C)'))+
-  scale_y_continuous('Relative change in movement speed') +
-  ggtitle('Need to account for uncertainty in scale parameter') +
-  theme(legend.position = 'none',
-        strip.text = element_text(face = 'bold.italic')); p_2
+  scale_y_continuous('Relative change in speed') +
+  theme(legend.position = 'none')
 
-p_3 <- ggplot() +
-  facet_wrap( ~ species, ncol = 4) +
-  geom_ribbon(aes(temp_c, ymin = lwr, ymax = upr, fill = species),
-              pred_3_sp, alpha = .1) +
-  geom_ribbon(aes(temp_c, ymin = lwr, ymax = upr),
-              pred_3_ave, alpha = .1) +
-  geom_line(aes(temp_c, mu, color = species), pred_3_sp, linewidth =  1) +
-  geom_line(aes(temp_c, mu), pred_3_ave, linewidth =  1) +
-  scale_color_manual('Species', values = c(PAL),
+distance_temp <-
+  ggplot(preds_temp_c) +
+  facet_wrap(~ species, nrow = 1, labeller = label_parsed) +
+  facet_wrap(~ species, nrow = 1) +
+  geom_hline(yintercept = 1, color = 'grey') +
+  geom_ribbon(aes(temp_c, ymin = d_lwr, ymax = d_upr, fill = species),
+              alpha = .2) +
+  geom_line(aes(temp_c, d_mu, color = species), linewidth =  1) +
+  scale_color_manual('Species', values = PAL,
                      aesthetics = c('color', 'fill')) +
   scale_x_continuous(paste0('Temperature (', '\U00B0', 'C)'))+
   scale_y_continuous('Relative change in distance travelled') +
-  ggtitle('Need to account for uncertainty in scale parameter') +
-  theme(legend.position = 'none',
-        strip.text = element_text(face = 'bold.italic')); p_3
+  theme(legend.position = 'none')
 
-# save the figures ----
-p <- plot_grid(p_1, p_2, p_3, labels = 'AUTO', ncol = 1)
+# full figures ----
+p_mov_full <- plot_grid(p_mov_temp, p_mov_tod, p_mov_doy,
+                        labels = 'AUTO', ncol = 1)
+ggsave('figures/p-moving-all.png', p_mov_full,
+       width = 25, height = 13, dpi = 600, bg = 'white')
 
-ggsave('figures/hgams-temp_c.png', plot = p, width = 5, height = 7,
-       units = 'in', dpi = 600, bg = 'white', scale = 1.5)
+speed_full <- plot_grid(speed_temp, speed_tod, speed_doy,
+                        labels = 'AUTO', ncol = 1)
+ggsave('figures/speed-all.png', speed_full,
+       width = 25, height = 13, dpi = 600, bg = 'white')
+
+distance_full <- plot_grid(distance_temp, distance_tod, distance_doy,
+                           labels = 'AUTO', ncol = 1)
+ggsave('figures/distance-travelled-all.png', distance_full,
+       width = 25, height = 13, dpi = 600, bg = 'white')
+
+temp_full <- plot_grid(p_mov_temp, speed_temp, distance_temp,
+                       labels = 'AUTO', ncol = 1)
+ggsave('figures/temp_c-all.png', temp_full,
+       width = 25, height = 13, dpi = 600, bg = 'white')
+
+# interaction plots ----
+# color palettes
+s_pal <- colorRampPalette(c('#BD4301', '#EBE8DB', '#560A63'))(1e3)
+plot_scheme_colorblind(s_pal)
+d_pal <- colorRampPalette(c('#9A2600', '#EBE8DB', '#00605C'))(1e3)
+plot_scheme_colorblind(d_pal)
+plot_scheme_colorblind(c(color('acton')(1e3), s_pal, d_pal))
+
+#' exclude values further from an observation than `DIST * 100%` of the
+#' range of the observed data
+DIST <- 0.2
+
+# function to calculate predictions
+surface <- function(newd, term) {
+  preds_1 <-
+    predict(object = m_1, newdata = newd, type = 'link',
+            se.fit = FALSE,
+            terms = c('(Intercept)', 's(species)',
+                      paste0('s(', term, ',species)'),
+                      paste0('ti(temp_c,', term, ',species)')),
+            discrete = FALSE) %>%
+    as.data.frame() %>%
+    transmute(p_mu = m_1$family$linkinv(`.`))
+  
+  preds_2 <-
+    predict(object = m_2, newdata = newd, type = 'link', se.fit = FALSE,
+            terms = c(paste0('s(', term, ',species)'),
+                      paste0('ti(temp_c,', term, ',species)')),
+            discrete = FALSE) %>%
+    as.data.frame() %>%
+    transmute(s_mu = exp(V1))
+  
+  # add columns of distance travelled
+  bind_cols(newd, preds_1, preds_2) %>%
+    mutate(species = gsub(' ', '~', species),
+           species = gsub('~\\(', '\\)~bold\\((', species),
+           species = paste0('bolditalic(', species, ')'),
+           d_mu = p_mu * s_mu) %>%
+    group_by(species) %>%
+    mutate(s_mu = s_mu / mean(s_mu),
+           d_mu = d_mu / mean(d_mu)) %>%
+    ungroup() %>%
+    return()
+}
+
+# time of day ----
+# P(moving)
+newd_tod <- expand_grid(animal = 'new animal',
+                        species = SPECIES,
+                        tod_pdt = seq(0, 24, length.out = 200),
+                        doy = 0,
+                        temp_c = seq(-40, 40, length.out = 200)) %>%
+  nest(dat = -species) %>%
+  mutate(dat = map2(dat, species, \(.d, .s) {
+    ref <- filter(d, species == .s)
+    
+    filter(.d, ! too_far(x = tod_pdt, y = temp_c, ref_1 = ref$tod_pdt,
+                         ref_2 = ref$temp_c, dist = DIST)) %>%
+      return()
+  })) %>%
+  unnest(dat)
+
+tod_breaks <- c(6, 12, 18)
+tod_labs <- paste0(c('06', 12, 18), ':00')
+
+ti_tod <- surface(newd_tod, term = 'tod_pdt')
+
+p_mov_tod_int <-
+  mutate(ti_tod,
+         p_mu = if_else(p_mu > 0.4, 0.4, p_mu)) %>%
+  ggplot(aes(tod_pdt, temp_c, fill = p_mu)) +
+  facet_wrap(~ species, labeller = label_parsed) +
+  geom_raster() +
+  geom_contour(aes(tod_pdt, temp_c, z = log2(p_mu)), color = 'black',
+               inherit.aes = FALSE, bins = 5) +
+  scale_x_continuous('Time of day (PDT)', expand = c(0, 0),
+                     breaks = tod_breaks, labels = tod_labs) +
+  scale_y_continuous(paste0('Temperature (\U00B0', 'C)'), expand = c(0, 0)) +
+  scale_fill_acton(name = 'P(moving)', limits = c(0, NA)) +
+  theme(panel.background = element_rect(fill = 'grey'),
+        legend.position = 'inside', legend.position.inside = c(0.66, 0.15),
+        legend.key.width = rel(1.5),  legend.justification = 'center',
+        legend.direction = 'horizontal')
+
+ggsave('figures/p-moving-tod-interaction.png', p_mov_tod_int,
+       width = 12, height = 8, units = 'in', dpi = 600, bg = 'white')
+
+# E(speed |  moving)
+s_tod_int <-
+  ggplot(ti_tod, aes(tod_pdt, temp_c, fill = log2(s_mu))) +
+  facet_wrap(~ species, labeller = label_parsed) +
+  geom_raster() +
+  geom_contour(aes(tod_pdt, temp_c, z = log2(s_mu)), color = 'black',
+               inherit.aes = FALSE, bins = 5) +
+  scale_x_continuous('Time of day (PDT)', expand = c(0, 0),
+                     breaks = tod_breaks, labels = tod_labs) +
+  scale_y_continuous(paste0('Temperature (\U00B0', 'C)'), expand = c(0, 0)) +
+  scale_fill_gradientn(name = 'Relative change in speed', colors = s_pal,
+                       limits = c(log2(0.75), - log2(0.75)),
+                       breaks = c(log2(0.75), 0, - log2(0.75)),
+                       labels = c(0.75, 1, 1.33)) +
+  theme(panel.background = element_rect(fill = 'grey'),
+        legend.position = 'inside', legend.position.inside = c(0.66, 0.15),
+        legend.key.width = rel(1.5),  legend.justification = 'center',
+        legend.direction = 'horizontal')
+
+ggsave('figures/speed-tod-interaction.png', s_tod_int,
+       width = 12, height = 8, units = 'in', dpi = 600, bg = 'white')
+
+# E(distance)
+d_tod_int <-
+  ti_tod %>%
+  mutate(d_mu = case_when(d_mu < 0.25 ~ 0.25,
+                          d_mu > 4 ~ 4,
+                          TRUE ~ d_mu)) %>%
+  ggplot(aes(tod_pdt, temp_c, fill = log2(d_mu))) +
+  facet_wrap(~ species, labeller = label_parsed) +
+  geom_raster() +
+  geom_contour(aes(tod_pdt, temp_c, z = log2(d_mu)), color = 'black',
+               inherit.aes = FALSE, bins = 5) +
+  scale_x_continuous('Time of day (PDT)', expand = c(0, 0),
+                     breaks = tod_breaks, labels = tod_labs) +
+  scale_y_continuous(paste0('Temperature (\U00B0', 'C)'), expand = c(0, 0)) +
+  scale_fill_gradientn(name = 'Relative change in distance travelled',
+                       colors = d_pal, limits = c(-2, 2),
+                       breaks = c(-2, 0, 2), labels = c(0.25, 1, 4)) +
+  theme(panel.background = element_rect(fill = 'grey'),
+        legend.position = 'inside', legend.position.inside = c(0.66, 0.15),
+        legend.key.width = rel(1.5),  legend.justification = 'center',
+        legend.direction = 'horizontal')
+
+ggsave('figures/distance-travelled-tod-interaction.png', d_tod_int,
+       width = 12, height = 8, units = 'in', dpi = 600, bg = 'white')
+
+# doy ----
+newd_doy <- expand_grid(animal = 'new animal',
+                        species = SPECIES,
+                        tod_pdt = 0,
+                        doy = seq(1, 365, length.out = 200),
+                        temp_c = seq(-40, 40, length.out = 200)) %>%
+  nest(dat = -species) %>%
+  mutate(dat = map2(dat, species, \(.d, .s) {
+    ref <- filter(d, species == .s)
+    
+    filter(.d, ! too_far(x = doy, y = temp_c, ref_1 = ref$doy,
+                         ref_2 = ref$temp_c, dist = DIST)) %>%
+      return()
+  })) %>%
+  unnest(dat)
+
+doys <- as.Date(paste0('2025-', c('03', '06', '09'), '-01'))
+doy_breaks <- yday(doys)
+doy_labs <- format(doys, format = '%b 1'); doy_labs
+
+ti_doy <- surface(newd_doy, term = 'doy')
+
+p_mov_doy_int <-
+  mutate(ti_doy,
+         p_mu = if_else(p_mu > 0.4, 0.4, p_mu)) %>%
+  ggplot(aes(doy, temp_c, fill = p_mu)) +
+  facet_wrap(~ species, labeller = label_parsed) +
+  geom_raster() +
+  geom_contour(aes(doy, temp_c, z = log2(p_mu)), color = 'black',
+               inherit.aes = FALSE, bins = 5) +
+  scale_x_continuous('Day of year', expand = c(0, 0),
+                     breaks = doy_breaks, labels = doy_labs) +
+  scale_y_continuous(paste0('Temperature (\U00B0', 'C)'), expand = c(0, 0)) +
+  scale_fill_acton(name = 'P(moving)', limits = c(0, NA)) +
+  theme(panel.background = element_rect(fill = 'grey'),
+        legend.position = 'inside', legend.position.inside = c(0.66, 0.15),
+        legend.key.width = rel(1.5),  legend.justification = 'center',
+        legend.direction = 'horizontal')
+
+ggsave('figures/p-moving-doy-interaction.png', p_mov_doy_int,
+       width = 12, height = 8, units = 'in', dpi = 600, bg = 'white')
+
+# E(speed | moving)
+s_doy_int <-
+  ggplot(ti_doy, aes(doy, temp_c, fill = log2(s_mu))) +
+  facet_wrap(~ species, labeller = label_parsed) +
+  geom_raster() +
+  geom_contour(aes(doy, temp_c, z = log2(s_mu)), color = 'black',
+               inherit.aes = FALSE, bins = 5) +
+  scale_x_continuous('Day of year', expand = c(0, 0),
+                     breaks = doy_breaks, labels = doy_labs) +
+  scale_y_continuous(paste0('Temperature (\U00B0', 'C)'), expand = c(0, 0)) +
+  scale_fill_gradientn(name = 'Relative change in speed', colors = s_pal,
+                       limits = c(- log2(1.6), log2(1.6)),
+                       breaks = c(- log2(1.6), 0, log2(1.6)), 
+                       labels = c(0.625, 1, 1.6)) +
+  theme(panel.background = element_rect(fill = 'grey'),
+        legend.position = 'inside', legend.position.inside = c(0.66, 0.15),
+        legend.key.width = rel(1.5),  legend.justification = 'center',
+        legend.direction = 'horizontal')
+
+ggsave('figures/speed-doy-interaction.png', s_doy_int,
+       width = 12, height = 8, units = 'in', dpi = 600, bg = 'white')
+
+# distance travelled
+d_doy_int <-
+  ti_doy %>%
+  mutate(d_mu = case_when(d_mu < 0.25 ~ 0.25,
+                          d_mu > 4 ~ 4,
+                          TRUE ~ d_mu)) %>%
+  ggplot(aes(doy, temp_c, fill = log2(d_mu))) +
+  facet_wrap(~ species, labeller = label_parsed) +
+  geom_raster() +
+  geom_contour(aes(doy, temp_c, z = log2(d_mu)), color = 'black',
+               inherit.aes = FALSE, bins = 5) +
+  scale_x_continuous('Time of day (PDT)', expand = c(0, 0),
+                     breaks = doy_breaks, labels = doy_labs) +
+  scale_y_continuous(paste0('Temperature (\U00B0', 'C)'), expand = c(0, 0)) +
+  scale_fill_gradientn(name = 'Relative change in distance travelled',
+                       colors = d_pal, limits = c(-2, 2),
+                       breaks = c(-2, 0, 2), labels = c(0.25, 1, 4)) +
+  theme(panel.background = element_rect(fill = 'grey'),
+        legend.position = 'inside', legend.position.inside = c(0.66, 0.15),
+        legend.key.width = rel(1.5),  legend.justification = 'center',
+        legend.direction = 'horizontal')
+
+ggsave('figures/distance-travelled-doy-interaction.png', d_doy_int,
+       width = 12, height = 8, units = 'in', dpi = 600, bg = 'white')
