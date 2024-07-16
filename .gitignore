@@ -74,4 +74,6 @@ data/ecmwf-era5-2m-temperature/*
 
 !data/resource-rasters
 !bc-shapefile.R
+
+# diagnostic figures for range residency (contains animal locations)
 /figures/movement-model-diagnostics
