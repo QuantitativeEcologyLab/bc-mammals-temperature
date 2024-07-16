@@ -105,7 +105,7 @@ p_mov_tod <-
                      breaks = c(0, 6, 12, 18),
                      labels = c('00:00', '06:00', '12:00', '18:00')) +
   scale_y_continuous(limits = c(0, NA), expand = c(0, 0)) +
-  labs(x = 'Time of day', y = 'P(moving)') +
+  labs(x = 'Time of day (PDT)', y = 'P(moving)') +
   theme(legend.position = 'none',
         panel.grid.major.x = element_blank(),
         panel.grid.major.y = element_line(colour = c(rep('grey', 5), NA)))
@@ -124,7 +124,7 @@ speed_tod <-
                      breaks = c(0, 6, 12, 18),
                      labels = c('00:00', '06:00', '12:00', '18:00')) +
   scale_y_continuous(limits = c(0, 2), expand = c(0, 0)) +
-  labs(x = 'Time of day', y = 'Relative change in speed') +
+  labs(x = 'Time of day (PDT)', y = 'Relative change in speed') +
   theme(legend.position = 'none',
         panel.grid.major.x = element_blank(),
         panel.grid.major.y = element_line(colour = c(rep('grey', 5), NA)))
@@ -143,7 +143,7 @@ distance_tod <-
                      breaks = c(0, 6, 12, 18),
                      labels = c('00:00', '06:00', '12:00', '18:00')) +
   scale_y_continuous(limits = c(0, 8), expand = c(0, 0)) +
-  labs(x = 'Time of day', y = 'Relative change in distance travelled') +
+  labs(x = 'Time of day (PDT)', y = 'Relative change in distance travelled') +
   theme(legend.position = 'none',
         panel.grid.major.x = element_blank(),
         panel.grid.major.y = element_line(colour = c(rep('grey', 5), NA)))
@@ -268,7 +268,6 @@ speed_temp <-
 distance_temp <-
   ggplot(preds_temp_c) +
   facet_wrap(~ species, nrow = 1, labeller = label_parsed) +
-  facet_wrap(~ species, nrow = 1) +
   geom_hline(yintercept = 1, color = 'grey') +
   geom_ribbon(aes(temp_c, ymin = d_lwr, ymax = d_upr, fill = species),
               alpha = .2) +
@@ -282,17 +281,17 @@ distance_temp <-
 # full figures ----
 p_mov_full <- plot_grid(p_mov_temp, p_mov_tod, p_mov_doy,
                         labels = 'AUTO', ncol = 1)
-ggsave('figures/p-moving-all.png', p_mov_full,
+ggsave('figures/p-moving-marginals.png', p_mov_full,
        width = 25, height = 13, dpi = 600, bg = 'white')
 
 speed_full <- plot_grid(speed_temp, speed_tod, speed_doy,
                         labels = 'AUTO', ncol = 1)
-ggsave('figures/speed-all.png', speed_full,
+ggsave('figures/speed-marginals.png', speed_full,
        width = 25, height = 13, dpi = 600, bg = 'white')
 
 distance_full <- plot_grid(distance_temp, distance_tod, distance_doy,
                            labels = 'AUTO', ncol = 1)
-ggsave('figures/distance-travelled-all.png', distance_full,
+ggsave('figures/distance-travelled-marginals.png', distance_full,
        width = 25, height = 13, dpi = 600, bg = 'white')
 
 temp_full <- plot_grid(p_mov_temp, speed_temp, distance_temp,
@@ -312,6 +311,15 @@ plot_scheme_colorblind(c(color('acton')(1e3), s_pal, d_pal))
 #' range of the observed data
 DIST <- 0.2
 
+# make more appropriate scale breaks
+z_breaks <- seq(-1, 1, length.out = 5)
+tod_breaks <- seq(0, 24, by = 6)
+tod_labs <- paste0(c('0', '0', '', '', ''), tod_breaks, ':00')
+doys <- as.Date(paste0('2025-', c('03', '06', '09', '12'), '-01'))
+doy_breaks <- yday(doys)
+doy_labs <- format(doys, format = '%b 1'); doy_labs
+
+doy_breaks
 # function to calculate predictions
 surface <- function(newd, term) {
   preds_1 <-
@@ -362,22 +370,20 @@ newd_tod <- expand_grid(animal = 'new animal',
   })) %>%
   unnest(dat)
 
-tod_breaks <- c(6, 12, 18)
-tod_labs <- paste0(c('06', 12, 18), ':00')
-
 ti_tod <- surface(newd_tod, term = 'tod_pdt')
 
 p_mov_tod_int <-
   mutate(ti_tod,
          p_mu = if_else(p_mu > 0.4, 0.4, p_mu)) %>%
-  ggplot(aes(tod_pdt, temp_c, fill = p_mu)) +
-  facet_wrap(~ species, labeller = label_parsed) +
+  ggplot(aes(temp_c, tod_pdt, fill = p_mu)) +
+  facet_wrap(~ species, labeller = label_parsed, nrow = 3) +
   geom_raster() +
-  geom_contour(aes(tod_pdt, temp_c, z = log2(p_mu)), color = 'black',
+  geom_contour(aes(temp_c, tod_pdt, z = log2(p_mu)), color = 'black',
                inherit.aes = FALSE, bins = 5) +
-  scale_x_continuous('Time of day (PDT)', expand = c(0, 0),
+  scale_x_continuous(paste0('Temperature (\U00B0', 'C)'),
+                     breaks = c(-20, 0, 20)) +
+  scale_y_continuous('Time of day (PDT)', expand = c(0, 0),
                      breaks = tod_breaks, labels = tod_labs) +
-  scale_y_continuous(paste0('Temperature (\U00B0', 'C)'), expand = c(0, 0)) +
   scale_fill_acton(name = 'P(moving)', limits = c(0, NA)) +
   theme(panel.background = element_rect(fill = 'grey'),
         legend.position = 'inside', legend.position.inside = c(0.66, 0.15),
@@ -385,29 +391,29 @@ p_mov_tod_int <-
         legend.direction = 'horizontal')
 
 ggsave('figures/p-moving-tod-interaction.png', p_mov_tod_int,
-       width = 12, height = 8, units = 'in', dpi = 600, bg = 'white')
+       width = 8, height = 8, units = 'in', dpi = 600, bg = 'white')
 
-# E(speed |  moving)
+# E(speed | moving)
 s_tod_int <-
-  ggplot(ti_tod, aes(tod_pdt, temp_c, fill = log2(s_mu))) +
-  facet_wrap(~ species, labeller = label_parsed) +
+  ggplot(ti_tod, aes(temp_c, tod_pdt, fill = log2(s_mu))) +
+  facet_wrap(~ species, labeller = label_parsed, nrow = 3) +
   geom_raster() +
-  geom_contour(aes(tod_pdt, temp_c, z = log2(s_mu)), color = 'black',
+  geom_contour(aes(temp_c, tod_pdt, z = log2(s_mu)), color = 'black',
                inherit.aes = FALSE, bins = 5) +
-  scale_x_continuous('Time of day (PDT)', expand = c(0, 0),
+  scale_x_continuous(paste0('Temperature (\U00B0', 'C)'),
+                     breaks = c(-20, 0, 20)) +
+  scale_y_continuous('Time of day (PDT)', expand = c(0, 0),
                      breaks = tod_breaks, labels = tod_labs) +
-  scale_y_continuous(paste0('Temperature (\U00B0', 'C)'), expand = c(0, 0)) +
   scale_fill_gradientn(name = 'Relative change in speed', colors = s_pal,
-                       limits = c(log2(0.75), - log2(0.75)),
-                       breaks = c(log2(0.75), 0, - log2(0.75)),
-                       labels = c(0.75, 1, 1.33)) +
+                       limits = range(z_breaks), breaks = z_breaks,
+                       labels = round(2^z_breaks, 2)) +
   theme(panel.background = element_rect(fill = 'grey'),
         legend.position = 'inside', legend.position.inside = c(0.66, 0.15),
         legend.key.width = rel(1.5),  legend.justification = 'center',
         legend.direction = 'horizontal')
 
 ggsave('figures/speed-tod-interaction.png', s_tod_int,
-       width = 12, height = 8, units = 'in', dpi = 600, bg = 'white')
+       width = 8, height = 8, units = 'in', dpi = 600, bg = 'white')
 
 # E(distance)
 d_tod_int <-
@@ -415,24 +421,26 @@ d_tod_int <-
   mutate(d_mu = case_when(d_mu < 0.25 ~ 0.25,
                           d_mu > 4 ~ 4,
                           TRUE ~ d_mu)) %>%
-  ggplot(aes(tod_pdt, temp_c, fill = log2(d_mu))) +
-  facet_wrap(~ species, labeller = label_parsed) +
+  ggplot(aes(temp_c, tod_pdt, fill = log2(d_mu))) +
+  facet_wrap(~ species, labeller = label_parsed, nrow = 3) +
   geom_raster() +
-  geom_contour(aes(tod_pdt, temp_c, z = log2(d_mu)), color = 'black',
+  geom_contour(aes(temp_c, tod_pdt, z = log2(d_mu)), color = 'black',
                inherit.aes = FALSE, bins = 5) +
-  scale_x_continuous('Time of day (PDT)', expand = c(0, 0),
+  scale_x_continuous(paste0('Temperature (\U00B0', 'C)'),
+                     breaks = c(-20, 0, 20)) +
+  scale_y_continuous('Time of day (PDT)', expand = c(0, 0),
                      breaks = tod_breaks, labels = tod_labs) +
-  scale_y_continuous(paste0('Temperature (\U00B0', 'C)'), expand = c(0, 0)) +
   scale_fill_gradientn(name = 'Relative change in distance travelled',
-                       colors = d_pal, limits = c(-2, 2),
-                       breaks = c(-2, 0, 2), labels = c(0.25, 1, 4)) +
+                       colors = d_pal, limits = range(z_breaks) * 2,
+                       breaks = z_breaks * 2,
+                       labels = round(2^(z_breaks * 2), 2)) +
   theme(panel.background = element_rect(fill = 'grey'),
         legend.position = 'inside', legend.position.inside = c(0.66, 0.15),
         legend.key.width = rel(1.5),  legend.justification = 'center',
         legend.direction = 'horizontal')
 
 ggsave('figures/distance-travelled-tod-interaction.png', d_tod_int,
-       width = 12, height = 8, units = 'in', dpi = 600, bg = 'white')
+       width = 8, height = 8, units = 'in', dpi = 600, bg = 'white')
 
 # doy ----
 newd_doy <- expand_grid(animal = 'new animal',
@@ -450,23 +458,20 @@ newd_doy <- expand_grid(animal = 'new animal',
   })) %>%
   unnest(dat)
 
-doys <- as.Date(paste0('2025-', c('03', '06', '09'), '-01'))
-doy_breaks <- yday(doys)
-doy_labs <- format(doys, format = '%b 1'); doy_labs
-
 ti_doy <- surface(newd_doy, term = 'doy')
 
 p_mov_doy_int <-
   mutate(ti_doy,
          p_mu = if_else(p_mu > 0.4, 0.4, p_mu)) %>%
-  ggplot(aes(doy, temp_c, fill = p_mu)) +
-  facet_wrap(~ species, labeller = label_parsed) +
+  ggplot(aes(temp_c, doy, fill = p_mu)) +
+  facet_wrap(~ species, labeller = label_parsed, nrow = 3) +
   geom_raster() +
-  geom_contour(aes(doy, temp_c, z = log2(p_mu)), color = 'black',
+  geom_contour(aes(temp_c, doy, z = log2(p_mu)), color = 'black',
                inherit.aes = FALSE, bins = 5) +
-  scale_x_continuous('Day of year', expand = c(0, 0),
+  scale_x_continuous(paste0('Temperature (\U00B0', 'C)'),
+                     breaks = c(-20, 0, 20)) +
+  scale_y_continuous('Day of year', expand = c(0, 0),
                      breaks = doy_breaks, labels = doy_labs) +
-  scale_y_continuous(paste0('Temperature (\U00B0', 'C)'), expand = c(0, 0)) +
   scale_fill_acton(name = 'P(moving)', limits = c(0, NA)) +
   theme(panel.background = element_rect(fill = 'grey'),
         legend.position = 'inside', legend.position.inside = c(0.66, 0.15),
@@ -474,29 +479,29 @@ p_mov_doy_int <-
         legend.direction = 'horizontal')
 
 ggsave('figures/p-moving-doy-interaction.png', p_mov_doy_int,
-       width = 12, height = 8, units = 'in', dpi = 600, bg = 'white')
+       width = 8, height = 8, units = 'in', dpi = 600, bg = 'white')
 
 # E(speed | moving)
 s_doy_int <-
-  ggplot(ti_doy, aes(doy, temp_c, fill = log2(s_mu))) +
-  facet_wrap(~ species, labeller = label_parsed) +
+  ggplot(ti_doy, aes(temp_c, doy, fill = log2(s_mu))) +
+  facet_wrap(~ species, labeller = label_parsed, nrow = 3) +
   geom_raster() +
-  geom_contour(aes(doy, temp_c, z = log2(s_mu)), color = 'black',
+  geom_contour(aes(temp_c, doy, z = log2(s_mu)), color = 'black',
                inherit.aes = FALSE, bins = 5) +
-  scale_x_continuous('Day of year', expand = c(0, 0),
+  scale_x_continuous(paste0('Temperature (\U00B0', 'C)'),
+                     breaks = c(-20, 0, 20)) +
+  scale_y_continuous('Day of year', expand = c(0, 0),
                      breaks = doy_breaks, labels = doy_labs) +
-  scale_y_continuous(paste0('Temperature (\U00B0', 'C)'), expand = c(0, 0)) +
   scale_fill_gradientn(name = 'Relative change in speed', colors = s_pal,
-                       limits = c(- log2(1.6), log2(1.6)),
-                       breaks = c(- log2(1.6), 0, log2(1.6)), 
-                       labels = c(0.625, 1, 1.6)) +
+                       limits = range(z_breaks), breaks = z_breaks,
+                       labels = round(2^z_breaks, 2)) +
   theme(panel.background = element_rect(fill = 'grey'),
         legend.position = 'inside', legend.position.inside = c(0.66, 0.15),
         legend.key.width = rel(1.5),  legend.justification = 'center',
         legend.direction = 'horizontal')
 
 ggsave('figures/speed-doy-interaction.png', s_doy_int,
-       width = 12, height = 8, units = 'in', dpi = 600, bg = 'white')
+       width = 8, height = 8, units = 'in', dpi = 600, bg = 'white')
 
 # distance travelled
 d_doy_int <-
@@ -504,21 +509,69 @@ d_doy_int <-
   mutate(d_mu = case_when(d_mu < 0.25 ~ 0.25,
                           d_mu > 4 ~ 4,
                           TRUE ~ d_mu)) %>%
-  ggplot(aes(doy, temp_c, fill = log2(d_mu))) +
-  facet_wrap(~ species, labeller = label_parsed) +
+  ggplot(aes(temp_c, doy, fill = log2(d_mu))) +
+  facet_wrap(~ species, labeller = label_parsed, nrow = 3) +
   geom_raster() +
-  geom_contour(aes(doy, temp_c, z = log2(d_mu)), color = 'black',
+  geom_contour(aes(temp_c, doy, z = log2(d_mu)), color = 'black',
                inherit.aes = FALSE, bins = 5) +
-  scale_x_continuous('Time of day (PDT)', expand = c(0, 0),
+  scale_x_continuous(paste0('Temperature (\U00B0', 'C)'),
+                     breaks = c(-20, 0, 20)) +
+  scale_y_continuous('Day of year', expand = c(0, 0),
                      breaks = doy_breaks, labels = doy_labs) +
-  scale_y_continuous(paste0('Temperature (\U00B0', 'C)'), expand = c(0, 0)) +
   scale_fill_gradientn(name = 'Relative change in distance travelled',
-                       colors = d_pal, limits = c(-2, 2),
-                       breaks = c(-2, 0, 2), labels = c(0.25, 1, 4)) +
+                       colors = d_pal, limits = range(z_breaks) * 2,
+                       breaks = z_breaks * 2,
+                       labels = round(2^(z_breaks * 2), 2)) +
   theme(panel.background = element_rect(fill = 'grey'),
         legend.position = 'inside', legend.position.inside = c(0.66, 0.15),
         legend.key.width = rel(1.5),  legend.justification = 'center',
         legend.direction = 'horizontal')
 
 ggsave('figures/distance-travelled-doy-interaction.png', d_doy_int,
-       width = 12, height = 8, units = 'in', dpi = 600, bg = 'white')
+       width = 8, height = 8, units = 'in', dpi = 600, bg = 'white')
+
+# figures by response parameter ----
+#' `get_legend()` for `{cowplot}` version 1.1.3 returns an empty plot 
+get_legend <- function(.plot) {
+  get_plot_component(.plot + theme(legend.position = 'top'),
+                     pattern = 'guide-box-top', return_all = TRUE)
+}
+
+p_mov <- plot_grid(
+  p_mov_temp,
+  get_legend(p_mov_tod_int),
+  p_mov_tod_int +
+    facet_wrap(~ species, labeller = label_parsed, nrow = 1) +
+    theme(legend.position = 'none'),
+  p_mov_doy_int +
+    facet_wrap(~ species, labeller = label_parsed, nrow = 1) +
+    theme(legend.position = 'none'),
+  labels = c('A', '', 'B', 'C'), ncol = 1, rel_heights = c(1, 0.2, 1, 1))
+ggsave('figures/p-moving.png', p_mov,
+       width = 20, height = 15, dpi = 600, bg = 'white')
+
+speed <- plot_grid(
+  speed_temp,
+  get_legend(s_tod_int),
+  s_tod_int +
+    facet_wrap(~ species, labeller = label_parsed, nrow = 1) +
+    theme(legend.position = 'none'),
+  s_doy_int +
+    facet_wrap(~ species, labeller = label_parsed, nrow = 1) +
+    theme(legend.position = 'none'),
+  labels = c('A', '', 'B', 'C'), ncol = 1, rel_heights = c(1, 0.2, 1, 1))
+ggsave('figures/speed.png', speed,
+       width = 20, height = 15, dpi = 600, bg = 'white')
+
+distance <- plot_grid(
+  distance_temp,
+  get_legend(d_tod_int),
+  d_tod_int +
+    facet_wrap(~ species, labeller = label_parsed, nrow = 1) +
+    theme(legend.position = 'none'),
+  d_doy_int +
+    facet_wrap(~ species, labeller = label_parsed, nrow = 1) +
+    theme(legend.position = 'none'),
+  labels = c('A', '', 'B', 'C'), ncol = 1, rel_heights = c(1, 0.2, 1, 1))
+ggsave('figures/distance.png', distance,
+       width = 20, height = 15, dpi = 600, bg = 'white')
