@@ -46,8 +46,8 @@ season_breaks <-
 marginal <- function(newd, term) {
   preds_1 <-
     predict(object = m_1, newdata = newd, type = 'link', se.fit = TRUE,
-            terms = c('(Intercept)', 's(species)',
-                      paste0('s(', term, ',species)')),
+            terms = c('(Intercept)', 'species',
+                      paste0('s(', term, '):species', SPECIES)),
             discrete = FALSE) %>%
     as.data.frame() %>%
     transmute(p_mu = m_1$family$linkinv(fit),
@@ -56,7 +56,7 @@ marginal <- function(newd, term) {
   
   preds_2 <-
     predict(object = m_2, newdata = newd, type = 'link', se.fit = TRUE,
-            terms = paste0('s(', term, ',species)'),
+            terms = paste0('s(', term, '):species', SPECIES),
             discrete = FALSE) %>%
     as.data.frame() %>%
     transmute(s_mu = exp(fit),
@@ -95,10 +95,12 @@ newd_tod <-
 preds_tod <- marginal(newd = newd_tod, term = 'tod_pdt')
 
 p_mov_tod <-
-  ggplot(preds_tod) +
+  preds_tod %>%
+  mutate(p_upr = if_else(p_upr > 0.75, 0.75, p_upr)) %>%
+  ggplot() +
   coord_polar() +
   facet_wrap(~ species, nrow = 1, labeller = label_parsed) +
-  geom_area(aes(x, 0.4, group = g), tod, fill = 'black', alpha = 0.2) +
+  geom_area(aes(x, 0.75, group = g), tod, fill = 'black', alpha = 0.2) +
   geom_line(aes(tod_pdt, p_mu, color = species), linewidth = 1) +
   geom_ribbon(aes(tod_pdt, ymin = p_lwr, ymax = p_upr, fill = species),
               alpha = 0.2) +
@@ -107,17 +109,17 @@ p_mov_tod <-
   scale_x_continuous(expand = c(0, 0), limits = c(0, 24),
                      breaks = c(0, 6, 12, 18),
                      labels = c('00:00', '06:00', '12:00', '18:00')) +
-  scale_y_continuous(limits = c(0, NA), expand = c(0, 0)) +
+  scale_y_continuous(limits = c(0, 0.75), expand = c(0, 0)) +
   labs(x = 'Time of day (PDT)', y = 'P(moving)') +
   theme(legend.position = 'none',
         panel.grid.major.x = element_blank(),
-        panel.grid.major.y = element_line(colour = c(rep('grey', 5), NA)))
+        panel.grid.major.y = element_line(colour = c(rep('grey', 4), NA)))
 
 speed_tod <-
   ggplot(preds_tod) +
   coord_polar() +
   facet_wrap(~ species, nrow = 1, labeller = label_parsed) +
-  geom_area(aes(x, 2, group = g), tod, fill = 'black', alpha = 0.2) +
+  geom_area(aes(x, 1.5, group = g), tod, fill = 'black', alpha = 0.2) +
   geom_line(aes(tod_pdt, s_mu, color = species), linewidth = 1) +
   geom_ribbon(aes(tod_pdt, ymin = s_lwr, ymax = s_upr, fill = species),
               alpha = 0.2) +
@@ -126,17 +128,19 @@ speed_tod <-
   scale_x_continuous(expand = c(0, 0), limits = c(0, 24),
                      breaks = c(0, 6, 12, 18),
                      labels = c('00:00', '06:00', '12:00', '18:00')) +
-  scale_y_continuous(limits = c(0, 2), expand = c(0, 0)) +
+  scale_y_continuous(limits = c(0, 1.5), expand = c(0, 0)) +
   labs(x = 'Time of day (PDT)', y = 'Relative change in speed') +
   theme(legend.position = 'none',
         panel.grid.major.x = element_blank(),
-        panel.grid.major.y = element_line(colour = c(rep('grey', 5), NA)))
+        panel.grid.major.y = element_line(colour = c(rep('grey', 4), NA)))
 
 distance_tod <-
-  ggplot(preds_tod) +
+  preds_tod %>%
+  mutate(d_upr = if_else(d_upr > 4, 4, d_upr)) %>%
+  ggplot() +
   coord_polar() +
   facet_wrap(~ species, nrow = 1, labeller = label_parsed) +
-  geom_area(aes(x, 8, group = g), tod, fill = 'black', alpha = 0.2) +
+  geom_area(aes(x, 4, group = g), tod, fill = 'black', alpha = 0.2) +
   geom_line(aes(tod_pdt, d_mu, color = species), linewidth = 1) +
   geom_ribbon(aes(tod_pdt, ymin = d_lwr, ymax = d_upr, fill = species),
               alpha = 0.2) +
@@ -145,7 +149,7 @@ distance_tod <-
   scale_x_continuous(expand = c(0, 0), limits = c(0, 24),
                      breaks = c(0, 6, 12, 18),
                      labels = c('00:00', '06:00', '12:00', '18:00')) +
-  scale_y_continuous(limits = c(0, 8), expand = c(0, 0)) +
+  scale_y_continuous(limits = c(0, 4), expand = c(0, 0)) +
   labs(x = 'Time of day (PDT)', y = 'Relative change in distance travelled') +
   theme(legend.position = 'none',
         panel.grid.major.x = element_blank(),
@@ -165,7 +169,7 @@ p_mov_doy <-
   ggplot(preds_doy) +
   coord_polar(start = 11 / 366 * 2 * pi) + # offset to make axes vertical
   facet_wrap(~ species, nrow = 1, labeller = label_parsed) +
-  geom_area(aes(x, 0.5, fill = season), seasons, alpha = 0.3,
+  geom_area(aes(x, 1, fill = season), seasons, alpha = 0.3,
             show.legend = FALSE) +
   scale_fill_manual(values = PAL_SEASONS) +
   ggnewscale::new_scale('fill') + # to remove the season scale for fill
@@ -176,12 +180,12 @@ p_mov_doy <-
                      aesthetics = c('color', 'fill')) +
   scale_x_continuous(breaks = yday(season_breaks),
                      labels = c('Spring', 'Summer', 'Fall', 'Winter')) +
-  scale_y_continuous(limits = c(0, 0.5), expand = c(0, 0)) +
+  scale_y_continuous(limits = c(0, 1), expand = c(0, 0)) +
   labs(x = 'Day of year', y = 'P(moving)') +
   theme(legend.position = 'none',
         axis.ticks.x = element_blank(),
         panel.grid.major.x = element_blank(),
-        panel.grid.major.y = element_line(colour = c(rep('grey', 6), NA)))
+        panel.grid.major.y = element_line(colour = c(rep('grey', 5), NA)))
 
 speed_doy <-
   ggplot(preds_doy) +
@@ -206,10 +210,12 @@ speed_doy <-
         panel.grid.major.y = element_line(colour = c(rep('grey', 5), NA)))
 
 distance_doy <-
-  ggplot(preds_doy) +
+  preds_doy %>%
+  mutate(d_upr = if_else(d_upr > 3, 3, d_upr)) %>%
+  ggplot() +
   coord_polar(start = 11 / 366 * 2 * pi) + # offset to make axes vertical
   facet_wrap(~ species, nrow = 1, labeller = label_parsed) +
-  geom_area(aes(x, 8, fill = season), seasons, alpha = 0.3,
+  geom_area(aes(x, 3, fill = season), seasons, alpha = 0.3,
             show.legend = FALSE) +
   scale_fill_manual(values = PAL_SEASONS) +
   ggnewscale::new_scale('fill') + # to remove the season scale for fill
@@ -220,12 +226,12 @@ distance_doy <-
                      aesthetics = c('color', 'fill')) +
   scale_x_continuous(breaks = yday(season_breaks),
                      labels = c('Spring', 'Summer', 'Fall', 'Winter')) +
-  scale_y_continuous(limits = c(0, 8), expand = c(0, 0)) +
+  scale_y_continuous(limits = c(0, 3), expand = c(0, 0)) +
   labs(x = 'Day of year', y = 'Relative change in distance travelled') +
   theme(legend.position = 'none',
         axis.ticks.x = element_blank(),
         panel.grid.major.x = element_blank(),
-        panel.grid.major.y = element_line(colour = c(rep('grey', 5), NA)))
+        panel.grid.major.y = element_line(colour = c(rep('grey', 4), NA)))
 
 # s(temp_c) ----
 newd_temp_c <- tibble(animal = 'new animal',
@@ -246,7 +252,6 @@ preds_temp_c <- marginal(newd = newd_temp_c, term = 'temp_c')
 
 p_mov_temp <-
   ggplot(preds_temp_c) +
-  coord_cartesian(ylim = c(0, 0.4)) +
   facet_wrap(~ species, nrow = 1, labeller = label_parsed) +
   geom_ribbon(aes(temp_c, ymin = p_lwr, ymax = p_upr, fill = species),
               alpha = .2) +
@@ -254,7 +259,7 @@ p_mov_temp <-
   scale_color_manual('Species', values = PAL,
                      aesthetics = c('color', 'fill')) +
   scale_x_continuous(paste0('Temperature (', '\U00B0', 'C)'))+
-  scale_y_continuous('P(moving)') +
+  scale_y_continuous('P(moving)', expand = c(0, 0)) +
   theme(legend.position = 'none')
 
 speed_temp <-
@@ -272,6 +277,7 @@ speed_temp <-
 
 distance_temp <-
   ggplot(preds_temp_c) +
+  coord_cartesian(ylim = c(0, 8)) +
   facet_wrap(~ species, nrow = 1, labeller = label_parsed) +
   geom_hline(yintercept = 1, color = 'grey') +
   geom_ribbon(aes(temp_c, ymin = d_lwr, ymax = d_upr, fill = species),
@@ -314,7 +320,7 @@ plot_scheme_colorblind(c(color('acton')(1e3), s_pal, d_pal))
 
 #' exclude values further from an observation than `DIST * 100%` of the
 #' range of the observed data
-DIST <- 0.2
+DIST <- 0.25
 
 # make more appropriate scale breaks
 z_breaks <- seq(-1, 1, length.out = 5)
@@ -331,16 +337,16 @@ surface <- function(newd, term) {
     predict(object = m_1, newdata = newd, type = 'link',
             se.fit = FALSE,
             terms = c('(Intercept)', 's(species)',
-                      paste0('s(', term, ',species)'),
-                      paste0('ti(temp_c,', term, ',species)')),
+                      paste0('s(', term, ',):species', SPECIES),
+                      paste0('ti(temp_c,', term, '):species', SPECIES)),
             discrete = FALSE) %>%
     as.data.frame() %>%
     transmute(p_mu = m_1$family$linkinv(`.`))
   
   preds_2 <-
     predict(object = m_2, newdata = newd, type = 'link', se.fit = FALSE,
-            terms = c(paste0('s(', term, ',species)'),
-                      paste0('ti(temp_c,', term, ',species)')),
+            terms = c(paste0('s(', term, '):species', SPECIES),
+                      paste0('ti(temp_c,', term, '):species', SPECIES)),
             discrete = FALSE) %>%
     as.data.frame() %>%
     rename(fit = '.') %>%
@@ -385,8 +391,8 @@ p_mov_tod_int <-
   ggplot(aes(temp_c, tod_pdt, fill = p_mu)) +
   facet_wrap(~ species, labeller = label_parsed, nrow = 3) +
   geom_raster() +
-  geom_contour(aes(temp_c, tod_pdt, z = log2(p_mu)), color = 'black',
-               inherit.aes = FALSE, bins = 5) +
+  geom_contour(aes(temp_c, tod_pdt, z = log2(p_mu)), color = 'grey',
+               inherit.aes = FALSE) +
   scale_x_continuous(paste0('Temperature (\U00B0', 'C)'),
                      breaks = c(-20, 0, 20)) +
   scale_y_continuous('Time of day (PDT)', expand = c(0, 0),
@@ -474,7 +480,7 @@ p_mov_doy_int <-
   ggplot(aes(temp_c, doy, fill = p_mu)) +
   facet_wrap(~ species, labeller = label_parsed, nrow = 3) +
   geom_raster() +
-  geom_contour(aes(temp_c, doy, z = log2(p_mu)), color = 'black',
+  geom_contour(aes(temp_c, doy, z = log2(p_mu)), color = 'grey',
                inherit.aes = FALSE, bins = 5) +
   scale_x_continuous(paste0('Temperature (\U00B0', 'C)'),
                      breaks = c(-20, 0, 20)) +

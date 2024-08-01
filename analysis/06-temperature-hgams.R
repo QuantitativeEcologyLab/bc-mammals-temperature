@@ -158,34 +158,7 @@ plot_grid(
 if(file.exists('models/binomial-gam.rds')) {
   m_1 <- readRDS('models/binomial-gam.rds')
 } else {
-  # m_1 <-
-  #   bam(moving ~
-  #         # random intercept for each animal
-  #         s(animal, bs = 're') +
-  #         # random intercept for each species
-  #         s(species, bs = 're') +
-  #         # to account for changes in behavior within days
-  #         s(tod_pdt, species, k = 5, bs = 'fs', xt = list(bs = 'cc')) +
-  #         # to account for changes in behavior within years
-  #         s(doy, species, k = 5, bs = 'fs', xt = list(bs = 'cc')) +
-  #         # species-level effect of temperature
-  #         s(temp_c, species, k = 5, bs = 'fs', xt = list(bs = 'tp')) +
-  #         # to account for seasonal changes in day length
-  #         ti(doy, tod_pdt, species, k = 5, bs = c('cc', 'cc', 're')) +
-  #         # to account for changes in day nocturnality with temperature
-  #         ti(temp_c, tod_pdt, species, k = 5, bs = c('tp', 'cc', 're')) +
-  #         # to account for changes in fur coats seasonally
-  #         ti(temp_c, doy, species, k = 5, bs = c('tp', 'cc', 're')) +
-  #         # larger sampling intervals underestimate movement speed
-  #         s(log(dt), k = 3) +
-  #         s(log(dt), species, k = 3, bs = 'fs'),
-  #       family = binomial(link = 'logit'),
-  #       data = d,
-  #       method = 'fREML', # fast REML
-  #       discrete = TRUE, # discretize the posterior for faster computation
-  #       knots = list(tod_pdt = c(0, 1), doy = c(0.5, 366.5)),# for bs = 'cc'
-  #       control = gam.control(trace = TRUE))
-  m_1 <-
+m_1 <-
     bam(moving ~
           # random intercept for each animal
           s(animal, bs = 're') +
@@ -269,34 +242,6 @@ ggplot(d_2, aes(speed_est)) +
 if(file.exists('models/gamma-gam.rds')) {
   m_2 <- readRDS('models/gamma-gam.rds')
 } else {
-  # m_2 <-
-  #   bam(
-  #     speed_est ~
-  #       # random intercept for each animal
-  #       s(animal, bs = 're') +
-  #       # random intercept for each species
-  #       s(species, bs = 're') +
-  #       # to account for changes in behavior within days
-  #       s(tod_pdt, species, k = 5, bs = 'fs', xt = list(bs = 'cc')) +
-  #       # to account for changes in behavior within years
-  #       s(doy, species, k = 5, bs = 'fs', xt = list(bs = 'cc')) +
-  #       # effects of temperature
-  #       s(temp_c, species, k = 5, bs = 'fs', xt = list(bs = 'tp')) +
-  #       # to account for seasonal changes in day length
-  #       ti(doy, tod_pdt, species, k = 5, bs = c('cc', 'cc', 're')) +
-  #       # to account for changes in day nocturnality with temperature
-  #       ti(temp_c, tod_pdt, species, k = 5, bs = c('tp', 'cc', 're')) +
-  #       # to account for changes in fur coats seasonally
-  #       ti(temp_c, doy, species, k = 5, bs = c('tp', 'cc', 're')) +
-  #       # larger sampling intervals underestimate movement speed
-  #       s(log(dt), k = 3) +
-  #       s(log(dt), species, k = 3, bs = 'fs'),
-  #     family = Gamma(link = 'log'), # can use Gamma because no zeros
-  #     data = d_2,
-  #     method = 'fREML', # fast REML
-  #     discrete = TRUE, # discretize the posterior for faster computation
-  #     knots = list(tod_pdt = c(0, 1), doy = c(0.5, 366.5)),
-  #     control = gam.control(trace = TRUE))
   m_2 <-
     bam(
       speed_est ~
@@ -440,7 +385,6 @@ preds_dt <-
 p_1_dt <-
   ggplot(preds_dt) +
   facet_wrap(~ species, labeller = label_parsed, nrow = 1) +
-  geom_hline(yintercept = 0.5, color = 'grey', linetype = 'dashed') +
   geom_ribbon(aes(log(dt), ymin = p_lwr, ymax = p_upr, fill = species),
               alpha = 0.2) +
   geom_line(aes(log(dt), p, color = species)) +
@@ -459,7 +403,8 @@ p_2_dt <-
   geom_line(aes(log(dt), s, color = species)) +
   scale_x_continuous(name = expression(bold(paste('\U0394', 't (hours, log scale)'))),
                      breaks = dt_breaks, labels = dt_labs) +
-  ylab('Relative change in speed') +
+  scale_y_continuous('Relative change in speed',
+                     breaks = c(0.5, 0.75, 1, 1.25)) +
   scale_color_manual(values = PAL, aesthetics = c('color', 'fill')) +
   theme(legend.position = 'none')
 
