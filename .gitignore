@@ -77,3 +77,9 @@ data/ecmwf-era5-2m-temperature/*
 
 # diagnostic figures for range residency (contains animal locations)
 /figures/movement-model-diagnostics
+
+# manuscript comments
+/writing/comments
+
+# log files from Rmd knitting
+*.log
