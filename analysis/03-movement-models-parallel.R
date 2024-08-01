@@ -203,27 +203,20 @@ d %>%
     has_speed = grepl('OUF', toupper(model_class)) |
       grepl('IOU', model_class),
     guild = case_when(species == 'Canis lupus' ~ 'Carnivore',
-                      species == 'Cervus elaphus' ~ 'Ungulate',
+                      species == 'Cervus canadensis' ~ 'Ungulate',
                       species == 'Oreamnos americanus' ~ 'Ungulate',
                       species == 'Puma concolor' ~ 'Carnivore',
                       species == 'Rangifer tarandus' ~ 'Ungulate',
                       species == 'Ursus arctos horribilis' ~ 'Carnivore'),
     # mass estimates from EltonTraits 1.0 database: https://esajournals.onlinelibrary.wiley.com/doi/10.1890/13-1917.1
     mass_g = case_when(species == 'Canis lupus' ~ 32183.33,
-                       species == 'Cervus elaphus' ~ 2e5, # C. canadensis
+                       species == 'Cervus canadensis' ~ 2e5,
                        species == 'Oreamnos americanus' ~ 72500.33,
                        species == 'Puma concolor' ~ 51600.04,
                        species == 'Rangifer tarandus' ~ 86033.98,
                        species == 'Ursus arctos horribilis' ~ 180520.42),
     range_resident = '') %>%
   write.csv('data/tracking-data/telemetry-metadata.csv', row.names = FALSE)
-
-# readr::read_csv('data/Species_Trait_Data.csv', show_col_types = FALSE) %>%
-#   rename(species = BINOMIAL,
-#          percent_grass = per.grass,
-#          percent_browse = per.browse,
-#          percent_fruit = per.fruit) %>%
-#   select(- c(Genus, Species, Animal, Mass_Old))
 
 # check range residency for each animal
 imap(d$animal, \(.a, .i) {
@@ -236,7 +229,15 @@ imap(d$animal, \(.a, .i) {
   layout(t(1:2))
   plot(variogram(d$tel[[.i]]), d$movement_model[[.i]], fraction = 0.5)
   title(paste0(d$dataset_name[.i], '; ', d$animal[.i]))
-  plot(d$tel[[.i]], d$akde[[.i]])
+  plot(d$tel[[.i]], d$akde[[.i]],
+       col = color(d$tel[[.i]],
+                   col.fn = \(i, alpha) {
+                     dt <- min(diff(i), na.rm = TRUE)
+                     t <- i / dt
+                     t <- as.integer(t / (1 %#% 'day'))
+                     t <- t - min(t) + 1
+                     return(khroma::color('smoothrainbow')(length(t)))
+                     }), error = FALSE, cex = 1, pch = 19)
   title(paste0('Start: ', date_min, '; ', 'End: ', date_max, '; ',
                'Duration: ', difftime(date_max, date_min, units = 'days'),
                ' days'))

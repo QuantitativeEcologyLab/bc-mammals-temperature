@@ -145,7 +145,8 @@ elk <-
   rename(species = individual.taxon.canonical.name,
          dataset_name = study.name,
          temperature = external.temperature) %>%
-  mutate(animal = as.character(individual.local.identifier),
+  mutate(species = 'Cervus elaphus',
+         animal = as.character(individual.local.identifier),
          outlier = manually.marked.outlier == 'true',
          timezone = bc_tz,
          timestamp = ymd_hms(timestamp, tz = 'UTC') %>%

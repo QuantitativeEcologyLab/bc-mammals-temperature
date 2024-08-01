@@ -190,7 +190,7 @@ points(location.lat ~ location.long,
 d$tel[[which(d$animal == 'BW046nex')]][i, 'outlier'] <- 1
 plot_adj('BW046nex', max_speed = 1, max_angle = 170) # ok
 
-# Cervus elaphus (clean) ----
+# Cervus canadensis (clean) ----
 
 #' *NOTE:* assuming movement at ~< 0.25 m/s is realistic, even if angle >
 #' 170 degrees since it's too hard to distinguish between movement and gps
@@ -338,7 +338,7 @@ plot_adj('E025', max_speed = 0.3, max_angle = 170) # ok
 
 # E026
 #' this elk does not have an unusual amount of data
-hist(map_int(filter(d, species == 'Cervus elaphus')$tel, nrow))
+hist(map_int(filter(d, species == 'Cervus canadensis')$tel, nrow))
 abline(v = nrow(d$tel[[which(d$animal == 'E026')]]), lwd = 2)
 d$tel[[which(d$animal == 'E026')]] %>%
   filter(! outlier) %>%
