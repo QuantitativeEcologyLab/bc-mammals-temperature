@@ -158,25 +158,51 @@ plot_grid(
 if(file.exists('models/binomial-gam.rds')) {
   m_1 <- readRDS('models/binomial-gam.rds')
 } else {
-  #' `ti(doy, temp_c)` does not increase BIC or AIC
+  # m_1 <-
+  #   bam(moving ~
+  #         # random intercept for each animal
+  #         s(animal, bs = 're') +
+  #         # random intercept for each species
+  #         s(species, bs = 're') +
+  #         # to account for changes in behavior within days
+  #         s(tod_pdt, species, k = 5, bs = 'fs', xt = list(bs = 'cc')) +
+  #         # to account for changes in behavior within years
+  #         s(doy, species, k = 5, bs = 'fs', xt = list(bs = 'cc')) +
+  #         # species-level effect of temperature
+  #         s(temp_c, species, k = 5, bs = 'fs', xt = list(bs = 'tp')) +
+  #         # to account for seasonal changes in day length
+  #         ti(doy, tod_pdt, species, k = 5, bs = c('cc', 'cc', 're')) +
+  #         # to account for changes in day nocturnality with temperature
+  #         ti(temp_c, tod_pdt, species, k = 5, bs = c('tp', 'cc', 're')) +
+  #         # to account for changes in fur coats seasonally
+  #         ti(temp_c, doy, species, k = 5, bs = c('tp', 'cc', 're')) +
+  #         # larger sampling intervals underestimate movement speed
+  #         s(log(dt), k = 3) +
+  #         s(log(dt), species, k = 3, bs = 'fs'),
+  #       family = binomial(link = 'logit'),
+  #       data = d,
+  #       method = 'fREML', # fast REML
+  #       discrete = TRUE, # discretize the posterior for faster computation
+  #       knots = list(tod_pdt = c(0, 1), doy = c(0.5, 366.5)),# for bs = 'cc'
+  #       control = gam.control(trace = TRUE))
   m_1 <-
     bam(moving ~
           # random intercept for each animal
           s(animal, bs = 're') +
-          # random effect for each species
-          s(species, bs = 're') +
+          # fixed intercept for each species
+          species +
           # to account for changes in behavior within days
-          s(tod_pdt, species, k = 5, bs = 'fs', xt = list(bs = 'cc')) +
+          s(tod_pdt, by = species, k = 5, bs = 'cc') +
           # to account for changes in behavior within years
-          s(doy, species, k = 5, bs = 'fs', xt = list(bs = 'cc')) +
+          s(doy, by = species, k = 5, bs = 'cc') +
           # species-level effect of temperature
-          s(temp_c, species, k = 5, bs = 'fs', xt = list(bs = 'tp')) +
+          s(temp_c, by = species, k = 5, bs = 'tp') +
           # to account for seasonal changes in day length
-          ti(doy, tod_pdt, species, k = 5, bs = c('cc', 'cc', 're')) +
+          ti(doy, tod_pdt, by = species, k = 5, bs = c('cc', 'cc')) +
           # to account for changes in day nocturnality with temperature
-          ti(temp_c, tod_pdt, species, k = 5, bs = c('tp', 'cc', 're')) +
+          ti(temp_c, tod_pdt, by = species, k = 5, bs = c('tp', 'cc')) +
           # to account for changes in fur coats seasonally
-          ti(temp_c, doy, species, k = 5, bs = c('tp', 'cc', 're')) +
+          ti(temp_c, doy, by = species, k = 5, bs = c('tp', 'cc')) +
           # larger sampling intervals underestimate movement speed
           s(log(dt), k = 3) +
           s(log(dt), species, k = 3, bs = 'fs'),
@@ -243,25 +269,53 @@ ggplot(d_2, aes(speed_est)) +
 if(file.exists('models/gamma-gam.rds')) {
   m_2 <- readRDS('models/gamma-gam.rds')
 } else {
+  # m_2 <-
+  #   bam(
+  #     speed_est ~
+  #       # random intercept for each animal
+  #       s(animal, bs = 're') +
+  #       # random intercept for each species
+  #       s(species, bs = 're') +
+  #       # to account for changes in behavior within days
+  #       s(tod_pdt, species, k = 5, bs = 'fs', xt = list(bs = 'cc')) +
+  #       # to account for changes in behavior within years
+  #       s(doy, species, k = 5, bs = 'fs', xt = list(bs = 'cc')) +
+  #       # effects of temperature
+  #       s(temp_c, species, k = 5, bs = 'fs', xt = list(bs = 'tp')) +
+  #       # to account for seasonal changes in day length
+  #       ti(doy, tod_pdt, species, k = 5, bs = c('cc', 'cc', 're')) +
+  #       # to account for changes in day nocturnality with temperature
+  #       ti(temp_c, tod_pdt, species, k = 5, bs = c('tp', 'cc', 're')) +
+  #       # to account for changes in fur coats seasonally
+  #       ti(temp_c, doy, species, k = 5, bs = c('tp', 'cc', 're')) +
+  #       # larger sampling intervals underestimate movement speed
+  #       s(log(dt), k = 3) +
+  #       s(log(dt), species, k = 3, bs = 'fs'),
+  #     family = Gamma(link = 'log'), # can use Gamma because no zeros
+  #     data = d_2,
+  #     method = 'fREML', # fast REML
+  #     discrete = TRUE, # discretize the posterior for faster computation
+  #     knots = list(tod_pdt = c(0, 1), doy = c(0.5, 366.5)),
+  #     control = gam.control(trace = TRUE))
   m_2 <-
     bam(
       speed_est ~
-        # random effect for each animal
+        # random intercept for each animal
         s(animal, bs = 're') +
-        # random effect for each species
-        s(species, bs = 're') +
+        # fixed intercept for each species
+        species +
         # to account for changes in behavior within days
-        s(tod_pdt, species, k = 5, bs = 'fs', xt = list(bs = 'cc')) +
+        s(tod_pdt, by = species, k = 5, bs = 'cc') +
         # to account for changes in behavior within years
-        s(doy, species, k = 5, bs = 'fs', xt = list(bs = 'cc')) +
-        # effects of temperature
-        s(temp_c, species, k = 5, bs = 'fs', xt = list(bs = 'tp')) +
+        s(doy, by = species, k = 5, bs = 'cc') +
+        # species-level effect of temperature
+        s(temp_c, by = species, k = 5, bs = 'tp') +
         # to account for seasonal changes in day length
-        ti(doy, tod_pdt, species, k = 5, bs = c('cc', 'cc', 're')) +
+        ti(doy, tod_pdt, by = species, k = 5, bs = c('cc', 'cc')) +
         # to account for changes in day nocturnality with temperature
-        ti(temp_c, tod_pdt, species, k = 5, bs = c('tp', 'cc', 're')) +
+        ti(temp_c, tod_pdt, by = species, k = 5, bs = c('tp', 'cc')) +
         # to account for changes in fur coats seasonally
-        ti(temp_c, doy, species, k = 5, bs = c('tp', 'cc', 're')) +
+        ti(temp_c, doy, by = species, k = 5, bs = c('tp', 'cc')) +
         # larger sampling intervals underestimate movement speed
         s(log(dt), k = 3) +
         s(log(dt), species, k = 3, bs = 'fs'),
