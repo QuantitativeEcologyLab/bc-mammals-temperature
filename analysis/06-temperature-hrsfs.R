@@ -13,7 +13,7 @@ if(file.exists('data/tracking-data/rsf-data.rds')) {
   d <- readRDS('data/tracking-data/rsf-data.rds')
 } else {
   # import movement models
-  mm <- readRDS('models/movement-models-akdes-2024-03-18.rds') %>%
+  mm <- readRDS('models/movement-models-akdes-2024-06-06.rds') %>%
     # remove animals that are not range resident (invalid weights)
     filter(! animal %in% c('SCEK014', 'SCEK014b', 'BW028')) %>%
     mutate(species = if_else(grepl('Rangifer', dataset_name),
