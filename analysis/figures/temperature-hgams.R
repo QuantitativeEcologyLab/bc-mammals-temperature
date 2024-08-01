@@ -15,7 +15,7 @@ d <- readRDS('data/hgam-speed-data.rds')
 
 # import models
 m_1 <- readRDS('models/binomial-gam.rds')
-m_2 <- readRDS('models/gammals-gam.rds')
+m_2 <- readRDS('models/gamma-gam.rds')
 
 # find unique species
 SPECIES <- unique(m_1$model$species)
@@ -41,6 +41,8 @@ season_breaks <-
   as.Date(paste0('2024-', c('03-20', '06-20', '09-22', '12-21'))) + 45
 
 # make predictions ----
+#' not averaging across uniform `tod_pdt` and `doy` because I want to
+#' preserve the uneaven sampling of `doy` for `E(speed | moving)`
 marginal <- function(newd, term) {
   preds_1 <-
     predict(object = m_1, newdata = newd, type = 'link', se.fit = TRUE,
@@ -57,9 +59,9 @@ marginal <- function(newd, term) {
             terms = paste0('s(', term, ',species)'),
             discrete = FALSE) %>%
     as.data.frame() %>%
-    transmute(s_mu = exp(fit.1),
-              s_lwr = exp(fit.1 - 1.96 * se.fit.1),
-              s_upr = exp(fit.1 + 1.96 * se.fit.1))
+    transmute(s_mu = exp(fit),
+              s_lwr = exp(fit - 1.96 * se.fit),
+              s_upr = exp(fit + 1.96 * se.fit))
   
   # add columns of distance travelled
   bind_cols(newd, preds_1, preds_2) %>%
@@ -87,7 +89,8 @@ newd_tod <-
               species = SPECIES,
               tod_pdt = seq(0, 24, length.out = 1e3),
               doy = 0,
-              temp_c = 0)
+              temp_c = 0,
+              dt = 0)
 
 preds_tod <- marginal(newd = newd_tod, term = 'tod_pdt')
 
@@ -153,7 +156,8 @@ newd_doy <- expand_grid(animal = 'new animal',
                         species = SPECIES,
                         tod_pdt = 12,
                         doy = seq(1, 366, by = 0.1),
-                        temp_c = 0)
+                        temp_c = 0,
+                        dt = 0)
 
 preds_doy <- marginal(newd = newd_doy, term = 'doy')
 
@@ -227,7 +231,8 @@ distance_doy <-
 newd_temp_c <- tibble(animal = 'new animal',
                       species = SPECIES,
                       tod_pdt = 12,
-                      doy = 0) %>%
+                      doy = 0,
+                      dt = 0) %>%
   mutate(temp_data = purrr::map(species, \(.s) {
     .temp <- filter(d, species == .s)$temp_c
     
@@ -338,7 +343,8 @@ surface <- function(newd, term) {
                       paste0('ti(temp_c,', term, ',species)')),
             discrete = FALSE) %>%
     as.data.frame() %>%
-    transmute(s_mu = exp(V1))
+    rename(fit = '.') %>%
+    transmute(s_mu = exp(fit))
   
   # add columns of distance travelled
   bind_cols(newd, preds_1, preds_2) %>%
@@ -359,7 +365,8 @@ newd_tod <- expand_grid(animal = 'new animal',
                         species = SPECIES,
                         tod_pdt = seq(0, 24, length.out = 200),
                         doy = 0,
-                        temp_c = seq(-40, 40, length.out = 200)) %>%
+                        temp_c = seq(-40, 40, length.out = 200),
+                        dt = 0) %>%
   nest(dat = -species) %>%
   mutate(dat = map2(dat, species, \(.d, .s) {
     ref <- filter(d, species == .s)
@@ -447,7 +454,8 @@ newd_doy <- expand_grid(animal = 'new animal',
                         species = SPECIES,
                         tod_pdt = 0,
                         doy = seq(1, 365, length.out = 200),
-                        temp_c = seq(-40, 40, length.out = 200)) %>%
+                        temp_c = seq(-40, 40, length.out = 200),
+                        dt = 0) %>%
   nest(dat = -species) %>%
   mutate(dat = map2(dat, species, \(.d, .s) {
     ref <- filter(d, species == .s)
