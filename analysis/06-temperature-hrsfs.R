@@ -9,8 +9,6 @@ library('ggplot2') # for fancy plots
 library('gratia')  # for graceful GAM plots
 source('analysis/figures/default-ggplot-theme.R')
 
-# K <- 1e6 # scaling constant for weights
-
 # import data ----
 if(file.exists('data/tracking-data/rsf-data.rds')) {
   d <- readRDS('data/tracking-data/rsf-data.rds')
@@ -122,8 +120,7 @@ if(file.exists('data/tracking-data/rsf-data.rds')) {
     mutate(forest_perc = extract(f, tibble(longitude, latitude))[, 2],
            elevation_m = extract(e, tibble(longitude, latitude))[, 2],
            dist_water_m = extract(w, tibble(longitude, latitude))[, 2],
-           detected = 1,
-           weight = weight)
+           detected = 1)
   
   # data frame of null locations ----
   # check range of temperatures
@@ -205,12 +202,11 @@ if(file.exists('data/tracking-data/rsf-data.rds')) {
 }
 
 # fit the RSFs ----
+#' *NOTES:*
 #' - adding `log()` gives too much leverage to low elevations and
 #' distances from water.
 #' - dividing `detected` by `K` and adding `K` in the weights does not
 #' improve the model fit
-#' - adding the AKDE weights makes everything flat
-#' took 18 minutes for goats and bears only (1.5% of the data)
 SPECIES <- unique(d$species)
 
 # find number of quadrature points per each detection
@@ -219,7 +215,15 @@ d %>%
   summarize(unweighted = 1 / mean(d$detected),
             weighted = 1 / mean(detected * weight))
 
+# arrange by number of rows
+SPECIES <- d %>%
+  group_by(species) %>%
+  summarise(n = n()) %>%
+  arrange(n) %>%
+  pull(species)
+
 for(sp in SPECIES) {
+  cat('Working on ', as.character(sp), '...\n', sep = '')
   d %>%
     filter(species == sp) %>%
     pivot_longer(c(forest_perc, elevation_m, dist_water_m)) %>%
@@ -232,18 +236,18 @@ for(sp in SPECIES) {
   rsf <- bam(
     detected ~
       # species-level average resource preference
-      s(forest_perc, k = 6, bs = 'cr') +
-      s(elevation_m, k = 6, bs = 'cr') +
-      s(dist_water_m, k = 6, bs = 'cr') +
+      s(forest_perc, k = 6, bs = 'tp') +
+      s(elevation_m, k = 6, bs = 'tp') +
+      s(dist_water_m, k = 6, bs = 'tp') +
       # animal-level deviations from the species-level average
       s(animal, bs = 're') +
-      s(forest_perc, animal, k = 6, bs = 'fs', xt = list(bs = 'cr')) +
-      s(elevation_m, animal, k = 6, bs = 'fs', xt = list(bs = 'cr')) +
-      s(dist_water_m, animal, k = 6, bs = 'fs', xt = list(bs = 'cr')) +
+      s(forest_perc, animal, k = 6, bs = 'fs') +
+      s(elevation_m, animal, k = 6, bs = 'fs') +
+      s(dist_water_m, animal, k = 6, bs = 'fs') +
       # changes in preference with temperature
-      ti(forest_perc, temperature_C, k = 6, bs = 'cr') +
-      ti(elevation_m, temperature_C, k = 6, bs = 'cr') +
-      ti(dist_water_m, temperature_C, k = 6, bs = 'cr'),
+      ti(forest_perc, temperature_C, k = 6, bs = 'tp') +
+      ti(elevation_m, temperature_C, k = 6, bs = 'tp') +
+      ti(dist_water_m, temperature_C, k = 6, bs = 'tp'),
     family = poisson(link = 'log'),
     data = d,
     weights = weight,
@@ -257,8 +261,9 @@ for(sp in SPECIES) {
        discrete_colour = scale_color_manual(values = rep('#00000080', 300)),
        discrete_fill = scale_fill_manual(values = rep('black', 300)))
   
-  ggsave(filename = paste0('figures/rsf-', sp, '.png'), width = 8, height = 8,
-         units = 'in', dpi = 600, bg = 'white')
+  ggsave(paste0('figures/hrsf-partial-effects/rsf-', sp, '.png'),
+         width = 16, height = 8, units = 'in', dpi = 300, bg = 'white',
+         scale = 1.5)
   
   summary(rsf, re.test = FALSE)
 }
