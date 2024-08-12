@@ -65,9 +65,6 @@ if(file.exists('data/hgam-speed-data.rds')) {
   saveRDS(d, 'data/hgam-speed-data.rds')
 }
 
-SPECIES <- unique(d$species)
-N_SPECIES <- length(SPECIES)
-
 #' `kmeans()` splits data poorly
 manual_splits <- c(0.06, 0.05, 0.08, 0.07, 0.1, 0.2, 0.05)
 km_splits <- rep(NA, N_SPECIES)

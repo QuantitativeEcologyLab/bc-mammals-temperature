@@ -17,10 +17,6 @@ d <- readRDS('data/hgam-speed-data.rds')
 m_1 <- readRDS('models/binomial-gam.rds')
 m_2 <- readRDS('models/gamma-gam.rds')
 
-# find unique species
-SPECIES <- unique(m_1$model$species)
-N_SPECIES <- length(SPECIES)
-
 # backgrounds for plots ----
 tod <- tibble(x = c(seq(0, 6, by = 0.01),
                     seq(18, 24, by = 0.01)),

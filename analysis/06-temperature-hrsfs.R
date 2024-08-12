@@ -207,8 +207,6 @@ if(file.exists('data/tracking-data/rsf-data.rds')) {
 #' distances from water.
 #' - dividing `detected` by `K` and adding `K` in the weights does not
 #' improve the model fit
-SPECIES <- unique(d$species)
-
 # find number of quadrature points per each detection
 d %>%
   group_by(species) %>%
