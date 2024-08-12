@@ -49,6 +49,23 @@ uds <- d %>%
       pull(geometry))
 
 # create the figures ----
+# tels only
+p_tels <-
+  ggplot() +
+  geom_sf(data = bc) +
+  geom_sf(aes(geometry = geometry, color = dataset_name), tels,
+          size = 0.1) +
+  scale_fill_manual(name = NULL, values = PAL, labels = parse_format(),
+                    aesthetics = c('color', 'fill')) +
+  labs(x = NULL, y = NULL) +
+  theme_void() +
+  theme(legend.position = 'inside', legend.position.inside = c(-0.025, 0.5),
+        legend.justification = c(0, 0)) +
+  guides(color = guide_legend(override.aes = list(alpha = 1, size = 1)))
+
+ggsave('figures/tels-map.png', plot = p_tels,
+       width = 10, height = 8.5, units = 'in', dpi = 600, bg = 'white')
+
 # UDs only
 p_uds <-
   ggplot() +
