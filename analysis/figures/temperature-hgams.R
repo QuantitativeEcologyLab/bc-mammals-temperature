@@ -343,7 +343,7 @@ surface <- function(newd, term) {
     predict(object = m_1, newdata = newd, type = 'link',
             se.fit = FALSE,
             terms = c('(Intercept)', 's(species)',
-                      paste0('s(', term, ',):species', SPECIES),
+                      paste0('s(', term, '):species', SPECIES),
                       paste0('ti(temp_c,', term, '):species', SPECIES)),
             discrete = FALSE) %>%
     as.data.frame() %>%
