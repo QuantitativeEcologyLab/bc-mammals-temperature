@@ -40,7 +40,7 @@ PAL_SEASONS <- c('forestgreen', 'goldenrod', 'darkorange4', 'grey90', 'grey90')
 season_breaks <-
   as.Date(paste0('2024-', c('03-20', '06-20', '09-22', '12-21'))) + 45
 
-# make predictions ----
+# marginal term plots ----
 #' not averaging across uniform `tod_pdt` and `doy` because I want to
 #' preserve the uneaven sampling of `doy` for `E(speed | moving)`
 marginal <- function(newd, term) {
@@ -109,7 +109,8 @@ p_mov_tod <-
   scale_x_continuous(expand = c(0, 0), limits = c(0, 24),
                      breaks = c(0, 6, 12, 18),
                      labels = c('00:00', '06:00', '12:00', '18:00')) +
-  scale_y_continuous(limits = c(0, 0.75), expand = c(0, 0)) +
+  scale_y_continuous(limits = c(0, 0.75), expand = c(0, 0),
+                     breaks = c(0, 0.25, 0.5, 0.75)) +
   labs(x = 'Time of day (PDT)', y = 'P(moving)') +
   theme(legend.position = 'none',
         panel.grid.major.x = element_blank(),
@@ -250,21 +251,30 @@ newd_temp_c <- tibble(animal = 'new animal',
 
 preds_temp_c <- marginal(newd = newd_temp_c, term = 'temp_c')
 
+# change species names for rug plots
+d <- mutate(d,
+            species = gsub(' ', '~', species),
+            species = gsub('~\\(', '\\)~bold\\((', species),
+            species = paste0('bolditalic(', species, ')'))
+
 p_mov_temp <-
   ggplot(preds_temp_c) +
-  facet_wrap(~ species, nrow = 1, labeller = label_parsed) +
+  facet_wrap(~ species, nrow = 1, labeller = label_parsed,
+             scales = 'free') +
+  geom_rug(aes(temp_c), d, alpha = 0.1) +
   geom_ribbon(aes(temp_c, ymin = p_lwr, ymax = p_upr, fill = species),
               alpha = .2) +
   geom_line(aes(temp_c, p_mu, color = species), linewidth =  1) +
   scale_color_manual('Species', values = PAL,
                      aesthetics = c('color', 'fill')) +
   scale_x_continuous(paste0('Temperature (', '\U00B0', 'C)'))+
-  scale_y_continuous('P(moving)', expand = c(0, 0)) +
+  scale_y_continuous('P(moving)') +
   theme(legend.position = 'none')
 
 speed_temp <-
   ggplot(preds_temp_c) +
   facet_wrap(~ species, nrow = 1, labeller = label_parsed) +
+  geom_rug(aes(temp_c), filter(d, moving), alpha = 0.1) +
   geom_hline(yintercept = 1, color = 'grey') +
   geom_ribbon(aes(temp_c, ymin = s_lwr, ymax = s_upr, fill = species),
               alpha = .2) +
@@ -277,8 +287,8 @@ speed_temp <-
 
 distance_temp <-
   ggplot(preds_temp_c) +
-  coord_cartesian(ylim = c(0, 8)) +
-  facet_wrap(~ species, nrow = 1, labeller = label_parsed) +
+  facet_wrap(~ species, nrow = 1, labeller = label_parsed,
+             scales = 'free_y') +
   geom_hline(yintercept = 1, color = 'grey') +
   geom_ribbon(aes(temp_c, ymin = d_lwr, ymax = d_upr, fill = species),
               alpha = .2) +
@@ -310,7 +320,7 @@ temp_full <- plot_grid(p_mov_temp, speed_temp, distance_temp,
 ggsave('figures/temp_c-all.png', temp_full,
        width = 25, height = 13, dpi = 600, bg = 'white')
 
-# interaction plots ----
+# interaction term plots ----
 # color palettes
 s_pal <- colorRampPalette(c('#BD4301', '#EBE8DB', '#560A63'))(1e3)
 plot_scheme_colorblind(s_pal)
@@ -320,7 +330,7 @@ plot_scheme_colorblind(c(color('acton')(1e3), s_pal, d_pal))
 
 #' exclude values further from an observation than `DIST * 100%` of the
 #' range of the observed data
-DIST <- 0.25
+DIST <- 0.1
 
 # make more appropriate scale breaks
 z_breaks <- seq(-1, 1, length.out = 5)
@@ -375,7 +385,7 @@ newd_tod <- expand_grid(animal = 'new animal',
                         dt = 0) %>%
   nest(dat = -species) %>%
   mutate(dat = map2(dat, species, \(.d, .s) {
-    ref <- filter(d, species == .s)
+    ref <- filter(m_1$model, species == .s)
     
     filter(.d, ! too_far(x = tod_pdt, y = temp_c, ref_1 = ref$tod_pdt,
                          ref_2 = ref$temp_c, dist = DIST)) %>%
@@ -397,7 +407,8 @@ p_mov_tod_int <-
                      breaks = c(-20, 0, 20)) +
   scale_y_continuous('Time of day (PDT)', expand = c(0, 0),
                      breaks = tod_breaks, labels = tod_labs) +
-  scale_fill_acton(name = 'P(moving)', limits = c(0, NA)) +
+  scale_fill_acton(name = 'P(moving)', limits = c(0, 0.3),
+                   breaks = seq(0, 0.3, by = 0.1)) +
   theme(panel.background = element_rect(fill = 'grey'),
         legend.position = 'inside', legend.position.inside = c(0.66, 0.15),
         legend.key.width = rel(1.5),  legend.justification = 'center',
@@ -464,7 +475,7 @@ newd_doy <- expand_grid(animal = 'new animal',
                         dt = 0) %>%
   nest(dat = -species) %>%
   mutate(dat = map2(dat, species, \(.d, .s) {
-    ref <- filter(d, species == .s)
+    ref <- filter(m_1$model, species == .s)
     
     filter(.d, ! too_far(x = doy, y = temp_c, ref_1 = ref$doy,
                          ref_2 = ref$temp_c, dist = DIST)) %>%
@@ -552,7 +563,6 @@ get_legend <- function(.plot) {
 }
 
 p_mov <- plot_grid(
-  p_mov_temp,
   get_legend(p_mov_tod_int),
   p_mov_tod_int +
     facet_wrap(~ species, labeller = label_parsed, nrow = 1) +
@@ -560,12 +570,11 @@ p_mov <- plot_grid(
   p_mov_doy_int +
     facet_wrap(~ species, labeller = label_parsed, nrow = 1) +
     theme(legend.position = 'none'),
-  labels = c('A', '', 'B', 'C'), ncol = 1, rel_heights = c(1, 0.2, 1, 1))
+  labels = c('', 'A', 'B'), ncol = 1, rel_heights = c(0.2, 1, 1))
 ggsave('figures/p-moving.png', p_mov,
-       width = 20, height = 15, dpi = 600, bg = 'white')
+       width = 20, height = 10, dpi = 600, bg = 'white')
 
 speed <- plot_grid(
-  speed_temp,
   get_legend(s_tod_int),
   s_tod_int +
     facet_wrap(~ species, labeller = label_parsed, nrow = 1) +
@@ -573,12 +582,11 @@ speed <- plot_grid(
   s_doy_int +
     facet_wrap(~ species, labeller = label_parsed, nrow = 1) +
     theme(legend.position = 'none'),
-  labels = c('A', '', 'B', 'C'), ncol = 1, rel_heights = c(1, 0.2, 1, 1))
+  labels = c('', 'A', 'B'), ncol = 1, rel_heights = c(0.2, 1, 1))
 ggsave('figures/speed.png', speed,
-       width = 20, height = 15, dpi = 600, bg = 'white')
+       width = 20, height = 10, dpi = 600, bg = 'white')
 
 distance <- plot_grid(
-  distance_temp,
   get_legend(d_tod_int),
   d_tod_int +
     facet_wrap(~ species, labeller = label_parsed, nrow = 1) +
@@ -586,6 +594,6 @@ distance <- plot_grid(
   d_doy_int +
     facet_wrap(~ species, labeller = label_parsed, nrow = 1) +
     theme(legend.position = 'none'),
-  labels = c('A', '', 'B', 'C'), ncol = 1, rel_heights = c(1, 0.2, 1, 1))
+  labels = c('', 'A', 'B'), ncol = 1, rel_heights = c(0.2, 1, 1))
 ggsave('figures/distance.png', distance,
-       width = 20, height = 15, dpi = 600, bg = 'white')
+       width = 20, height = 10, dpi = 600, bg = 'white')
