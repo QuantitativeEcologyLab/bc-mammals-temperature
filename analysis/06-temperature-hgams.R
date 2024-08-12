@@ -158,7 +158,7 @@ plot_grid(
 if(file.exists('models/binomial-gam.rds')) {
   m_1 <- readRDS('models/binomial-gam.rds')
 } else {
-m_1 <-
+  m_1 <-
     bam(moving ~
           # random intercept for each animal
           s(animal, bs = 're') +
@@ -197,26 +197,35 @@ m_1 <-
 }
 
 # check predictions ----
-transmute(d,
-          species,
-          moving,
-          est = predict(m_1, type = 'response') %>%
-            round(2)) %>%
+p_op <- 
+  transmute(d,
+            species,
+            moving,
+            est = predict(m_1, type = 'response') %>%
+              round(2)) %>%
   group_by(species, est) %>%
   summarise(empirical_mean = mean(moving),
             n = n(),
+            se = sd(moving) / sqrt(n),
+            lwr = empirical_mean - se,
+            upr = empirical_mean + se,
             .groups = 'drop') %>%
+  mutate(species = gsub(' ', '~', species),
+         species = gsub('~\\(', '\\)~bold\\((', species),
+         species = paste0('bolditalic(', species, ')')) %>%
   ggplot(aes(est, empirical_mean, color = log2(n))) +
-  facet_wrap(~ species) +
-  geom_abline(slope = 1, intercept = 0, color = 'red') +
+  facet_wrap(~ species, nrow = 2, labeller = label_parsed) +
+  geom_abline(slope = 1, intercept = 0, color = 'grey') +
+  geom_errorbar(aes(est, ymin = lwr, ymax = upr), width = 0, alpha = 0.3) +
   geom_point() +
   lims(x = c(0, 1), y = c(0, 1)) +
   scale_color_viridis_c(breaks = 4 * (0:5), labels = 2^(2 * 0:5),
                         limits = c(0, 16)) +
-  labs(x = 'Predicted P(moving)', y = 'Observed P(moving)')
+  labs(x = 'Predicted P(moving)', y = 'Observed P(moving)') +
+  theme(legend.position = 'inside', legend.position.inside = c(0.875, 0.25))
 
-ggsave('figures/p-moving-observed-vs-predicted.png',
-       width = 8, height = 8, dpi = 600, bg = 'white')
+ggsave('figures/p-moving-observed-vs-predicted.png', p_op,
+       width = 12, height = 6, dpi = 600, bg = 'white')
 
 # model mean speed given that animals are moving ----
 # sampling is relatively consistent over DOY with some additional bursts
@@ -316,18 +325,30 @@ if(file.exists('models/gamma-gam.rds')) {
     theme(legend.position = 'none')
 }
 
-mutate(d_2, mu = predict(m_2, type = 'response')) %>%
+s_op <-
+  mutate(d_2, mu = predict(m_2, type = 'response'),
+         species = gsub(' ', '~', species),
+         species = gsub('~\\(', '\\)~bold\\((', species),
+         species = paste0('bolditalic(', species, ')')) %>%
   ggplot(aes(mu, speed_est, color = species)) +
-  facet_wrap(~ species, scales = 'free') +
+  facet_wrap(~ species, scales = 'free', nrow = 2, labeller = label_parsed) +
+  geom_point(alpha = 0.1, size = 0.1) +
   geom_abline(intercept = 0, slope = 1, color = 'grey') +
-  geom_point(alpha = 0.3, shape = '.', size = 2) +
   theme(legend.position = 'none') +
   scale_color_manual('Species', values = PAL,
                      aesthetics = c('color', 'fill')) +
-  labs(x = 'Predicted', y = 'Observed')
+  ylim(c(0, NA)) +
+  labs(x = 'Predicted speed (m/s)', y = 'Observed speed (m/s)') +
+  guides(color = guide_legend(override.aes = list(alpha = 1, size = 1))) +
+  theme(legend.position = 'none')
 
-ggsave('figures/speed-observed-vs-predicted.png',
-       width = 8, height = 8, dpi = 600, bg = 'white')
+ggsave('figures/speed-observed-vs-predicted.png', s_op,
+       width = 12, height = 6, dpi = 600, bg = 'white')
+
+op <- plot_grid(p_op, s_op, labels = 'AUTO', ncol = 1)
+
+ggsave('figures/p-and-speed-observed-vs-predicted.png', op,
+       width = 12, height = 12, dpi = 600, bg = 'white')
 
 # sampling interval has a small effect on estimated state and speed ----
 dt_breaks <- c(-5, 0, 5)
@@ -359,7 +380,7 @@ preds_dt <-
             temp_c = 0) %>%
   mutate(dt = map2(min_log_dt, max_log_dt, \(.a, .b) {
     tibble(dt = exp(seq(.a, .b, by = 0.01)))
-    })) %>%
+  })) %>%
   unnest(dt) %>%
   select(! min_log_dt, ! max_log_dt) %>%
   bind_cols(
