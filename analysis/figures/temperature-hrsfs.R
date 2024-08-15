@@ -115,7 +115,8 @@ preds %>%
   facet_grid(variable ~ lab, scales = 'free', labeller = label_parsed,
              switch = 'y') +
   geom_raster(aes(temperature_C, x, fill = log2(lambda))) +
-  scale_x_continuous(paste0('Temperature (\U00B0', 'C)'), expand = c(0, 0)) +
+  scale_x_continuous(paste0('Temperature (\U00B0', 'C)'), expand = c(0, 0),
+                     breaks = c(-20, 0, 20)) +
   scale_y_continuous(NULL, expand = c(0, 0)) +
   scale_fill_sunset(name = 'Relative selection strength', midpoint = 0,
                     limits = c(-2, 2), breaks = -2:2, labels = 2^c(-2:2)) +
@@ -123,5 +124,5 @@ preds %>%
         strip.text.y = element_text(size = 11), legend.position = 'top',
         panel.background = element_rect(fill = 'grey'))
 
-ggsave('figures/rsf-surface-plots.png', width = 3 * nrow(d), height = 10,
+ggsave('figures/rsf-surface-plots.png', width = 2.5 * nrow(d), height = 8,
        units = 'in', dpi = 600, bg = 'white')
