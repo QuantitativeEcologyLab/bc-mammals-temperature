@@ -173,17 +173,13 @@ if(file.exists('data/tracking-data/rsf-data.rds')) {
       unnest(zeros)
     saveRDS(d_0, paste0('data/quadrature-data-', Sys.Date(), '.rds'))
   } else {
-    d_0 <- readRDS('data/quadrature-data-2024-08-02.rds')
+    d_0 <- readRDS('data/quadrature-data-2024-08-13.rds')
   }
   
   # bind observed and quadrature locations together
   d <- bind_rows(d_1, d_0) %>%
     mutate(species = factor(species),
            animal = factor(animal))
-  
-  d %>%
-    group_by(species) %>%
-    summarise(ratio = sum(weight * (1 - detected)))
   
   saveRDS(d, 'data/tracking-data/rsf-data.rds')
   
@@ -211,7 +207,7 @@ if(file.exists('data/tracking-data/rsf-data.rds')) {
 # find number of quadrature points per each detection
 d %>%
   group_by(species) %>%
-  summarize(unweighted = 1 / mean(d$detected),
+  summarize(unweighted = 1 / mean(detected),
             weighted = 1 / mean(detected * weight))
 
 # arrange by number of rows
@@ -265,8 +261,8 @@ for(sp in SPECIES) {
          scale = 1.5)
   
   summary(rsf, re.test = FALSE)
-}
-
-if(FALSE) {
-  appraise(rsf, type = 'pearson')
+  
+  if(FALSE) {
+    appraise(rsf, type = 'pearson')
+  }
 }

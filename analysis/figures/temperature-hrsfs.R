@@ -12,34 +12,40 @@ plot_scheme(PAL, colours = TRUE)
 
 # import models for each species
 d <- tibble(
-  species = SPECIES[c(1:2, 7)],
-  lab = SPECIES_LABS[c(1:2, 7)],
+  species = SPECIES,
+  lab = SPECIES_LABS,
   file_name = map_chr(species, \(.sp) {
-    list.files(path = 'H:/GitHub/bc-mammals-temperature/models/',
-               pattern = gsub('\\(s\\.', 'southern', .sp) %>%
-                 gsub('\\(', '', .) %>%
-                 gsub('\\)', '', .) %>%
-                 paste0('rsf-', .),
-               full.names = TRUE)
-  }),
-  rsf = map(file_name, readRDS),
-  local_newd = map(species, tibble))
-
+    fn <- list.files(path = 'H:/GitHub/bc-mammals-temperature/models/',
+                     pattern = gsub('\\(s\\.', 'southern', .sp) %>%
+                       gsub('\\(', '', .) %>%
+                       gsub('\\)', '', .) %>%
+                       paste0('rsf-', .),
+                     full.names = TRUE)
+    if(length(fn) == 0) fn <- NA_character_
+    return(fn)
+  })) %>%
+  filter(! is.na(file_name)) %>%
+  mutate(rsf = map(file_name, readRDS),
+         local_newd = map(species, tibble))
 d
 
 # get range of predictors
-d0 <- readRDS('data/tracking-data/rsf-data.rds')
-range(d0$elevation_m)
-range(d0$dist_water_m)
-range(d0$temperature_C)
+readRDS('data/tracking-data/rsf-data.rds') %>%
+  filter(detected == 1) %>%
+  summarize(min_elevation_m = min(elevation_m),
+            max_elevation_m = max(elevation_m),
+            min_dist_water_m = min(dist_water_m),
+            max_dist_water_m = max(dist_water_m),
+            min_temperature_C = min(temperature_C),
+            max_temperature_C = max(temperature_C))
 
 # surface plots of partial effects ----
 newd <-
   tibble(animal = 'new animal',
          temperature_C = seq(-40, 40, length.out = 400),
-         x = tibble(forest_perc = seq(0, 100, length.out = 400),
-                    elevation_m = seq(0, 2500, length.out = 400),
-                    dist_water_m = seq(0, 5e3, length.out = 400)) %>%
+         x = tibble(forest_perc = seq(0, 100, length.out = 500),
+                    elevation_m = seq(0, 5000, length.out = 500),
+                    dist_water_m = seq(0, 30e3, length.out = 500)) %>%
            list()) %>%
   unnest(x)
 
@@ -56,7 +62,8 @@ surface <- function(m, dist = 0.1) {
                 terms = c('s(forst_perc)',
                           'ti(forest_perc,temperature_C)')),
       too_far = too_far(temperature_C, x,
-                        m$model$temperature_C, m$model$forest_perc,
+                        filter(m$model, detected == 1)$temperature_C,
+                        filter(m$model, detected == 1)$forest_perc,
                         dist = dist)),
     transmute(
       newd,
@@ -67,10 +74,11 @@ surface <- function(m, dist = 0.1) {
         predict(object = m, newdata = newd, type = 'response',
                 se.fit = FALSE, discrete = FALSE, newdata.guaranteed = TRUE,
                 terms = c('s(elevation_m)',
-                          'ti(elevation_m,temperature_C)'),
+                          'ti(elevation_m,temperature_C)')),
       too_far = too_far(temperature_C, x,
-                        m$model$temperature_C, m$model$elevation_m,
-                        dist = 1))),
+                        filter(m$model, detected == 1)$temperature_C,
+                        filter(m$model, detected == 1)$elevation_m,
+                        dist = dist)),
     transmute(
       newd,
       temperature_C,
@@ -81,9 +89,10 @@ surface <- function(m, dist = 0.1) {
                 se.fit = FALSE, discrete = FALSE, newdata.guaranteed = TRUE,
                 terms = c('s(dist_water_m)',
                           'ti(dist_water_m,temperature_C)')),
-    too_far = too_far(temperature_C, x,
-                      m$model$temperature_C, m$model$dist_water_m,
-                      dist = dist)))
+      too_far = too_far(temperature_C, x,
+                        filter(m$model, detected == 1)$temperature_C,
+                        filter(m$model, detected == 1)$dist_water_m,
+                        dist = dist)))
 }
 
 # predict partial effects
@@ -96,10 +105,9 @@ preds <- d %>%
 preds %>%
   select(species, lab, x, temperature_C, variable, lambda, too_far) %>%
   group_by(species, variable) %>%
-  mutate(lambda = lambda / median(lambda)) %>%
+  mutate(lambda = lambda / median(lambda[which(! too_far)])) %>%
   ungroup() %>%
-  #' **elevation gets dropped if only using too_far because it's NA**
-  filter((! too_far) | variable == 'bold(Elevation~(m))') %>%
+  filter((! too_far)) %>%
   mutate(lambda = case_when(lambda > 4 ~ 4,
                             lambda < 0.25 ~ 0.25,
                             TRUE ~ lambda)) %>%
@@ -112,49 +120,8 @@ preds %>%
   scale_fill_sunset(name = 'Relative selection strength', midpoint = 0,
                     limits = c(-2, 2), breaks = -2:2, labels = 2^c(-2:2)) +
   theme(strip.placement = 'outside', strip.background.y = element_blank(),
-        strip.text.y = element_text(size = 11), legend.position = 'top')
+        strip.text.y = element_text(size = 11), legend.position = 'top',
+        panel.background = element_rect(fill = 'grey'))
 
-# old code -----
-
-# predict habitat quality
-hq <- mutate(hq,
-             preds = map2(model, species,
-                          \(.m, .sp) {
-                            mutate(
-                              filter(newd, species == .sp),
-                              mu = predict(
-                                .m, newdata = filter(newd, species == .sp),
-                                type = 'response') %>%
-                                # take yearly averages
-                                group_by(scenario, year) %>%
-                                summarize(mu = mean(mu), .groups = 'drop'))
-                          }))
-
-hq_rel <-
-  hq %>%
-  select(-model) %>%
-  unnest(preds) %>%
-  # scale to ralative change
-  group_by(species, scenario) %>%
-  mutate(ref = mu[2],
-         mu_rel = mu / ref) %>%
-  ungroup() %>%
-  mutate(mu_rel = if_else(mu_rel < 0.25, 0.25, mu_rel),
-         mu_rel = if_else(mu_rel > 4, 4, mu_rel))
-
-# plot the estimated change
-ggplot(hq_rel, aes(year, mu_rel, color = scenario)) +
-  facet_wrap(~ species, scales = 'fixed') +
-  geom_hline(yintercept = 1, color = 'grey') +
-  geom_point() +
-  geom_smooth(se = FALSE, method = 'gam', formula = y ~ s(x)) +
-  xlab(NULL) +
-  scale_y_continuous(expression(Relative~change~'in'~habitat~quality~(log[2])),
-                     trans = 'log2') +
-  scale_color_brewer('Scenario', type = 'div', palette = 5, direction = -1,
-                     aesthetics = c('color', 'fill')) +
-  theme(legend.position = c(0.85, 0.2))
-
-ggsave('figures/climate-change-habitat-quality-relative.png',
-       width = 10, height = 5, dpi = 600, bg = 'white')
-
+ggsave('figures/rsf-surface-plots.png', width = 3 * nrow(d), height = 10,
+       units = 'in', dpi = 600, bg = 'white')
