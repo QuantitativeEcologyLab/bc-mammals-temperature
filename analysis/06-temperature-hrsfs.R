@@ -126,7 +126,7 @@ if(file.exists('data/tracking-data/rsf-data.rds')) {
   # check range of temperatures
   range(d_1$temperature_C, na.rm = TRUE)
   
-  if(! file.exists('data/quadrature-data-2024-08-02.rds')) {
+  if(! file.exists('data/quadrature-data-2024-08-13.rds')) {
     d_0 <- mm %>%
       transmute(
         animal, # for each animal
@@ -139,7 +139,8 @@ if(file.exists('data/tracking-data/rsf-data.rds')) {
           # uniform temperatures to compare to no selection
           null_temperatures <- filter(d_1, species == .species) %>%
             pull(temperature_C) %>%
-            quantile(probs = c(0.1, 0.3, 0.5, 0.7, 0.9), na.rm = TRUE) %>%
+            quantile(probs = c(0.05, 0.1, 0.3, 0.5, 0.7, 0.9, 0.95),
+                     na.rm = TRUE) %>%
             unname()
           
           q <-
