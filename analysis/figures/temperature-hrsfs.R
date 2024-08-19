@@ -44,12 +44,12 @@ newd <-
   tibble(animal = 'new animal',
          temperature_C = seq(-40, 40, length.out = 400),
          x = tibble(forest_perc = seq(0, 100, length.out = 500),
-                    elevation_m = seq(0, 5000, length.out = 500),
-                    dist_water_m = seq(0, 30e3, length.out = 500)) %>%
+                    elevation_m = seq(0, 3000, length.out = 500),
+                    dist_water_m = seq(0, 25e3, length.out = 500)) %>%
            list()) %>%
   unnest(x)
 
-surface <- function(m, dist = 0.1) {
+surface <- function(m, dist_1 = 0.01, dist_2 = 0.1) {
   bind_rows(
     transmute(
       newd,
@@ -61,10 +61,14 @@ surface <- function(m, dist = 0.1) {
                 se.fit = FALSE, discrete = FALSE, newdata.guaranteed = TRUE,
                 terms = c('s(forst_perc)',
                           'ti(forest_perc,temperature_C)')),
-      too_far = too_far(temperature_C, x,
-                        filter(m$model, detected == 1)$temperature_C,
-                        filter(m$model, detected == 1)$forest_perc,
-                        dist = dist)),
+      too_far_1 = too_far(temperature_C, x,
+                          filter(m$model, detected == 1)$temperature_C,
+                          filter(m$model, detected == 1)$forest_perc,
+                          dist = dist_1),
+      too_far_2 = too_far(temperature_C, x,
+                          filter(m$model, detected == 1)$temperature_C,
+                          filter(m$model, detected == 1)$forest_perc,
+                          dist = dist_2)),
     transmute(
       newd,
       temperature_C,
@@ -75,10 +79,14 @@ surface <- function(m, dist = 0.1) {
                 se.fit = FALSE, discrete = FALSE, newdata.guaranteed = TRUE,
                 terms = c('s(elevation_m)',
                           'ti(elevation_m,temperature_C)')),
-      too_far = too_far(temperature_C, x,
-                        filter(m$model, detected == 1)$temperature_C,
-                        filter(m$model, detected == 1)$elevation_m,
-                        dist = dist)),
+      too_far_1 = too_far(temperature_C, x,
+                          filter(m$model, detected == 1)$temperature_C,
+                          filter(m$model, detected == 1)$elevation_m,
+                          dist = dist_1),
+      too_far_2 = too_far(temperature_C, x,
+                          filter(m$model, detected == 1)$temperature_C,
+                          filter(m$model, detected == 1)$elevation_m,
+                          dist = dist_2)),
     transmute(
       newd,
       temperature_C,
@@ -89,10 +97,14 @@ surface <- function(m, dist = 0.1) {
                 se.fit = FALSE, discrete = FALSE, newdata.guaranteed = TRUE,
                 terms = c('s(dist_water_m)',
                           'ti(dist_water_m,temperature_C)')),
-      too_far = too_far(temperature_C, x,
-                        filter(m$model, detected == 1)$temperature_C,
-                        filter(m$model, detected == 1)$dist_water_m,
-                        dist = dist)))
+      too_far_1 = too_far(temperature_C, x,
+                          filter(m$model, detected == 1)$temperature_C,
+                          filter(m$model, detected == 1)$dist_water_m,
+                          dist = dist_1),
+      too_far_2 = too_far(temperature_C, x,
+                          filter(m$model, detected == 1)$temperature_C,
+                          filter(m$model, detected == 1)$dist_water_m,
+                          dist = dist_2)))
 }
 
 # predict partial effects
@@ -103,18 +115,27 @@ preds <- d %>%
   unnest(lambdas)
 
 preds %>%
-  select(species, lab, x, temperature_C, variable, lambda, too_far) %>%
+  select(species, lab, x, temperature_C, variable, lambda, too_far_1,
+         too_far_2) %>%
+  filter((! too_far_2)) %>%
   group_by(species, variable) %>%
-  mutate(lambda = lambda / median(lambda[which(! too_far)])) %>%
+  mutate(lambda = lambda / median(lambda[which(! too_far_1)])) %>%
   ungroup() %>%
-  filter((! too_far)) %>%
-  mutate(lambda = case_when(lambda > 4 ~ 4,
-                            lambda < 0.25 ~ 0.25,
-                            TRUE ~ lambda)) %>%
+  mutate(
+    log2_lambda = log2(lambda),
+    log2_lambda = case_when(log2_lambda > 2 ~ 2,
+                            log2_lambda < -2 ~ -2,
+                            TRUE ~ log2_lambda),
+    variable = factor(variable,
+                      levels = c("bold(Forest~cover~('%'))",
+                                 "bold(Elevation~(m))",
+                                 "bold(Distance~from~water~(m))"))) %>%
   ggplot() +
   facet_grid(variable ~ lab, scales = 'free', labeller = label_parsed,
              switch = 'y') +
-  geom_raster(aes(temperature_C, x, fill = log2(lambda))) +
+  geom_raster(aes(temperature_C, x, fill = log2_lambda)) +
+  geom_contour(aes(temperature_C, x, z = as.numeric(too_far_1)),
+               color = 'grey', linewidth = 0.25) +
   scale_x_continuous(paste0('Temperature (\U00B0', 'C)'), expand = c(0, 0),
                      breaks = c(-20, 0, 20)) +
   scale_y_continuous(NULL, expand = c(0, 0)) +
