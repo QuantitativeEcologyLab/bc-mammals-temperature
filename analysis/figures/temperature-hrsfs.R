@@ -30,14 +30,16 @@ d <- tibble(
 d
 
 # get range of predictors
-readRDS('data/tracking-data/rsf-data.rds') %>%
-  filter(detected == 1) %>%
-  summarize(min_elevation_m = min(elevation_m),
-            max_elevation_m = max(elevation_m),
-            min_dist_water_m = min(dist_water_m),
-            max_dist_water_m = max(dist_water_m),
-            min_temperature_C = min(temperature_C),
-            max_temperature_C = max(temperature_C))
+if(FALSE) {
+  readRDS('data/tracking-data/rsf-data.rds') %>%
+    filter(detected == 1) %>%
+    summarize(min_elevation_m = min(elevation_m),
+              max_elevation_m = max(elevation_m),
+              min_dist_water_m = min(dist_water_m),
+              max_dist_water_m = max(dist_water_m),
+              min_temperature_C = min(temperature_C),
+              max_temperature_C = max(temperature_C))
+}
 
 # surface plots of partial effects ----
 newd <-
@@ -73,7 +75,7 @@ surface <- function(m, dist_1 = 0.01, dist_2 = 0.1) {
       newd,
       temperature_C,
       x = elevation_m,
-      variable = 'bold(Elevation~(m))',
+      variable = 'bold(Elevation~(km))',
       lambda =
         predict(object = m, newdata = newd, type = 'response',
                 se.fit = FALSE, discrete = FALSE, newdata.guaranteed = TRUE,
@@ -86,12 +88,13 @@ surface <- function(m, dist_1 = 0.01, dist_2 = 0.1) {
       too_far_2 = too_far(temperature_C, x,
                           filter(m$model, detected == 1)$temperature_C,
                           filter(m$model, detected == 1)$elevation_m,
-                          dist = dist_2)),
+                          dist = dist_2),
+      x = x / 1e3),
     transmute(
       newd,
       temperature_C,
       x = dist_water_m,
-      variable = 'bold(Distance~from~water~(m))',
+      variable = 'bold(Distance~from~water~(km))',
       lambda =
         predict(object = m, newdata = newd, type = 'response',
                 se.fit = FALSE, discrete = FALSE, newdata.guaranteed = TRUE,
@@ -104,7 +107,8 @@ surface <- function(m, dist_1 = 0.01, dist_2 = 0.1) {
       too_far_2 = too_far(temperature_C, x,
                           filter(m$model, detected == 1)$temperature_C,
                           filter(m$model, detected == 1)$dist_water_m,
-                          dist = dist_2)))
+                          dist = dist_2),
+      x = x / 1e3))
 }
 
 # predict partial effects
@@ -118,8 +122,8 @@ preds %>%
   select(species, lab, x, temperature_C, variable, lambda, too_far_1,
          too_far_2) %>%
   filter((! too_far_2)) %>%
-  group_by(species, variable) %>%
-  mutate(lambda = lambda / median(lambda[which(! too_far_1)])) %>%
+  group_by(species, variable, temperature_C) %>%
+  mutate(lambda = lambda / median(lambda)) %>%
   ungroup() %>%
   mutate(
     log2_lambda = log2(lambda),
@@ -128,8 +132,8 @@ preds %>%
                             TRUE ~ log2_lambda),
     variable = factor(variable,
                       levels = c("bold(Forest~cover~('%'))",
-                                 "bold(Elevation~(m))",
-                                 "bold(Distance~from~water~(m))"))) %>%
+                                 "bold(Elevation~(km))",
+                                 "bold(Distance~from~water~(km))"))) %>%
   ggplot() +
   facet_grid(variable ~ lab, scales = 'free', labeller = label_parsed,
              switch = 'y') +
