@@ -74,9 +74,11 @@ uds <-
   }))
 
 # get resources for each species
-res(rast('data/resource-rasters/forest.tif'))
-res(rast('data/resource-rasters/bc-dem-z6.tif')) # higher res than others
-res(rast('data/resource-rasters/bc-distance-from-water.tif'))
+if(FALSE) {
+  res(rast('data/resource-rasters/forest.tif'))
+  res(rast('data/resource-rasters/bc-dem-z6.tif')) # higher res than others
+  res(rast('data/resource-rasters/bc-distance-from-water.tif'))
+}
 
 resources <- transmute(
   uds,
@@ -115,16 +117,21 @@ resources %>%
 temps <-
   readRDS('H:/GitHub/bc-mammals-temperature/data/weather-projections.rds')
 
-unique_locs <- temps %>%
-  select(species, long, lat) %>%
-  unique()
+gc() # clean up
 
-unique_locs <- mutate(
+unique_locs <-
+  readRDS('data/climate-yearly-projections-2024-06-11.rds') %>%
+  transmute(long = longitude, lat = latitude) %>%
+  group_by(long, lat) %>%
+  slice(1) %>%
+  ungroup()
+
+unique_locs_spp <- mutate(
   uds,
   subset = map(akdes, \(.ud) {
     unique_locs %>%
       transmute(
-        long, lat, # drop other columns
+        long, lat, # drop all other columns
         inside =
           st_intersects(
             unique_locs %>%
@@ -140,5 +147,32 @@ unique_locs <- mutate(
   select(! akdes) %>%
   unnest(subset)
 
-temps <- left_join(unique_locs, temps)
+ggplot(unique_locs_spp, aes(long, lat)) +
+  facet_wrap(~ species, scales = 'free') +
+  geom_point() +
+  labs(x = NULL, y = NULL)
 
+gc() # clean up
+
+temps <- filter(temps,
+                long >= min(unique_locs_spp$long),
+                long <= max(unique_locs_spp$long),
+                lat >= min(unique_locs_spp$lat),
+                lat <= max(unique_locs_spp$lat))
+
+map(unique(unique_locs_spp$species), \(.s) {
+  .u <- unique_locs_spp %>%
+    filter(species == .s)
+
+  .t <- filter(temps,
+               long >= min(.u$long),
+               long <= max(.u$long),
+               lat >= min(.u$lat),
+               lat <= max(.u$lat))
+
+  .u %>%
+    left_join(.t, by = c('long', 'lat')) %>%
+    saveRDS(paste0('data/weather-projections-', .s, '.rds'))
+  
+  return(as.character(.s))
+})
