@@ -179,7 +179,7 @@ if(file.exists('models/binomial-gam.rds')) {
         family = binomial(link = 'logit'),
         data = d,
         method = 'fREML', # fast REML
-        discrete = TRUE, # discretize the posterior for faster computation
+        discrete = TRUE, # discretize the covariates for faster computation
         knots = list(tod_pdt = c(0, 1), doy = c(0.5, 366.5)),# for bs = 'cc'
         control = gam.control(trace = TRUE))
   saveRDS(m_1, 'models/binomial-gam.rds')
@@ -273,7 +273,7 @@ if(file.exists('models/gamma-gam.rds')) {
       family = Gamma(link = 'log'), # can use Gamma because no zeros
       data = d_2,
       method = 'fREML', # fast REML
-      discrete = TRUE, # discretize the posterior for faster computation
+      discrete = TRUE, # discretize the covariates for faster computation
       knots = list(tod_pdt = c(0, 1), doy = c(0.5, 366.5)),
       control = gam.control(trace = TRUE))
   hist(resid(m_2))
