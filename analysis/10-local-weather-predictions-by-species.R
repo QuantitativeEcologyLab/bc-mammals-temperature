@@ -13,29 +13,6 @@ library('terra')   # for rasters
 source('analysis/figures/default-ggplot-theme.R') # bold text and no grids
 plot_scheme(PAL, colours = TRUE)
 
-# import data
-d <- readRDS('data/hgam-speed-data.rds')
-
-# import models
-m_1 <- readRDS('models/binomial-gam.rds')
-m_2 <- readRDS('models/gamma-gam.rds')
-rsfs <- tibble(
-  species = SPECIES,
-  lab = SPECIES_LABS,
-  file_name = map_chr(species, \(.sp) {
-    fn <- list.files(path = 'H:/GitHub/bc-mammals-temperature/models/',
-                     pattern = gsub('\\(s\\.', 'southern', .sp) %>%
-                       gsub('\\(', '', .) %>%
-                       gsub('\\)', '', .) %>%
-                       paste0('rsf-', .),
-                     full.names = TRUE)
-    if(length(fn) == 0) fn <- NA_character_
-    return(fn)
-  })) %>%
-  filter(! is.na(file_name)) %>%
-  mutate(rsf = map(file_name, readRDS),
-         local_newd = map(species, tibble))
-
 # get range-resident animals
 ANIMALS <- readr::read_csv('data/tracking-data/telemetry-metadata.csv',
                            show_col_types = FALSE) %>%
