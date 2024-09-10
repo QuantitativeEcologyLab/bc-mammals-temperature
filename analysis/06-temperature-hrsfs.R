@@ -236,13 +236,13 @@ for(sp in SPECIES) {
       s(dist_water_m, k = 6, bs = 'tp') +
       # animal-level deviations from the species-level average
       s(animal, bs = 're') +
-      s(forest_perc, animal, k = 6, bs = 'fs') +
-      s(elevation_m, animal, k = 6, bs = 'fs') +
-      s(dist_water_m, animal, k = 6, bs = 'fs') +
+      s(forest_perc, animal, k = 6, bs = 'fs', xt = list(bc = 'cr')) +
+      s(elevation_m, animal, k = 6, bs = 'fs', xt = list(bc = 'cr')) +
+      s(dist_water_m, animal, k = 6, bs = 'fs', xt = list(bc = 'cr')) +
       # changes in preference with temperature
-      ti(forest_perc, temperature_C, k = 6, bs = 'tp') +
-      ti(elevation_m, temperature_C, k = 6, bs = 'tp') +
-      ti(dist_water_m, temperature_C, k = 6, bs = 'tp'),
+      ti(forest_perc, temperature_C, k = 4, bs = 'cr') +
+      ti(elevation_m, temperature_C, k = 4, bs = 'cr') +
+      ti(dist_water_m, temperature_C, k = 4, bs = 'cr'),
     family = poisson(link = 'log'),
     data = d,
     weights = weight,
