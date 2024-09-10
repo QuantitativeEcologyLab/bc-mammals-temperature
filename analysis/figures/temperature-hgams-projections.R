@@ -8,6 +8,7 @@ library('ggplot2')   # for fancy plots
 library('khroma')    # for colorblind-friendly color palettes
 library('cowplot')   # for fancy multi-panel plots
 source('analysis/figures/default-ggplot-theme.R') # bold text and no grids
+source('functions/labeller_perc.R')
 plot_scheme(PAL, colours = TRUE)
 
 # functions for calculating odds and back-transforming
@@ -103,14 +104,6 @@ if(file.exists('data/cc-hgam-projections.rds')) {
 beepr::beep(2)
 
 # make figures ----
-labeller_perc <- function(breaks) {
-  breaks <- round(breaks * 100 - 100, 1)
-  
-  if_else(breaks <= 0,
-          paste0(breaks, '%'),
-          paste0('+', breaks, '%'))
-}
-
 p_o_mov <-
   ggplot(cc_proj) +
   facet_wrap(~ species, scales = 'free_y', drop = FALSE,
