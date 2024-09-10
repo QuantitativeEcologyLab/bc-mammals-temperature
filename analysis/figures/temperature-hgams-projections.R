@@ -8,7 +8,7 @@ library('ggplot2')   # for fancy plots
 library('khroma')    # for colorblind-friendly color palettes
 library('cowplot')   # for fancy multi-panel plots
 source('analysis/figures/default-ggplot-theme.R') # bold text and no grids
-source('functions/labeller_perc.R')
+source('functions/labeller_perc.R') # for y axis labels in percentage
 plot_scheme(PAL, colours = TRUE)
 
 # functions for calculating odds and back-transforming
