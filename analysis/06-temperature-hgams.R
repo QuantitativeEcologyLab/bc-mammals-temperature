@@ -1,7 +1,7 @@
 library('dplyr')     # for data wrangling
 library('tidyr')     # for data wrangling
 library('purrr')     # for functional programming
-library('lubridate') # for smother date wrangling
+library('lubridate') # for smoother date wrangling
 library('mgcv')      # for Generalized Additive Models
 library('gratia')    # for ggplot-based figures for GAMs
 library('ggplot2')   # for fancy plots

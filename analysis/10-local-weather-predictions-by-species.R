@@ -1,15 +1,15 @@
 library('dplyr')     # for data wrangling
 library('tidyr')     # for data wrangling
 library('purrr')     # for functional programming
-library('lubridate') # for smother date wrangling
+library('lubridate') # for smoother date wrangling
 library('mgcv')      # for Generalized Additive Models
 library('gratia')    # for useful convenience functions for GAMs
 library('ggplot2')   # for fancy plots
 library('khroma')    # for colorblind-friendly color palettes
 library('cowplot')   # for fancy multi-panel plots
 library('sf')        # for spatial data
-library('ctmm')    # for movement models and utilization distributions
-library('terra')   # for rasters
+library('ctmm')      # for movement models and utilization distributions
+library('terra')     # for rasters
 source('analysis/figures/default-ggplot-theme.R') # bold text and no grids
 plot_scheme(PAL, colours = TRUE)
 
@@ -123,6 +123,8 @@ unique_locs_spp <- mutate(
   })) %>%
   select(! akdes) %>%
   unnest(subset)
+
+
 
 ggplot(unique_locs_spp, aes(long, lat)) +
   facet_wrap(~ species, scales = 'free') +

@@ -1,5 +1,5 @@
 library('dplyr')     # for data wrangling
-library('lubridate') # for smother date wrangling
+library('lubridate') # for smoother date wrangling
 library('mgcv')      # for Generalized Additive Models
 library('ggplot2')   # for fancy plots
 library('khroma')    # for colorblind-friendly color palettes
