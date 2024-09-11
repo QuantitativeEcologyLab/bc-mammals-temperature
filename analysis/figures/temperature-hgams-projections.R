@@ -67,15 +67,15 @@ if(file.exists('data/cc-hgam-projections.rds')) {
            d = p * s,
            d_upr = p_upr * s_upr) %>%
     group_by(scenario, year, species) %>%
-    summarize(p_lwr = mean(p_lwr, weight = weight),
-              s_lwr = mean(s_lwr, weight = weight),
-              d_lwr = mean(d_lwr, weight = weight),
-              p = mean(p, weight = weight),
-              s = mean(s, weight = weight),
-              d = mean(d, weight = weight),
-              p_upr = mean(p_upr, weight = weight),
-              s_upr = mean(s_upr, weight = weight),
-              d_upr = mean(d_upr, weight = weight),
+    summarize(p_lwr = weighted.mean(p_lwr, w = weight),
+              s_lwr = weighted.mean(s_lwr, w = weight),
+              d_lwr = weighted.mean(d_lwr, w = weight),
+              p = weighted.mean(p, w = weight),
+              s = weighted.mean(s, w = weight),
+              d = weighted.mean(d, w = weight),
+              p_upr = weighted.mean(p_upr, w = weight),
+              s_upr = weighted.mean(s_upr, w = weight),
+              d_upr = weighted.mean(d_upr, w = weight),
               .groups = 'drop') %>%
     # center by the mean of the 2020 estimates for each species
     arrange(year, species, scenario) %>%
@@ -98,7 +98,7 @@ if(file.exists('data/cc-hgam-projections.rds')) {
            species = gsub(' ', '~', species) %>%
              gsub('~\\(', '\\)~bold\\((', .) %>%
              paste0('bolditalic(', ., ')') %>%
-             factor(levels = SPECIES_LABS))
+             factor())
   saveRDS(cc_proj, 'data/cc-hgam-projections.rds')
 }
 beepr::beep(2)
