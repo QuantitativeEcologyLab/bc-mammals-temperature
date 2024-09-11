@@ -122,9 +122,11 @@ preds %>%
   select(species, lab, x, temperature_C, variable, lambda, too_far_1,
          too_far_2) %>%
   filter((! too_far_2)) %>%
-  group_by(species, variable, temperature_C) %>%
+  # re-scale the center (1) relative to the median value 
+  group_by(species, variable) %>%
   mutate(lambda = lambda / median(lambda)) %>%
   ungroup() %>%
+  # cap at 2^(+/-2)
   mutate(
     log2_lambda = log2(lambda),
     log2_lambda = case_when(log2_lambda > 2 ~ 2,
@@ -144,10 +146,11 @@ preds %>%
                      breaks = c(-20, 0, 20)) +
   scale_y_continuous(NULL, expand = c(0, 0)) +
   scale_fill_sunset(name = 'Relative selection strength', midpoint = 0,
-                    limits = c(-2, 2), breaks = -2:2, labels = 2^c(-2:2)) +
+                    limits = c(-2, 2), breaks = -2:2, labels = \(x) 2^x) +
   theme(strip.placement = 'outside', strip.background.y = element_blank(),
         strip.text.y = element_text(size = 11), legend.position = 'top',
-        panel.background = element_rect(fill = 'grey'))
+        panel.background = element_rect(fill = 'grey'),
+        legend.key.width = rel(2))
 
-ggsave('figures/rsf-surface-plots.png', width = 2.5 * nrow(d), height = 8,
+ggsave('figures/rsf-surface-plots.png', width = 17.5, height = 8,
        units = 'in', dpi = 600, bg = 'white')
