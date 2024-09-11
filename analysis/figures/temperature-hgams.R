@@ -594,4 +594,4 @@ distance <- plot_grid(
     theme(legend.position = 'none'),
   labels = c('', 'A', 'B'), ncol = 1, rel_heights = c(0.2, 1, 1))
 ggsave('figures/distance.png', distance,
-       width = 20, height = 10, dpi = 600, bg = 'white')
+       width = 16, height = 8, dpi = 600, bg = 'white')
