@@ -219,14 +219,15 @@ SPECIES <- d %>%
 
 for(sp in SPECIES) {
   cat('Working on ', as.character(sp), '...\n', sep = '')
-  d %>%
-    filter(species == sp) %>%
-    pivot_longer(c(forest_perc, elevation_m, dist_water_m)) %>%
-    ggplot() +
-    facet_wrap(~ name, scales = 'free') +
-    geom_histogram(aes(value, fill = factor(detected)),
-                   position = 'identity', alpha = 0.5, bins = 10) +
-    scale_fill_brewer('Detected', type = 'qual', palette = 6)
+  print(
+    d %>%
+      filter(species == sp) %>%
+      pivot_longer(c(forest_perc, elevation_m, dist_water_m)) %>%
+      ggplot() +
+      facet_wrap(~ name, scales = 'free') +
+      geom_histogram(aes(value, fill = factor(detected)),
+                     position = 'identity', alpha = 0.5, bins = 10) +
+      scale_fill_brewer('Detected', type = 'qual', palette = 6))
   
   rsf <- bam(
     detected ~
