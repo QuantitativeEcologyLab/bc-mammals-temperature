@@ -8,6 +8,7 @@ library('ggplot2')   # for fancy plots
 library('khroma')    # for colorblind-friendly color palettes
 library('cowplot')   # for fancy multi-panel plots
 source('analysis/figures/default-ggplot-theme.R') # bold text and no grids
+source('functions/labeller_perc.R') # for percentage labels
 plot_scheme(PAL, colours = TRUE)
 
 # import data
@@ -426,7 +427,7 @@ s_tod_int <-
                      breaks = tod_breaks, labels = tod_labs) +
   scale_fill_gradientn(name = 'Relative change in speed', colors = s_pal,
                        limits = range(z_breaks), breaks = z_breaks,
-                       labels = round(2^z_breaks, 2)) +
+                       labels = \(x) labeller_perc(round(2^x, 2))) +
   theme(panel.background = element_rect(fill = 'grey'),
         legend.position = 'inside', legend.position.inside = c(0.66, 0.15),
         legend.key.width = rel(1.5),  legend.justification = 'center',
@@ -453,7 +454,7 @@ d_tod_int <-
   scale_fill_gradientn(name = 'Relative change in distance travelled',
                        colors = d_pal, limits = range(z_breaks) * 2,
                        breaks = z_breaks * 2,
-                       labels = round(2^(z_breaks * 2), 2)) +
+                       labels = \(x) labeller_perc(2^x)) +
   theme(panel.background = element_rect(fill = 'grey'),
         legend.position = 'inside', legend.position.inside = c(0.66, 0.15),
         legend.key.width = rel(1.5),  legend.justification = 'center',
@@ -514,8 +515,9 @@ s_doy_int <-
   scale_y_continuous('Day of year', expand = c(0, 0),
                      breaks = doy_breaks, labels = doy_labs) +
   scale_fill_gradientn(name = 'Relative change in speed', colors = s_pal,
-                       limits = range(z_breaks), breaks = z_breaks,
-                       labels = round(2^z_breaks, 2)) +
+                       limits = range(z_breaks),
+                       breaks = z_breaks,
+                       labels = \(x) labeller_perc(round(2^x, 2))) +
   theme(panel.background = element_rect(fill = 'grey'),
         legend.position = 'inside', legend.position.inside = c(0.66, 0.15),
         legend.key.width = rel(1.5),  legend.justification = 'center',
@@ -542,7 +544,7 @@ d_doy_int <-
   scale_fill_gradientn(name = 'Relative change in distance travelled',
                        colors = d_pal, limits = range(z_breaks) * 2,
                        breaks = z_breaks * 2,
-                       labels = round(2^(z_breaks * 2), 2)) +
+                       labels = \(x) labeller_perc(2^x)) +
   theme(panel.background = element_rect(fill = 'grey'),
         legend.position = 'inside', legend.position.inside = c(0.66, 0.15),
         legend.key.width = rel(1.5),  legend.justification = 'center',
