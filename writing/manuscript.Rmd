@@ -71,7 +71,7 @@ six-sentence abstract:
 abstract <- "Recent widespread warming has caused many terrestrial mammals to change when, how, and where they move. These changes in species' movement behavior have had cascading effects on individuals' fitness and habitat selection with consequences at the population, community, and ecosystem levels. Previous research has quantified changes in mammalian movement behavior, but we are lacking an estimate of the effects of climate change on fine-scale movement and habitat selection. We address this by using Continuous-Time Movement Models and Hierarchical Generalized Additive Models to quantify the effects of temperature on mammal's probability of movement, speed, and habitat selection. We then leverage the estimated effects to predict when, how, and where mammals will move in BC in the current century. We conclude with implications for energetics, encounter rates, habitat conservation, and human-wildlife conflicts."
 ```
 
-<!-- elements of the title page -->
+\clearpage
 
 \noindent \textbf{Article type}: Research article
 
@@ -153,7 +153,7 @@ Understanding animals' responses to temperature is essential for anticipating th
 
 <!-- introduce the study -->
 
-This paper provides an analysis of the effects of ambient temperature on the movement of six terrestrial mammal species in British Columbia (BC), Canada (*Canis lupus*, *Cervus canadensis*, *Oreamnos americanus*, *Puma concolor*, boreal and southern mountain *Rangifer tarandus*, and *Ursus arctos horribilis*; Table \@ref(tab:data-table)). Using over two decades of telemetry data over a large spatial range of Biritish Columbia (Fig. \@ref(fig:bc-map)) and hourly weather data, we estimate how mammals altered their movement frequency, movement speed, and habitat selection in response to air temperature. We then pair the estimated responses with climate change projections to forecast changes in mammalian movement in 2100 under different climate-change scenarios [Shared Socioeconomic Pathways, see @riahi_shared_2017]. We discuss the consequences of these changes in movement behavior with regards to to energetics, encounter rates, habitat conservation, and human-wildlife conflicts.
+This paper provides an analysis of the effects of ambient temperature on the movement of six terrestrial mammal species in British Columbia (BC), Canada (*Canis lupus*, *Cervus canadensis*, *Oreamnos americanus*, *Puma concolor*, boreal and southern mountain *Rangifer tarandus*, and *Ursus arctos horribilis*; Table \@ref(tab:data-table)). Using over two decades of telemetry data over a large spatial range of British Columbia (Fig. \@ref(fig:bc-map)) and hourly air temperature data, we estimate how mammals altered their movement frequency, movement speed, and habitat selection in response to air temperature. We then pair the estimated responses with climate change projections to forecast changes in mammalian movement in 2100 under different climate-change scenarios [Shared Socioeconomic Pathways, see @riahi_shared_2017]. We discuss the consequences of these changes in movement behavior with regards to energetics, encounter rates, habitat conservation, and human-wildlife conflicts.
 
 ```{r bc-map, fig.cap="GPS telemetry data and 95% autocorrelated kernel density utilization distributions for the six species in this study."}
 knitr::include_graphics('../figures/tels-map.png')
@@ -161,30 +161,50 @@ knitr::include_graphics('../figures/tels-map.png')
 
 \footnotesize
 
+```{r, eval=FALSE}
+# a quick check for the table below
+readRDS('../data/movement-models-speed-weights-2024-06-10.rds') %>%
+    group_by(dataset_name, animal) %>%
+    summarize(any_na_speed = any(is.na(speed_est)),
+              all_na_speed = all(is.na(speed_est))) %>%
+    group_by(dataset_name) %>%
+    summarise(n_missing_any = sum(any_na_speed),
+              n_missing_all = sum(all_na_speed))
+```
+
 ```{r data-table}
 readRDS('../models/movement-models-2024-06-06.rds') %>%
   transmute(
     Dataset = case_when(
       dataset_name == 'Canis_lupus_boreal' ~ '\\emph{Canis lupus}',
       dataset_name == 'Rangifer_tarandus_boreal' ~ '\\emph{Rangifer tarandus} (boreal)',
-      dataset_name == 'Rangifer_tarandus_southern_mountain' ~ '\\emph{Rangifer tarandus} (southern mountain)',
+      dataset_name == 'Rangifer_tarandus_southern_mountain' ~ '\\emph{Rangifer tarandus} (s. mountain)',
       dataset_name == 'Puma_concolor_2' ~ '\\emph{Puma concolor}',
       dataset_name == 'Puma_concolor_4' ~ '\\emph{Puma concolor}',
       dataset_name == 'Elk in southwestern Alberta' ~ '\\emph{Cervus canadensis}',
       dataset_name == 'Oreamnos_americanus' ~ '\\emph{Oreamnos americanus}',
       dataset_name == 'Ursus_arctos_horribilis' ~ '\\emph{Ursus arctos horribilis}'),
     animal, # keep animal column for grouping later
-    tel = purrr::map(tel, data.frame)) %>%
+    tel = map(tel, data.frame),
+    na_speed = map_lgl(movement_model,
+                       \(.m) suppressWarnings(speed(.m)$DOF == 0))) %>%
   unnest(tel) %>%
-  group_by(animal) %>%
-  mutate(dt = timestamp - lag(timestamp)) %>%
-  group_by(Dataset) %>%
+  group_by(Dataset, animal) %>%
   summarize(Start = min(as.Date(timestamp)),
             End = max(as.Date(timestamp)),
-            dt = as.numeric(median(dt, na.rm = TRUE))) %>%
-  mutate(dt = round('hours' %#% dt, 2)) %>%
-  rename('Median \U0394t (hours)' = dt) %>%
-  knitr::kable(format = 'markdown', caption = 'Start and end of the GPS telemetries along with the median sampling interval ($\\Delta t$) for each of the species in this study.', escape = FALSE)
+            dt = median(timestamp - lag(timestamp), na.rm = TRUE),
+            na_speed = unique(na_speed),
+            .groups = 'drop') %>%
+  group_by(Dataset) %>%
+  summarize(Start = min(Start),
+            End = max(End),
+            dt = as.numeric(median(dt, na.rm = TRUE)),
+            n_missing = sum(na_speed),
+            .groups = 'drop') %>%
+  mutate(dt = round('hours' %#% dt, 2)) %>% # convert from seconds to hours
+  rename('Median \U0394t (hours)' = dt,
+         'NA speed' = n_missing) %>%
+  knitr::kable(format = 'markdown', caption = 'Start and end of the GPS telemetries along with the median sampling interval ($\\Delta t$; stratified by individual) and number of animals with unresolved speed (NA speed) for each of the species in this study.', escape = FALSE)
 ```
 
 \normalsize
@@ -193,35 +213,33 @@ readRDS('../models/movement-models-2024-06-06.rds') %>%
 
 ## GPS telemetry data
 
-\noindent Elk (*Cervus canadensis*) data from @ciuti_human_2012 were downloaded from Movebank [study name: Elk in southwestern Alberta, see @kays_movebank_2022], while boreal caribou (*Rangifer tarandus*) and wolf (*Canis lupus*) telemetries were acquired via a public BC Oil and Gas Research and Innovation Society repository ([https://www.bcogris.ca/projects/boreal-caribou-telemetry-data](https://www.bcogris.ca/projects/boreal-caribou-telemetry-data)), and the mountain goat (*Oreamnos americanus*) locations were provided by BC Parks. All other tracking data were obtained from private collaborators. Outlier GPS locations were removed following diagnostic analyses of the distance from the median location as well as straight-line displacement, turning angle, and time interval between consecutive points. Particular attention was paid to points with large turning angles ($\gtrapprox 170^\circ$) and high straight-line displacement, especially if antecedent and subsequent points indicated stationary behavior. The script used to clean the data and all custom functions used are available on GitHub ([https://github.com/QuantitativeEcologyLab/bc-mammals-temperature](https://github.com/QuantitativeEcologyLab/bc-mammals-temperature)).
+\noindent Elk (*Cervus canadensis*) data from @ciuti_human_2012 were downloaded from Movebank [study name: Elk in southwestern Alberta, see @kays_movebank_2022], while boreal caribou (*Rangifer tarandus*) and wolf (*Canis lupus*) telemetries were acquired via a public BC Oil and Gas Research and Innovation Society repository ([https://www.bcogris.ca/projects/boreal-caribou-telemetry-data](https://www.bcogris.ca/projects/boreal-caribou-telemetry-data)), and the mountain goat (*Oreamnos americanus*) locations were provided by BC Parks. All other tracking data were obtained from private collaborators. Outlier GPS locations were removed following diagnostic analyses of the distance from the median location as well as straight-line displacement, turning angle, and time interval between consecutive points. Particular attention was paid to points with large turning angles ($\gtrapprox 170^\circ$) and high straight-line displacement, especially if antecedent and subsequent points indicated stationary behavior. The script used to clean the data and all associated custom functions are available on GitHub ([https://github.com/QuantitativeEcologyLab/bc-mammals-temperature](https://github.com/QuantitativeEcologyLab/bc-mammals-temperature)).
 
 ## Historical temperature data
 
-\noindent Rasters of hourly reanalyzed air temperature data were downloaded from the ERA5 dataset [@hersbach_era5_2023] from the European Center for Medium-range Weather Forecasting server (ECMWF; [www.ecmwf.int](www.ecmwf.int); [https://cds.climate.copernicus.eu](https://cds.climate.copernicus.eu)). Proximal weather conditions were estimated for each location by extracting the values from the corresponding raster cell from the temporally nearest raster using the `extract()` function from the `terra` package [version 1.7-46, @hijmans_terra_2023] for `R`  [@r_core_team_r_2024].
+\noindent Rasters of hourly reanalyzed air temperature data were downloaded from the ERA5 dataset [@hersbach_era5_2023] from the European Center for Medium-range Weather Forecasting server (ECMWF; [www.ecmwf.int](www.ecmwf.int); [https://cds.climate.copernicus.eu](https://cds.climate.copernicus.eu)). Proximal temperature was estimated for each location by extracting the values from the corresponding raster cell from the temporally nearest raster using the `extract()` function from the `terra` package [version 1.7-46, @hijmans_terra_2023] for `R`  [@r_core_team_r_2024].
 
 ## Estimating mammals' instantaneous speeds
 
-\noindent We modeled each animal's movement using continuous-time movement models [@fleming_fine-scale_2014] via the `ctmm` package [version 1.2.0, @fleming_ctmm_2023] for `R`. We then estimated mammals' instantaneous speeds by applying the `ctmm::speeds()` function on all models with finite speed estimates [416 of 433, see @fleming_fine-scale_2014; @noonan_scale-insensitive_2019]. The 17 telemetries with insufficiently fine sampling were for caribou (15 boreal and 2 southern mountain; see Table \@ref(tab:data-table)).
+\noindent We modeled each animal's movement using continuous-time movement models [@fleming_fine-scale_2014] via the `ctmm` package [version 1.2.0, @fleming_ctmm_2023] for `R`. We then estimated mammals' instantaneous speeds by applying the `ctmm::speeds()` function on all models with finite speed estimates [416 of 433, see @fleming_fine-scale_2014; @noonan_scale-insensitive_2019]. The 18 telemetries with insufficiently fine sampling were for one mountain goat, 15 boreal caribou, and 2 southern mountain caribou (Table \@ref(tab:data-table).
 
-Since `ctmm`'s movement models assume stochastic but non-zero speeds (i.e., a single, stochastic moving state), data-informed speeds needed to be corrected so that the minimum instantaneous speed could be 0. We performed this correction by subtracting the data-independent, background minimum speed while assuming speeds were $\chi^2$-distributed and correcting the degrees of freedom and confidence intervals accordingly. The function we used is available on GitHub at [https://github.com/QuantitativeEcologyLab/bc-mammals-temperature/blob/main/functions/detrend_speeds.R](https://github.com/QuantitativeEcologyLab/bc-mammals-temperature/blob/main/functions/detrend_speeds.R). To avoid artifacts due to excessively small, non-zero speeds, we determined whether an animal was moving or not using the inflection point of each species' histogram of detrended speed estimates (Appendix A).
+Since `ctmm`'s movement models assume stochastic but non-zero speeds (i.e., a single, stochastic moving state), data-informed speeds needed to be corrected so that the minimum instantaneous speed could be 0. We performed this correction by subtracting each model's mean speed while assuming speeds were $\chi^2$-distributed.<!-- The degrees of freedom and confidence intervals were adjusted accordingly.--> The function we used is available on GitHub at [https://github.com/QuantitativeEcologyLab/bc-mammals-temperature/blob/main/functions/detrend_speeds.R](https://github.com/QuantitativeEcologyLab/bc-mammals-temperature/blob/main/functions/detrend_speeds.R). To avoid artifacts due to excessively small, non-zero speeds, we determined whether an animal was moving or not using the inflection point of each species' histogram of detrended speed estimates (Appendix A).
 
 ## Estimating the effects of temperature on mammals' movement
 
 ### Movement frequency and speed
 
-\noindent We estimated the effects of temperature on mammals' state (moving or not) and speed (given the animal was moving) using two Hierarchical Generalized Additive Models [HGAMs, see @pedersen_hierarchical_2019] with the `mgcv` package for `R` [version 1.9-1, @wood_generalized_2017]. The first HGAM estimated the probability that an animal was moving with a binomial family of distributions. The second HGAM estimated an animal's speed (given that it was moving) with a gamma Location-Scale family of distributions [`mgcv::gammals()`, @wood_smoothing_2016]. Unlike the more commonly used gamma family (`stats::Gamma()`), the `mgcv::gammals()` family allows the mean-variance relationship to depend on covariates rather than assuming a constant mean-variance relationship. For example, if mean speed increases with temperature but the scale decreases, the variance in speed will not increase as much as with a constant scale parameter. The animal would then have low average speed but a (relatively) large variance at cold temperatures, and a high average speed with a (relatively) small variance at high temperatures.
-
-The binomial and gamma HGAMs (see code chunk below) included random intercepts for each animal (`s(..., bs = 're')`), fixed intercepts for each species, and factor smooth interactions for time of day, day of year, and temperature for each species [`s(..., bs = 'fs')`, see model S in Figure 4 of @pedersen_hierarchical_2019]. Additionally, the models had three tensor product interaction terms (`mgcv::ti()`) for each species: (1) day of year and time of day, (2) temperature and time of day, and (3) temperature and day of year. These three terms accounted for: (1) seasonal changes in day length, (2) changes in the response to temperature at the hourly scale (e.g., changes in nocturnality), and (3) seasonal changes in the response to temperature (e.g., due to differences in coats), including changes in the timing of migratory behavior. The HGAMs accounted for the cyclicity of time of day and day of year using cyclic cubic splines [`bs = 'cc'`, @wood_generalized_2017]. Together, the binomial HGAM and the gamma HGAM inform us on an animal's long-term average speed, since it is the product of the probability the animal is moving and its average speed when moving. Additional details are provided in Appendix A.
+\noindent We estimated the effects of temperature on mammals' movement state (moving or not) and speed (when moving) using two Hierarchical Generalized Additive Models [HGAMs, see @pedersen_hierarchical_2019 and the code chunk below] with the `mgcv` package for `R` [version 1.9-1, @wood_generalized_2017]. The first HGAM estimated the probability that an animal was moving with a binomial family of distributions and logit link function. The second HGAM estimated an animal's speed (when moving) with a gamma family of distributions and log link function. The HGAMs included random intercepts for each animal (`s(..., bs = 're')`), fixed intercepts for each species, and species-level factor smooth interactions for time of day, day of year, and temperature [`s(..., bs = 'fs')`, see model S in Figure 4 of @pedersen_hierarchical_2019]. Additionally, the models had three tensor product interaction terms (`ti()`) for each species: (1) day of year and time of day, (2) temperature and time of day, and (3) temperature and day of year. These three terms accounted for: (1) seasonal changes in day length, (2) hourly changes in the response to temperature (e.g., changes in nocturnality), and (3) seasonal changes in the response to temperature (e.g., changes in coats and migration timing). The HGAMs accounted for the cyclicity of time of day and day of year using cyclic cubic splines [`bs = 'cc'`, @wood_generalized_2017]. Together, the binomial HGAM and the gamma HGAM inform us on an animal's long-term average speed, since it is the product of the probability the animal is moving and its average speed when moving. We fit the models with fast REML (`'fREML'`) and discretized covariates (`discrete = TRUE`) to optimize computational efficiency with no appreciable losses to model performance [@wood_generalized_2015; @wood_generalized_2017-1; @li_faster_2020]. Additional details are provided in Appendix A.
 
 \singlespacing
 
 \small
 
 ```{r hgams, eval=FALSE, echo=TRUE}
-m_1 <- bam(
+m_moving <- bam(
   moving ~
     s(animal, bs = 're') +
-    species +
+    species + #' necessary since `by` terms do not include intercept terms
     s(tod_pdt, by = species, k = 5, bs = 'cc') +
     s(doy, by = species, k = 5, bs = 'cc') +
     s(temp_c, by = species, k = 5, bs = 'tp') +
@@ -235,7 +253,7 @@ m_1 <- bam(
   discrete = TRUE, # discretize the covariates for faster computation
   knots = list(tod_pdt = c(0, 1), doy = c(0.5, 366.5))) # for bs = 'cc'
 
-m_2 <- bam(
+m_speed <- bam(
   speed_est ~
     s(animal, bs = 're') +
     species +
@@ -260,7 +278,7 @@ m_2 <- bam(
 
 ### Habitat selection
 
-\noindent We estimated the effects of temperature on each species' selection for percent forest cover, elevation, and distance from fresh water (i.e., not sea water) using a series of HGAMs with Poisson families of distributions [Appendix B, also see @aarts_estimating_2008; @alston_mitigating_2022]. While we recognize there are other important drivers of habitat selection, we decided to only use these three proxies to produce results that are relatively comparable between species and to make province-wide predictions simpler. Each species' model had the same structure:
+\noindent We estimated the effects of temperature on each species' selection for percent forest cover, elevation, and distance from fresh water (i.e., not sea water) using an HGAM with a Poisson family of distributions and log link function for each species [Appendix B, also see @aarts_estimating_2008; @alston_mitigating_2022]. While we recognize there are other important drivers of habitat selection that we did not include in our models (e.g., forest age), we decided to only use these three proxies to produce results that are relatively comparable between species and to make province-wide predictions simpler. Each species' model had the same structure:
 
 \singlespacing
 
@@ -293,19 +311,29 @@ rsf <- bam(
 
 \doublespacing
 
-Smooth effects of forest cover, elevation, and distance to fresh water accounted for the species-level average selection strength for each resource. A random effect for each individual animal corrected for uneven sampling across individuals, while factor smooth interaction terms (`bs = 'fs'`) accounted for individual level resource selection (i.e., individual-level deviations from the species-level average). Finally, tensor interaction product terms (`ti()`) of each resource and temperature estimated the effect of temperature on the selection strength for each resource. Each model used a Poisson distribution and a $\log$ link function because detected is the number of animals (0 or 1) within a small, finite amount of space and time. Detections were down-weighted proportionally to their dependence on temporally proximate detections [see Appendix C and @alston_mitigating_2022], while quadrature points had a weight of 1. Finally, we fit each model with fast REML (`'fREML'`) and discretized covariates (`discrete = TRUE`) to optizimize computational efficiency with no meaningful losses to model performance [@wood_generalized_2015; @wood_generalized_2017-1; @li_faster_2020].
+Smooth effects of percent forest cover, elevation, and distance to fresh water accounted for the species-level average selection strength for each resource. A random effect for each individual animal corrected for uneven sampling across individuals, while factor smooth interaction terms (`bs = 'fs'`) accounted for individual-level resource selection (i.e., individual-level deviations from the species-level average). Finally, tensor interaction product terms (`ti()`) of the three resources and temperature estimated the change in resource selection at different temperatures. Detections were down-weighted proportionally to their degree of dependence temporally proximate detections [see Appendix C and @alston_mitigating_2022], while quadrature points had a weight of 1.
 
 ## Predicting changes in animal movement during the current century
 
-***check this***
+\noindent Rasters of projected monthly average temperature in BC from 2020 to 2100 were obtained via the `climatenaR` package [version 1.0, @burnett_climatenar_2023] for `R`. Since the climate projections only provided monthly means and ranges but no measures of variance or distributional assumptions, we used the hourly ERA5 data for BC from 1998 to 2023 [extremes included, see @hersbach_era5_2023] to calculate within-month variance, which we defined as the variance within a given pixel, month, and year. We then modelled the estimated variance using a GAM for location and scale [GAMLS, see @rigby_generalized_2005; @stasinopoulos_generalized_2007]. The linear predictor for the location (i.e., the mean) included smooth terms of the within-pixel monthly mean temperature (for each year), month (as a cyclic smooth), a two-dimensional smooth of space, and a tensor interaction product term of space and month. The linear predictor for the scale term (which governs the mean-variance relationship) included smooth terms of the monthly mean, month, and space. Additional details are available in Appendix C.
 
-\noindent Rasters of projected monthly average temperature in BC from 2020 to 2100 were obtained via the `climatenaR` package [version 1.0, @burnett_climatenar_2023] for `R`. Since the climate projections did not provide a measure of variation in temperature within each month, we estimated within-month variance by fitting a GAM for location and scale [GAMLS, see @rigby_generalized_2005; @stasinopoulos_generalized_2007] to the monthly variance in temperature using the hourly ERA5 data for BC during from 1998 to 2023 [extremes included, see @hersbach_era5_2023]. The model included smooth terms of the monthly mean temperature, month, and year as well as and a two-dimensional smooth of space and a tensor interaction product term of space and month (Appendix C).
-
-```{r, eval=FALSE}
-'Gamma GAMLS code'
+```{r, eval=FALSE, echo=FALSE}
+  m_gammals <- gam(list(
+    monthly_var ~
+      s(monthly_mean, bs = 'cr', k = 10) + # using cr to reduce fitting time
+      s(month, bs = 'cc', k = 10) +
+      s(long, lat, bs = 'ds', k = 500) +
+      ti(long, lat, month, bs = c('ds', 'cc'), d = c(2, 1), k = c(100, 10)),
+    ~ s(monthly_mean, bs = 'cr', k = 10) +
+      s(month, bs = 'cc', k = 10) +
+      s(long, lat, bs = 'ds', k = 100)),
+    family = gammals(),
+    data = d,
+    method = 'REML',
+    knots = list(month = c(0.5, 12.5)))
 ```
 
-We accounted for hourly variation in weather by assuming temperature followed a normal distribution with mean specified by the `climatenaR` climate projectionS and variance as specified by the Gamma GAMLS. We then predicted changes in movement behavior and habitat selection as a function of temperature using the HGAMs and HRSFs along with the temperature HGAM described above. For each month within each year from 2020 to 2100 we simulated hourly weather by including temperatures from the 5%, 10%, 20%, ..., 80%, 90%, and 95% (***?***) quantiles and weighted each quantile proportionally to the Gaussian probability density for each value (Appendix C).
+We simulated for hourly variation in weather by assuming temperature followed a normal distribution with mean specified by the `climatenaR` climate projections and variance as specified by the Gamma GAMLS. We then predicted changes in movement behavior and habitat selection as a function of temperature using the HGAMs and HRSFs along with the temperature HGAM described above. For each month within each year from 2020 to 2100, we simulated hourly weather by including temperatures from the 0.1, 0.2, ..., 0.8, 0.9 quantiles and weighted each quantile proportionally to the (normalized) Gaussian probability density for each value (Appendix C).
 
 # Results
 
@@ -319,7 +347,7 @@ knitr::include_graphics('../figures/distance.png')
 
 Both movement frequency and speed when moving decreased with increasing sampling interval, with a strong common effect (Fig. ***AX***). ***here***
 
-`ctmm` models are scale independent assuming single, homogeneous behavior, but scale-dependency in the behavior (data) causes sampling effects
+`ctmm` models are scale independent assuming single, homogeneous behavior, but scale-dependency in the behavior (data) causes sampling effects. See poor projections for boreal caribou, which have the greatest sampling interval
 
 worse climate-change scenarios corresponded to greater changes in behavior along with greater variance in within years
 
@@ -351,6 +379,7 @@ plot(1, main = '7. spatial projections of RSFs in 2020 and 2100')
 
 # Discussion
 
+* We discuss the consequences of these changes in movement behavior with regards to energetics, encounter rates, habitat conservation, and human-wildlife conflicts.
 * as temperatures get warmer, we will be pushing into the unknown portion of the surface plots
 * our models don’t include any physiological responses to temperature that may impact movement (e.g., hybernation)
 * our models also assume the behaviour we modeled now will persist into the future (e.g., hybernation, migration)
