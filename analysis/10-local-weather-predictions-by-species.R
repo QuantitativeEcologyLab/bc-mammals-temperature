@@ -124,8 +124,6 @@ unique_locs_spp <- mutate(
   select(! akdes) %>%
   unnest(subset)
 
-
-
 ggplot(unique_locs_spp, aes(long, lat)) +
   facet_wrap(~ species, scales = 'free') +
   geom_point() +
