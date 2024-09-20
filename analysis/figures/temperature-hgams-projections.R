@@ -11,44 +11,44 @@ source('analysis/figures/default-ggplot-theme.R') # bold text and no grids
 source('functions/labeller_perc.R') # for y axis labels in percentage
 plot_scheme(PAL, colours = TRUE)
 
-# functions for calculating odds and back-transforming
-odds <- function(p) p / (1 - p)
-inv_odds <- function(o) 1 / (1 + 1/o)
-if(FALSE) inv_odds(odds(0.2)) # check the functions
-
-# import models
-m_1 <- readRDS('models/binomial-gam.rds')
-m_2 <- readRDS('models/gamma-gam.rds')
-
-# terms to exclude from the prediction
-EXCLUDE <- c('s(animal)',
-             paste0('s(tod_pdt):species', SPECIES),
-             paste0('ti(doy,tod_pdt):species', SPECIES),
-             paste0('ti(temp_c,tod_pdt):species', SPECIES),
-             's(log(dt))', 's(log(dt), species)')
-
-# import prediction data for each species in the data's extent ----
-cc_newd <- tibble(
-  wp = list.files('data', 'weather-projections-', full.names = TRUE) %>%
-    map(readRDS)) %>%
-  unnest(wp) %>%
-  filter(year >= 2020) %>%
-  # make sure only the necessary column are kept
-  transmute(
-    scenario,
-    year,
-    animal = m_1$model$animal[1],
-    species = gsub('boreal', '(boreal)', species) %>%
-      gsub('southern mountain', '(s. mountain)', x = .),
-    tod_pdt = 0,
-    doy = yday(date_decimal(year + (month - 0.5) / 12)),
-    temp_c,
-    dt = 1,
-    weight)
-
 if(file.exists('data/cc-hgam-projections.rds')) {
   cc_proj <- readRDS('data/cc-hgam-projections.rds')
 } else {
+  # functions for calculating odds and back-transforming
+  odds <- function(p) p / (1 - p)
+  inv_odds <- function(o) 1 / (1 + 1/o)
+  if(FALSE) inv_odds(odds(0.2)) # check the functions
+  
+  # import models
+  m_1 <- readRDS('models/binomial-gam.rds')
+  m_2 <- readRDS('models/gamma-gam.rds')
+  
+  # terms to exclude from the prediction
+  EXCLUDE <- c('s(animal)',
+               paste0('s(tod_pdt):species', SPECIES),
+               paste0('ti(doy,tod_pdt):species', SPECIES),
+               paste0('ti(temp_c,tod_pdt):species', SPECIES),
+               's(log(dt))', 's(log(dt), species)')
+  
+  # import prediction data for each species in the data's extent ----
+  cc_newd <- tibble(
+    wp = list.files('data', 'weather-projections-', full.names = TRUE) %>%
+      map(readRDS)) %>%
+    unnest(wp) %>%
+    filter(year >= 2020) %>%
+    # make sure only the necessary column are kept
+    transmute(
+      scenario,
+      year,
+      animal = m_1$model$animal[1],
+      species = gsub('boreal', '(boreal)', species) %>%
+        gsub('southern mountain', '(s. mountain)', x = .),
+      tod_pdt = 0,
+      doy = yday(date_decimal(year + (month - 0.5) / 12)),
+      temp_c,
+      dt = 1,
+      weight)
+  
   cc_proj <- bind_cols(
     cc_newd,
     predict(m_1, newdata = cc_newd, type = 'link', se.fit = TRUE,
