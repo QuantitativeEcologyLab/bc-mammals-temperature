@@ -126,20 +126,22 @@ if(file.exists('data/tracking-data/rsf-data.rds')) {
   # check range of temperatures
   range(d_1$temperature_C, na.rm = TRUE)
   
-  if(! file.exists('data/quadrature-data-2024-08-13.rds')) {
+  if(file.exists('data/quadrature-data-2024-09-24.rds')) {
+    d_0 <- readRDS('data/quadrature-data-2024-09-24.rds')
+  } else {
     d_0 <- mm %>%
       transmute(
         animal, # for each animal
         zeros = map2(akde, species, function(.a, .species) {
           # extract the extent of each AKDE
-          .a <- SpatialPolygonsDataFrame.UD(.a) %>%
+          .a <- SpatialPolygonsDataFrame.UD(.a, level.UD = 0.999, level = 0) %>%
             st_as_sf() %>%
             st_transform('EPSG:4326')
           
           # uniform temperatures to compare to no selection
           null_temperatures <- filter(d_1, species == .species) %>%
             pull(temperature_C) %>%
-            quantile(probs = c(0.05, 0.1, 0.3, 0.5, 0.7, 0.9, 0.95),
+            quantile(probs = c(0.1, 0.3, 0.5, 0.7, 0.9),
                      na.rm = TRUE) %>%
             unname()
           
@@ -150,7 +152,8 @@ if(file.exists('data/tracking-data/rsf-data.rds')) {
             mask(.a) %>%
             as.data.frame(xy = TRUE) %>% # convert to a data.frame
             rename(forest_perc = consensus_full_class_1) %>%
-            mutate( # extract corresponding elevation and distance values
+            mutate(
+              # extract corresponding elevation and distance values
               elevation_m = st_as_sf(tibble(x, y), coords = c('x', 'y')) %>%
                 extract(x = e, y = .) %>%
                 pull(2),
@@ -158,7 +161,7 @@ if(file.exists('data/tracking-data/rsf-data.rds')) {
                                       coords = c('x', 'y')) %>%
                 extract(x = w, y = .) %>%
                 pull(2)) %>%
-            rename(long = x, lat = y) %>%
+            rename(longitude = x, latitude = y) %>%
             # drop NAs (masked values)
             filter(! is.na(forest_perc + elevation_m + dist_water_m)) %>%
             mutate(detected = 0, # because it's a quadrature point
@@ -172,8 +175,6 @@ if(file.exists('data/tracking-data/rsf-data.rds')) {
         })) %>%
       unnest(zeros)
     saveRDS(d_0, paste0('data/quadrature-data-', Sys.Date(), '.rds'))
-  } else {
-    d_0 <- readRDS('data/quadrature-data-2024-08-13.rds')
   }
   
   # bind observed and quadrature locations together
@@ -198,12 +199,52 @@ if(file.exists('data/tracking-data/rsf-data.rds')) {
   rm(d_0, d_1, e, f, ud_bounds, mm, w, wide_bounds)
 }
 
+# all sets of quadrature points have forest values 0-100%
+range(d$forest_perc)
+d %>%
+  filter(detected == 0) %>%
+  group_by(animal) %>%
+  summarize(min = min(forest_perc),
+            max = max(forest_perc)) %>%
+  summarize(min = min(min),
+            max = max(max))
+
+# find n(locations) with resource values outside the quadrature values
+problematic <-
+  d %>%
+  group_by(animal) %>%
+  mutate(min_ele = min(elevation_m[detected == 0]),
+         max_ele = max(elevation_m[detected == 0]),
+         min_dis = min(dist_water_m[detected == 0]),
+         max_dis = max(dist_water_m[detected == 0]),
+         ) %>%
+  filter(elevation_m < min_ele |
+         elevation_m > max_ele |
+         dist_water_m < min_dis |
+         dist_water_m > max_dis) %>%
+  filter(detected == 1) %>%
+  select(c(species, animal, weight,
+           min_ele, elevation_m, max_ele,
+           min_dis, dist_water_m, max_dis)) %>%
+  mutate(problematic = paste(if_else(elevation_m < min_ele |
+                                        elevation_m > max_ele,
+                                      'elevation', ''),
+                              if_else(dist_water_m < min_dis |
+                                        dist_water_m > max_dis,
+                                      'water', '')))
+problematic
+
+problematic %>%
+  group_by(species) %>%
+  summarize(n = n())
+
 # fit the RSFs ----
 #' *NOTES:*
 #' - adding `log()` gives too much leverage to low elevations and
 #' distances from water.
-#' - dividing `detected` by `K` and adding `K` in the weights does not
-#' improve the model fit
+#' - dividing `detected` by a large number like `K = 1e6` and multiplying
+#'   the weights by `K` does not improve the model fit
+
 # find number of quadrature points per each detection
 d %>%
   group_by(species) %>%
@@ -216,6 +257,8 @@ SPECIES <- d %>%
   summarise(n = n()) %>%
   arrange(n) %>%
   pull(species)
+
+COMPLETED <- character(0)
 
 for(sp in SPECIES) {
   cat('Working on ', as.character(sp), '...\n', sep = '')
@@ -241,9 +284,9 @@ for(sp in SPECIES) {
       s(elevation_m, animal, k = 6, bs = 'fs', xt = list(bc = 'cr')) +
       s(dist_water_m, animal, k = 6, bs = 'fs', xt = list(bc = 'cr')) +
       # changes in preference with temperature
-      ti(forest_perc, temperature_C, k = 4, bs = 'cr') +
-      ti(elevation_m, temperature_C, k = 4, bs = 'cr') +
-      ti(dist_water_m, temperature_C, k = 4, bs = 'cr'),
+      ti(forest_perc, temperature_C, k = 6, bs = 'tp') +
+      ti(elevation_m, temperature_C, k = 6, bs = 'tp') +
+      ti(dist_water_m, temperature_C, k = 6, bs = 'tp'),
     family = poisson(link = 'log'),
     data = d,
     weights = weight,
@@ -253,15 +296,19 @@ for(sp in SPECIES) {
     control = gam.control(trace = TRUE))
   
   saveRDS(rsf, paste0('models/rsf-', sp, '-', Sys.Date(), '.rds'))
+  
   draw(rsf, scales = 'free', rug = FALSE, ci_alpha = 0.05,
        discrete_colour = scale_color_manual(values = rep('#00000080', 300)),
-       discrete_fill = scale_fill_manual(values = rep('black', 300)))
+       discrete_fill = scale_fill_manual(values = rep('black', 300))) %>%
+    print()
   
   ggsave(paste0('figures/hrsf-partial-effects/rsf-', sp, '.png'),
          width = 16, height = 8, units = 'in', dpi = 300, bg = 'white',
          scale = 1.5)
   
   summary(rsf, re.test = FALSE)
+  
+  COMPLETED <- c(COMPLETED, sp)
   
   if(FALSE) {
     appraise(rsf, type = 'pearson')
