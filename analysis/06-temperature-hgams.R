@@ -128,24 +128,47 @@ ggplot(d_2) +
 
 # check spread for tod, doy, and temp for each species except for grizzly
 # should be ok to keep cs = 'cc'
-plot_grid(
-  d %>%
-    select(species, tod_pdt, doy, temp_c, moving) %>%
-    pivot_longer(-c(species, moving)) %>%
-    ggplot(aes(value)) +
-    facet_grid(species ~ name, scales = 'free') +
-    geom_histogram(aes(fill = moving), position = 'stack') +
-    ggtitle('Full dataset') +
-    scale_fill_brewer(type = 'qual', palette = 6) +
-    theme(legend.position = 'top'),
-  d_2 %>%
-    select(species, tod_pdt, doy, temp_c) %>%
-    pivot_longer(-species) %>%
-    ggplot(aes(value)) +
-    facet_grid(species ~ name, scales = 'free') +
-    geom_histogram() +
-    ggtitle('Moving only'),
-  labels = 'AUTO', nrow = 1)
+hist_1 <- d %>%
+  select(species, tod_pdt, doy, temp_c, moving) %>%
+  pivot_longer(-c(species, moving), names_to = 'variable') %>%
+  mutate(variable = case_when(
+    variable == 'doy' ~ 'Day of year',
+    variable == 'temp_c' ~ paste0('Temprature (\U00B0', 'C)'),
+    variable == 'tod_pdt' ~ 'Time of day (PDT)') %>%
+      factor(., levels = unique(.))) %>%
+  ggplot(aes(value)) +
+  facet_grid(species ~ variable, scales = 'free', switch = 'x') +
+  geom_histogram(aes(fill = moving), position = 'stack', bins = 24) +
+  scale_x_continuous(NULL, expand = c(0, 0)) +
+  ylab('Count') +
+  scale_fill_brewer('Moving', type = 'qual', palette = 6,
+                    breaks = c(FALSE, TRUE), labels = c('No', 'Yes')) +
+  theme(legend.position = 'none', strip.background.x = element_blank(),
+        strip.text.x = element_text(size = 11), strip.placement = 'outside')
+
+hist_2 <- d_2 %>%
+  select(species, tod_pdt, doy, temp_c) %>%
+  pivot_longer(-c(species), names_to = 'variable') %>%
+  mutate(variable = case_when(
+    variable == 'doy' ~ 'Day of year',
+    variable == 'temp_c' ~ paste0('Temprature (\U00B0', 'C)'),
+    variable == 'tod_pdt' ~ 'Time of day (PDT)') %>%
+      factor(., levels = unique(.))) %>%
+  ggplot(aes(value)) +
+  facet_grid(species ~ variable, scales = 'free', switch = 'x') +
+  geom_histogram(fill = '#377EB8', position = 'stack', bins = 24) +
+  scale_x_continuous(NULL, expand = c(0, 0)) +
+  ylab('Count') +
+  theme(strip.background.x = element_blank(),
+        strip.text.x = element_text(size = 11), strip.placement = 'outside')
+
+plot_grid(get_plot_component(hist_1 + theme(legend.position = 'top'),
+                             pattern = 'guide-box-top', return_all = TRUE),
+          plot_grid(hist_1, hist_2, labels = 'AUTO', nrow = 1),
+          ncol = 1, rel_heights = c(1, 15))
+
+ggsave('figures/temperature-movement-rates-hist.png',
+       width = 16, height = 11, units = 'in', dpi = 600, bg = 'white')
 
 # model P(movement) ----
 #' using `bs = 'fs'` rather than `by` smooths because to keep the models
@@ -429,3 +452,117 @@ p_2_dt <-
 plot_grid(p_dt, p_1_dt, p_2_dt, labels = 'AUTO', ncol = 1)
 ggsave('figures/dt-smooths.png', width = 16, height = 8, units = 'in',
        dpi = 600, bg = 'white')
+
+# fit HGAMs without temperature ----
+# P(moving)
+if(file.exists('models/binomial-gam-without-temperature.rds')) {
+  m_1_no_t <- readRDS('models/binomial-gam-without-temperature.rds')
+} else {
+  m_1_no_t <-
+    bam(moving ~
+          # random intercept for each animal
+          s(animal, bs = 're') +
+          # fixed intercept for each species
+          species +
+          # to account for changes in behavior within days
+          s(tod_pdt, by = species, k = 5, bs = 'cc') +
+          # to account for changes in behavior within years
+          s(doy, by = species, k = 5, bs = 'cc') +
+          # to account for seasonal changes in day length
+          ti(doy, tod_pdt, by = species, k = 5, bs = c('cc', 'cc')) +
+          # larger sampling intervals underestimate movement speed
+          s(log(dt), k = 3) +
+          s(log(dt), species, k = 3, bs = 'fs'),
+        family = binomial(link = 'logit'),
+        data = d,
+        method = 'fREML', # fast REML
+        discrete = TRUE, # discretize the covariates for faster computation
+        knots = list(tod_pdt = c(0, 1), doy = c(0.5, 366.5)),# for bs = 'cc'
+        control = gam.control(trace = TRUE))
+  
+  saveRDS(m_1_no_t, 'models/binomial-gam-without-temperature.rds')
+  qq.gam(m_1_no_t, type = 'pearson') # some extreme outliers
+}
+
+# speed
+if(file.exists('models/gamma-gam-without-temperature.rds')) {
+  m_2_no_t <- readRDS('models/gamma-gam-without-temperature.rds')
+} else {
+  m_2_no_t <-
+    bam(
+      speed_est ~
+        # random intercept for each animal
+        s(animal, bs = 're') +
+        # fixed intercept for each species
+        species +
+        # to account for changes in behavior within days
+        s(tod_pdt, by = species, k = 5, bs = 'cc') +
+        # to account for changes in behavior within years
+        s(doy, by = species, k = 5, bs = 'cc') +
+        # to account for seasonal changes in day length
+        ti(doy, tod_pdt, by = species, k = 5, bs = c('cc', 'cc')) +
+        # larger sampling intervals underestimate movement speed
+        s(log(dt), k = 3) +
+        s(log(dt), species, k = 3, bs = 'fs'),
+      family = Gamma(link = 'log'), # can use Gamma because no zeros
+      data = d_2,
+      method = 'fREML', # fast REML
+      discrete = TRUE, # discretize the covariates for faster computation
+      knots = list(tod_pdt = c(0, 1), doy = c(0.5, 366.5)),
+      control = gam.control(trace = TRUE))
+  
+  saveRDS(m_2_no_t, 'models/gamma-gam-without-temperature.rds')
+}
+
+# unsurprisingly, deviance explained does not change much since predictors
+# are correlated
+de_1 <- round((1 - m_1$deviance / m_1$null.deviance) * 100, 2)
+de_1_nt <- round((1 - m_1_no_t$deviance / m_1_no_t$null.deviance) * 100, 2)
+de_1
+de_1_nt
+de_1 / de_1_nt
+
+de_2 <- round((1 - m_2$deviance / m_2$null.deviance) * 100, 2)
+de_2_nt <- round((1 - m_2_no_t$deviance / m_2_no_t$null.deviance) * 100, 2)
+de_2
+de_2_nt
+de_2 / de_2_nt
+
+# RMSE does not change much
+rmse <- function(.m) {
+  sqrt(mean(resid(.m)^2))
+}
+
+tibble(model = c('P(moving)', 'speed'),
+       rmse_without_temp = c(rmse(m_1_no_t), rmse(m_2_no_t)),
+       rmse_with_temp = c(rmse(m_1), rmse(m_2)),
+       perc_change = (((rmse_with_temp / rmse_without_temp) - 1) * 100) %>%
+                           round(2) %>%
+         paste0('%')) %>%
+  knitr::kable()
+
+# P(moving)
+AIC(m_1, m_1_no_t) %>%
+  mutate(delta = AIC - min(AIC))
+
+# speed
+AIC(m_2, m_2_no_t) %>%
+  mutate(delta = AIC - min(AIC))
+
+# figure of comparison between predictions
+p_preds <-
+  plot_grid(ggplot() +
+              geom_point(aes(fitted(m_1), fitted(m_1_no_t)), shape = '.') +
+              geom_abline(intercept = 0, slope = 1, color = 'red') +
+              labs(x = 'Predictions without temperature',
+                   y = 'Predictions with temperature'),
+            ggplot() +
+              geom_point(aes(fitted(m_2), fitted(m_2_no_t)), shape = '.') +
+              geom_abline(intercept = 0, slope = 1, color = 'red') +
+              labs(x = 'Predictions without temperature',
+                   y = 'Predictions with temperature'),
+            labels = 'AUTO')
+
+ggsave('figures/hgam-with-without-temp-prediction-agreement.png',
+       plot = p_preds, width = 12, height = 6, units = 'in', dpi = 600,
+       bg = 'white')
