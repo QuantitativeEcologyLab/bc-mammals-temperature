@@ -81,5 +81,6 @@ data/ecmwf-era5-2m-temperature/*
 # manuscript comments
 /writing/comments
 
-# log files from Rmd knitting
+# ignore unnecessary  files
 *.log
+*.db
