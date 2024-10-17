@@ -196,12 +196,9 @@ plot(factor(m_gammals$model$month), resid(m_gammals, type = 'deviance'),
      xlab = NULL, ylab = 'Residuals')
 abline(h = 0, lwd = 1.5, col = 'red3')
 
-# still, AIC and BIC are substantially better for the gammals model
+# still, AIC is substantially better for the gammals model
 AIC(m_gamma, m_gammals) %>%
   mutate(delta_AIC = AIC - min(AIC))
-
-BIC(m_gamma, m_gammals) %>%
-  mutate(delta_BIC = BIC - min(BIC))
 
 # get SD(temperature) based on SSP monthly averages ----
 preds <- readRDS('data/climate-yearly-projections-2024-06-11.rds') %>%
