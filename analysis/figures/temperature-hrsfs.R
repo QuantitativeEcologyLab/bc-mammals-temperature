@@ -8,7 +8,6 @@ library('ggplot2')   # for fancy plots
 library('khroma')    # for colorblind-friendly color palettes
 library('cowplot')   # for fancy multi-panel plots
 source('analysis/figures/default-ggplot-theme.R') # bold text and no grids
-plot_scheme(PAL, colours = TRUE)
 
 # import models for each species
 d <- tibble(
@@ -19,7 +18,7 @@ d <- tibble(
                      pattern = gsub('\\(s\\.', 'southern', .sp) %>%
                        gsub('\\(', '', .) %>%
                        gsub('\\)', '', .) %>%
-                       paste0('rsf-', .),
+                       paste0('rsf-', ., '-2024-'),
                      full.names = TRUE)
     if(length(fn) == 0) fn <- NA_character_
     return(fn)
@@ -67,10 +66,11 @@ surface <- function(m, dist_1 = 0.01, dist_2 = 0.1) {
                           filter(m$model, detected == 1)$temperature_C,
                           filter(m$model, detected == 1)$forest_perc,
                           dist = dist_1),
-      too_far_2 = too_far(temperature_C, x,
-                          filter(m$model, detected == 1)$temperature_C,
-                          filter(m$model, detected == 1)$forest_perc,
-                          dist = dist_2)),
+      # too_far_2 = too_far(temperature_C, x,
+      #                     filter(m$model, detected == 1)$temperature_C,
+      #                     filter(m$model, detected == 1)$forest_perc,
+      #                     dist = dist_2)
+      too_far_2 = FALSE),
     transmute(
       newd,
       temperature_C,
@@ -85,10 +85,13 @@ surface <- function(m, dist_1 = 0.01, dist_2 = 0.1) {
                           filter(m$model, detected == 1)$temperature_C,
                           filter(m$model, detected == 1)$elevation_m,
                           dist = dist_1),
-      too_far_2 = too_far(temperature_C, x,
-                          filter(m$model, detected == 1)$temperature_C,
-                          filter(m$model, detected == 1)$elevation_m,
-                          dist = dist_2),
+      # too_far_2 = too_far(temperature_C, x,
+      #                     filter(m$model, detected == 1)$temperature_C,
+      #                     filter(m$model, detected == 1)$elevation_m,
+      #                     dist = dist_2),
+      too_far_2 =
+        x < min(filter(m$model, detected == 1)$elevation_m) - 500 |
+        x > max(filter(m$model, detected == 1)$elevation_m) + 500,
       x = x / 1e3),
     transmute(
       newd,
@@ -104,11 +107,14 @@ surface <- function(m, dist_1 = 0.01, dist_2 = 0.1) {
                           filter(m$model, detected == 1)$temperature_C,
                           filter(m$model, detected == 1)$dist_water_m,
                           dist = dist_1),
-      too_far_2 = too_far(temperature_C, x,
-                          filter(m$model, detected == 1)$temperature_C,
-                          filter(m$model, detected == 1)$dist_water_m,
-                          dist = dist_2),
-      x = x / 1e3))
+      # too_far_2 = too_far(temperature_C, x,
+      #                     filter(m$model, detected == 1)$temperature_C,
+      #                     filter(m$model, detected == 1)$dist_water_m,
+      #                     dist = dist_2),
+      too_far_2 =
+        x < min(filter(m$model, detected == 1)$dist_water_m) - 1e3 |
+        x > max(filter(m$model, detected == 1)$dist_water_m) + 1e3,
+    x = x / 1e3))
 }
 
 # predict partial effects
@@ -118,19 +124,34 @@ preds <- d %>%
             lambdas = map(rsf, surface)) %>%
   unnest(lambdas)
 
+# need to divide by median lambda within each variable
 preds %>%
+  filter(! too_far_1) %>%
+  group_by(species, variable) %>%
+  summarize(min_lambda = min(lambda),
+            median_lambda = median(lambda),
+            max_lambda = max(lambda))
+
+LIM <- 2
+
+preds %>%
+  filter(! (species == 'Canis lupus' & variable == 'bold(Elevation~(km))' &
+              x > 1.2)) %>%
+  # filter(species == 'Canis lupus', variable == 'bold(Elevation~(km))') %>%
   select(species, lab, x, temperature_C, variable, lambda, too_far_1,
          too_far_2) %>%
   filter((! too_far_2)) %>%
-  # re-scale the center (1) relative to the median value 
+  # re-scale the center (1) relative to the median in the observed data
+  # doing this because some estimated effects of distance from water and
+  # elevation are extreme
   group_by(species, variable) %>%
-  mutate(lambda = lambda / median(lambda)) %>%
+  mutate(lambda = lambda / median(lambda[! too_far_1])) %>%
   ungroup() %>%
   # cap at 2^(+/-2)
   mutate(
     log2_lambda = log2(lambda),
-    log2_lambda = case_when(log2_lambda > 2 ~ 2,
-                            log2_lambda < -2 ~ -2,
+    log2_lambda = case_when(log2_lambda > LIM ~ LIM,
+                            log2_lambda < -LIM ~ -LIM,
                             TRUE ~ log2_lambda),
     variable = factor(variable,
                       levels = c("bold(Forest~cover~('%'))",
@@ -141,15 +162,16 @@ preds %>%
              switch = 'y') +
   geom_raster(aes(temperature_C, x, fill = log2_lambda)) +
   geom_contour(aes(temperature_C, x, z = as.numeric(too_far_1)),
-               color = 'grey', linewidth = 0.25) +
+               color = 'grey50', linewidth = 0.25) +
   scale_x_continuous(paste0('Temperature (\U00B0', 'C)'), expand = c(0, 0),
                      breaks = c(-20, 0, 20)) +
   scale_y_continuous(NULL, expand = c(0, 0)) +
   scale_fill_sunset(name = 'Relative selection strength', midpoint = 0,
-                    limits = c(-2, 2), breaks = -2:2, labels = \(x) 2^x) +
+                    limits = c(-LIM, LIM), breaks = -LIM:LIM,
+                    labels = \(x) 2^x) +
   theme(strip.placement = 'outside', strip.background.y = element_blank(),
         strip.text.y = element_text(size = 11), legend.position = 'top',
-        panel.background = element_rect(fill = 'grey'),
+        panel.background = element_rect(fill = 'grey90'),
         legend.key.width = rel(2))
 
 ggsave('figures/rsf-surface-plots.png', width = 17.5, height = 8,
