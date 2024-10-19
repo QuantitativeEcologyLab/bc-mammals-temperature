@@ -24,11 +24,9 @@ if(file.exists('data/cc-hgam-projections.rds')) {
   m_2 <- readRDS('models/gamma-gam.rds')
   
   # terms to exclude from the prediction
-  EXCLUDE <- c('s(animal)',
-               paste0('s(tod_pdt):species', SPECIES),
-               paste0('ti(doy,tod_pdt):species', SPECIES),
-               paste0('ti(temp_c,tod_pdt):species', SPECIES),
-               's(log(dt))', 's(log(dt), species)')
+  SM <- smooths(m_1)
+  EXCLUDE <- SM[grepl('tod', SM) | grepl('dt', SM) | grepl('animal', SM) |
+                  grepl('dt', SM)]
   
   # import prediction data for each species in the data's extent ----
   cc_newd <- tibble(
@@ -100,8 +98,8 @@ if(file.exists('data/cc-hgam-projections.rds')) {
              paste0('bolditalic(', ., ')') %>%
              factor())
   saveRDS(cc_proj, 'data/cc-hgam-projections.rds')
+  beepr::beep(2)
 }
-beepr::beep(2)
 
 # make figures ----
 p_o_mov <-
