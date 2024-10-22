@@ -3,6 +3,7 @@ library('tidyr')     # for data wrangling
 library('purrr')     # for functional programming
 library('lubridate') # for working with dates
 library('sf')        # for working with spatial data
+library('terra')     # for working with rasters
 library('mgcv')      # for generalized additive models
 library('gratia')    # for useful functions for generalized additive models
 library('ggplot2')   # for fancy figures
@@ -13,9 +14,13 @@ library('cowplot')   # to add phylopic once (not in each facet)
 source('analysis/figures/default-ggplot-theme.R') # for consistent theme
 source('data/bc-shapefile.R') # import shapefile of bc
 
-#' **NEED TO USE BC ALBERS**
+# raster test
+expand_grid(x = 1:10,
+            y = 1:10) %>%
+  mutate(z = )
+
+
 # import climate data ----
-#' from `analysis/figures/temperature-hgams-projections.R`
 if(file.exists('data/cc-hgam-bc-projections.rds')) {
   cc_proj <- readRDS('data/cc-hgam-bc-projections.rds')
 } else {
@@ -24,21 +29,15 @@ if(file.exists('data/cc-hgam-bc-projections.rds')) {
   m_2 <- readRDS('models/gamma-gam.rds')
   
   # terms to exclude from the prediction
-  EXCLUDE <- c('s(animal)',
-               paste0('s(tod_pdt):species', SPECIES),
-               paste0('ti(doy,tod_pdt):species', SPECIES),
-               paste0('ti(temp_c,tod_pdt):species', SPECIES),
-               's(log(dt))', 's(log(dt), species)')
+  SM <- smooths(m_1)
+  EXCLUDE <- SM[grepl('tod', SM) | grepl('dt', SM) | grepl('animal', SM) |
+                  grepl('dt', SM)]
   
-  #' ***HERE***
-  
-  # import prediction data for all of BC ----
-  cc_newd <- tibble(
-    wp = list.files('H:/GitHub/bc-mammals-temperature/data',
-                    'weather-projections-', full.names = TRUE)[3] %>%
-      map(readRDS)) %>%
-    unnest(wp) %>%
+  # predict movement rates
+  bc_preds <- readRDS('data/weather-projections.rds') %>%
     filter(year == 2020 | year == 2100) %>%
+    select(scenario, year, month, latitude, longitude, temp_c, weight) %>%
+    rename(temp_c = temp_c) %>%
     # make sure only the necessary column are kept
     transmute(
       scenario,
@@ -50,36 +49,25 @@ if(file.exists('data/cc-hgam-bc-projections.rds')) {
       doy = yday(date_decimal(year + (month - 0.5) / 12)),
       temp_c,
       dt = 1,
-      weight)
-  
-  cc_proj <- bind_cols(
-    cc_newd,
-    predict(m_1, newdata = cc_newd, type = 'link', se.fit = TRUE,
-            discrete = TRUE, exclude = EXCLUDE) %>%
-      as.data.frame() %>%
-      transmute(p_lwr = inv_link(m_1)(fit - se.fit * 1.96),
-                p = inv_link(m_1)(fit),
-                p_upr = inv_link(m_1)(fit + se.fit * 1.96)),
-    predict(m_2, newdata = cc_newd, type = 'link', se.fit = TRUE,
-            discrete = TRUE, exclude = EXCLUDE) %>%
-      as.data.frame() %>%
-      transmute(s_lwr = inv_link(m_2)(fit - se.fit * 1.96),
-                s = inv_link(m_2)(fit),
-                s_upr = inv_link(m_2)(fit + se.fit * 1.96))) %>%
-    mutate(d_lwr = p_lwr * s_lwr,
-           d = p * s,
-           d_upr = p_upr * s_upr) %>%
+      weight) %>%
+    # predict P(moving), E(speed | moving) and E(speed) = displacement
+    mutate(.,
+           p = predict(m_1, newdata = ., type = 'response', se.fit = FALSE,
+                       discrete = TRUE, exclude = EXCLUDE),
+           s = predict(m_2, newdata = ., type = 'response', se.fit = FALSE,
+                       discrete = TRUE, exclude = EXCLUDE),
+           d = p * s) %>%
     group_by(scenario, year, species, long, lat) %>%
-    summarize(d_lwr = weighted.mean(d_lwr, w = weight),
+    summarize(p = weighted.mean(p, w = weight),
+              s = weighted.mean(s, w = weight),
               d = weighted.mean(d, w = weight),
-              d_upr = weighted.mean(d_upr, w = weight),
               .groups = 'drop') %>%
     # center by the mean of the 2020 estimates for each species
-    arrange(year, species, scenario) %>%
+    arrange(species, year, scenario) %>%
     group_by(species) %>%
-    mutate(d_lwr = d_lwr / mean(d_lwr[1:4]),
-           d = d / mean(d[1:4]),
-           d_upr = d_upr / mean(d_upr[1:4])) %>%
+    mutate(p = p / mean(p[1:4]),
+           s = s / mean(s[1:4]),
+           d = d / mean(d[1:4])) %>%
     ungroup() %>%
     mutate(scenario = case_when(grepl('126', scenario) ~ 'SSP 1-2.6',
                                 grepl('245', scenario) ~ 'SSP 2-4.5',
@@ -89,40 +77,7 @@ if(file.exists('data/cc-hgam-bc-projections.rds')) {
              gsub('~\\(', '\\)~bold\\((', .) %>%
              paste0('bolditalic(', ., ')') %>%
              factor())
-  saveRDS(cc_proj, 'data/cc-hgam-bc-projections.rds')
-}
-
-# import models ----
-m_1 <- readRDS('models/binomial-gam.rds')
-m_2 <- readRDS('models/gamma-gam.rds')
-
-# predict speeds ----
-if(file.exists('data/rel-change-2020-2100-movement-rates.rds')) {
-  preds <- readRDS('data/rel-change-2020-2100-movement-rates.rds')
-} else {
-  EXCLUDE <- smooths(m_1)[grepl('tod', smooths(m_1)) |
-                            grepl('dt', smooths(m_1)) |
-                            grepl('animal', smooths(m_1))]
-  
-  preds <-
-    mutate(newd,
-           p_moving =
-             predict(m_1, newdata = newd, type = 'response',
-                     exclude = EXCLUDE, discrete = FALSE,
-                     newdata.guaranteed = FALSE),
-           speed =
-             predict(m_2, newdata = newd, type = 'response',
-                     exclude = EXCLUDE, discrete = FALSE,
-                     newdata.guaranteed = TRUE),
-           # convert to overall average speed (accounting for P(moving))
-           displ = p_moving * speed, # m/s
-           displ = speed / 1e3 * n_days * 24 * 60 * 60) %>% # km / month
-    group_by(species, scenario, long, lat) %>%
-    summarise(p_moving = sum(p_moving * n_days) / 365, # no units
-              speed = sum(speed * n_days) / 365, # m/s
-              displ = sum(displ) / 365, # km/day
-              .groups = 'drop')
-  saveRDS(preds, 'data/rel-change-2020-2100-movement-rates.rds')
+  saveRDS(bc_preds, 'data/cc-hgam-bc-projections.rds')
 }
 
 # check overall changes from 2020 to 2100
