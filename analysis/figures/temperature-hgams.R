@@ -8,7 +8,6 @@ library('ggplot2')   # for fancy plots
 library('khroma')    # for colorblind-friendly color palettes
 library('cowplot')   # for fancy multi-panel plots
 source('analysis/figures/default-ggplot-theme.R') # bold text and no grids
-source('functions/labeller_perc.R') # for percentage labels
 plot_scheme(PAL, colours = TRUE)
 
 # import data
@@ -427,7 +426,7 @@ s_tod_int <-
                      breaks = tod_breaks, labels = tod_labs) +
   scale_fill_gradientn(name = 'Relative change in speed', colors = s_pal,
                        limits = range(z_breaks), breaks = z_breaks,
-                       labels = \(x) labeller_perc(round(2^x, 2))) +
+                       labels = \(x) round(2^x, 2)) +
   theme(panel.background = element_rect(fill = 'grey'),
         legend.position = 'inside', legend.position.inside = c(0.66, 0.15),
         legend.key.width = rel(1.5),  legend.justification = 'center',
@@ -454,7 +453,7 @@ d_tod_int <-
   scale_fill_gradientn(name = 'Relative change in distance travelled',
                        colors = d_pal, limits = range(z_breaks) * 2,
                        breaks = z_breaks * 2,
-                       labels = \(x) labeller_perc(2^x)) +
+                       labels = \(x) 2^x) +
   theme(panel.background = element_rect(fill = 'grey'),
         legend.position = 'inside', legend.position.inside = c(0.66, 0.15),
         legend.key.width = rel(1.5),  legend.justification = 'center',
@@ -517,7 +516,7 @@ s_doy_int <-
   scale_fill_gradientn(name = 'Relative change in speed', colors = s_pal,
                        limits = range(z_breaks),
                        breaks = z_breaks,
-                       labels = \(x) labeller_perc(round(2^x, 2))) +
+                       labels = \(x) round(2^x, 2)) +
   theme(panel.background = element_rect(fill = 'grey'),
         legend.position = 'inside', legend.position.inside = c(0.66, 0.15),
         legend.key.width = rel(1.5),  legend.justification = 'center',
@@ -544,7 +543,7 @@ d_doy_int <-
   scale_fill_gradientn(name = 'Relative change in distance travelled',
                        colors = d_pal, limits = range(z_breaks) * 2,
                        breaks = z_breaks * 2,
-                       labels = \(x) labeller_perc(2^x)) +
+                       labels = \(x) round(2^x, 2)) +
   theme(panel.background = element_rect(fill = 'grey'),
         legend.position = 'inside', legend.position.inside = c(0.66, 0.15),
         legend.key.width = rel(1.5),  legend.justification = 'center',
@@ -595,3 +594,32 @@ distance <- plot_grid(
   labels = c('', 'A', 'B'), ncol = 1, rel_heights = c(0.2, 1, 1))
 ggsave('figures/distance.png', distance,
        width = 16, height = 8, dpi = 600, bg = 'white')
+
+# for posters
+plot_grid(
+  d_tod_int +
+    facet_wrap(~ species, labeller = label_parsed, nrow = 1) +
+    theme(legend.position = 'none', strip.text = element_text(size = 10)),
+  d_doy_int +
+    facet_wrap(~ species, labeller = label_parsed, nrow = 1) +
+    theme(legend.position = 'none', strip.text = element_text(size = 10)),
+  labels = c('A', 'B'), ncol = 1) %>%
+  plot_grid(
+    .,
+    get_legend(
+      d_tod_int +
+        scale_fill_gradientn(name = expression(atop(bold('Relative'),
+                                                    bold('change'))),
+                             colors = d_pal,
+                             limits = range(z_breaks) * 2,
+                             breaks = z_breaks * 2,
+                             labels = \(x) round(2^x, 2)) +
+        theme(panel.background = element_rect(fill = 'grey'),
+              legend.position = 'right',
+              legend.key.width = rel(1),
+              legend.justification = 'center',
+              legend.direction = 'vertical')),
+    nrow = 1, rel_widths = c(1, 0.05))
+
+ggsave('figures/2024-ubco-grad-symposium/distance.png',
+       width = 12, height = 4.75, dpi = 600, bg = 'white', scale = 1.6)
