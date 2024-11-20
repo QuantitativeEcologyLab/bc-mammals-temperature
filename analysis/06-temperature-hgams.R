@@ -126,18 +126,39 @@ ggplot(d_2) +
   facet_wrap(~ species, scales = 'free', ncol = 2) +
   geom_density(aes(speed_est), fill = 'grey')
 
+d <- mutate(d,
+            lab = case_when(species == SPECIES[1] ~ SPECIES_LABS[1],
+                            species == SPECIES[2] ~ SPECIES_LABS[2],
+                            species == SPECIES[3] ~ SPECIES_LABS[3],
+                            species == SPECIES[4] ~ SPECIES_LABS[4],
+                            species == SPECIES[5] ~ SPECIES_LABS[5],
+                            species == SPECIES[6] ~ SPECIES_LABS[6],
+                            species == SPECIES[7] ~ SPECIES_LABS[7]))
+
+d_2 <- mutate(d_2,
+              lab = case_when(species == SPECIES[1] ~ SPECIES_LABS[1],
+                              species == SPECIES[2] ~ SPECIES_LABS[2],
+                              species == SPECIES[3] ~ SPECIES_LABS[3],
+                              species == SPECIES[4] ~ SPECIES_LABS[4],
+                              species == SPECIES[5] ~ SPECIES_LABS[5],
+                              species == SPECIES[6] ~ SPECIES_LABS[6],
+                              species == SPECIES[7] ~ SPECIES_LABS[7]))
+
+
 # check spread for tod, doy, and temp for each species except for grizzly
 # should be ok to keep cs = 'cc'
 hist_1 <- d %>%
-  select(species, tod_pdt, doy, temp_c, moving) %>%
-  pivot_longer(-c(species, moving), names_to = 'variable') %>%
+  select(lab, tod_pdt, doy, temp_c, moving) %>%
+  pivot_longer(-c(lab, moving), names_to = 'variable') %>%
   mutate(variable = case_when(
-    variable == 'doy' ~ 'Day of year',
-    variable == 'temp_c' ~ paste0('Temprature (\U00B0', 'C)'),
-    variable == 'tod_pdt' ~ 'Time of day (PDT)') %>%
+    variable == 'doy' ~ 'Day~of~year',
+    variable == 'temp_c' ~ paste0('Temperature~(degree*C)'),
+    variable == 'tod_pdt' ~ 'Time~of~day~(PDT)') %>%
+      paste0('bold(', ., ')') %>%
       factor(., levels = unique(.))) %>%
   ggplot(aes(value)) +
-  facet_grid(species ~ variable, scales = 'free', switch = 'x') +
+  facet_grid(lab ~ variable, scales = 'free', switch = 'x',
+             labeller = label_parsed) +
   geom_histogram(aes(fill = moving), position = 'stack', bins = 24) +
   scale_x_continuous(NULL, expand = c(0, 0)) +
   ylab('Count') +
@@ -147,15 +168,17 @@ hist_1 <- d %>%
         strip.text.x = element_text(size = 11), strip.placement = 'outside')
 
 hist_2 <- d_2 %>%
-  select(species, tod_pdt, doy, temp_c) %>%
-  pivot_longer(-c(species), names_to = 'variable') %>%
+  select(lab, tod_pdt, doy, temp_c, moving) %>%
+  pivot_longer(-c(lab, moving), names_to = 'variable') %>%
   mutate(variable = case_when(
-    variable == 'doy' ~ 'Day of year',
-    variable == 'temp_c' ~ paste0('Temprature (\U00B0', 'C)'),
-    variable == 'tod_pdt' ~ 'Time of day (PDT)') %>%
+    variable == 'doy' ~ 'Day~of~year',
+    variable == 'temp_c' ~ paste0('Temperature~(degree*C)'),
+    variable == 'tod_pdt' ~ 'Time~of~day~(PDT)') %>%
+      paste0('bold(', ., ')') %>%
       factor(., levels = unique(.))) %>%
   ggplot(aes(value)) +
-  facet_grid(species ~ variable, scales = 'free', switch = 'x') +
+  facet_grid(lab ~ variable, scales = 'free', switch = 'x',
+             labeller = label_parsed) +
   geom_histogram(fill = '#377EB8', position = 'stack', bins = 24) +
   scale_x_continuous(NULL, expand = c(0, 0)) +
   ylab('Count') +
@@ -168,7 +191,7 @@ plot_grid(get_plot_component(hist_1 + theme(legend.position = 'top'),
           ncol = 1, rel_heights = c(1, 15))
 
 ggsave('figures/temperature-movement-rates-hist.png',
-       width = 16, height = 11, units = 'in', dpi = 600, bg = 'white')
+       width = 16, height = 17, units = 'in', dpi = 600, bg = 'white')
 
 # model P(movement) ----
 #' using `bs = 'fs'` rather than `by` smooths because to keep the models
@@ -537,7 +560,7 @@ tibble(model = c('P(moving)', 'speed'),
        rmse_without_temp = c(rmse(m_1_no_t), rmse(m_2_no_t)),
        rmse_with_temp = c(rmse(m_1), rmse(m_2)),
        perc_change = (((rmse_with_temp / rmse_without_temp) - 1) * 100) %>%
-                           round(2) %>%
+         round(2) %>%
          paste0('%')) %>%
   knitr::kable()
 

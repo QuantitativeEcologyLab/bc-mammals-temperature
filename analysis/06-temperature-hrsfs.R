@@ -40,23 +40,6 @@ if(file.exists('data/tracking-data/rsf-data.rds')) {
              factor()) %>%
     select(species, animal, longitude, latitude, temperature_C, weight)
   
-  # minimum convex polygon to compare data extent to AKDEs
-  locs_mcp <-
-    map_dfr(mm$tel, \(.t) {
-      .t %>%
-        SpatialPoints.telemetry() %>%
-        adehabitatHR::mcp() %>%
-        st_as_sf() %>%
-        st_geometry() %>%
-        #' st_make_valid() %>% #' use if `Error: Loop x edge x has duplicate...`
-        st_union() %>% # unite estimate with lower and upper 95% CIs
-        st_transform('EPSG:4326') %>%
-        st_as_sf()
-    }) %>%
-    st_make_valid() %>%
-    st_union() %>%
-    st_as_sf()
-  
   ud_bounds <-
     map_dfr(mm$akde, \(.a) {
       SpatialPolygonsDataFrame.UD(.a, level.UD = 0.95, level = 0) %>%
@@ -103,15 +86,12 @@ if(file.exists('data/tracking-data/rsf-data.rds')) {
     # plot(locs, add = TRUE)
     plot(wide_bounds, add = TRUE)
     plot(ud_bounds, add = TRUE)
-    plot(locs_mcp, add = TRUE, col = 'red3')
     plot(e)
     plot(wide_bounds, add = TRUE)
     plot(ud_bounds, add = TRUE)
-    plot(locs_mcp, add = TRUE, col = 'red3')
     plot(w)
     plot(wide_bounds, add = TRUE)
     plot(ud_bounds, add = TRUE)
-    plot(locs_mcp, add = TRUE, col = 'red3')
     layout(1)
   }
   
@@ -126,8 +106,8 @@ if(file.exists('data/tracking-data/rsf-data.rds')) {
   # check range of temperatures
   range(d_1$temperature_C, na.rm = TRUE)
   
-  if(file.exists('data/quadrature-data-2024-09-24.rds')) {
-    d_0 <- readRDS('data/quadrature-data-2024-09-24.rds')
+  if(file.exists('data/quadrature-data-2024-11-13.rds')) {
+    d_0 <- readRDS('data/quadrature-data-2024-11-13.rds')
   } else {
     d_0 <- mm %>%
       transmute(
@@ -137,13 +117,6 @@ if(file.exists('data/tracking-data/rsf-data.rds')) {
           .a <- SpatialPolygonsDataFrame.UD(.a, level.UD = 0.999, level = 0) %>%
             st_as_sf() %>%
             st_transform('EPSG:4326')
-          
-          # uniform temperatures to compare to no selection
-          null_temperatures <- filter(d_1, species == .species) %>%
-            pull(temperature_C) %>%
-            quantile(probs = c(0.1, 0.3, 0.5, 0.7, 0.9),
-                     na.rm = TRUE) %>%
-            unname()
           
           q <-
             # crop and mask forest raster with the AKDE
@@ -169,9 +142,10 @@ if(file.exists('data/tracking-data/rsf-data.rds')) {
           
           # make a final tibble of the species, temperatures, and q points
           tibble(species = .species,
-                 temperature_C = null_temperatures,
                  quadrature_points = list(q)) %>%
-            unnest(quadrature_points)
+            unnest(quadrature_points) %>%
+            # uniform temperatures to compare to no selection
+            mutate(temperature_C = runif(n(), min = -40, max = 40))
         })) %>%
       unnest(zeros)
     saveRDS(d_0, paste0('data/quadrature-data-', Sys.Date(), '.rds'))
@@ -224,7 +198,7 @@ if(FALSE) {
   
   ggplot(goat_akdes) +
     geom_raster(aes(longitude, latitude, fill = dist_water_m),
-                readRDS('data/quadrature-data-2024-09-24.rds') %>%
+                readRDS('data/quadrature-data-2024-11-12.rds') %>%
                   filter(species == 'Oreamnos americanus')) +
     geom_sf(data = goat_akdes_0999, fill = 'transparent', lwd = 2,
             color = 'red') +
@@ -241,7 +215,9 @@ d %>%
   filter(detected == 0) %>%
   group_by(animal) %>%
   summarize(min = min(forest_perc),
-            max = max(forest_perc)) %>%
+            max = max(forest_perc),
+            .groups = 'drop') %>%
+  # summarize across animals
   summarize(min = min(min),
             max = max(max))
 
@@ -268,11 +244,9 @@ problematic <-
                              if_else(dist_water_m < min_dis |
                                        dist_water_m > max_dis,
                                      'water', '')))
-problematic
 
-problematic %>%
-  group_by(species) %>%
-  summarize(n = n())
+# only three problematic points because the elevation is slightly too low
+problematic
 
 # drop two wolf locations with unusually high elevations
 filter(d, species == 'Canis lupus', detected == 1) %>%
@@ -281,10 +255,20 @@ filter(d, species == 'Canis lupus', detected == 1) %>%
 
 filter(d, species == 'Canis lupus', detected == 1) %>%
   pull(elevation_m) %>%
-  hist(ylim = c(0, 10))
+  hist(ylim = c(0, 100))
 abline(v = 1200, col = 'red', lwd = 2)
 
 d <- filter(d, ! (species == 'Canis lupus' & elevation_m > 1200))
+
+filter(d, species == 'Canis lupus', detected == 1) %>%
+  pull(elevation_m) %>%
+  hist(ylim = c(0, 200), xlim = c(200, 1200))
+
+# the only caribou (likely tracked twice) that moves up in elevation
+filter(d, species == 'Rangifer tarandus boreal',
+       elevation_m > 1500) %>% pull(animal) %>% unique()
+
+d <- filter(d, animal != 'SCEK014' & animal != 'SCEK014b')
 
 # fit the RSFs ----
 #' *NOTES:*
@@ -321,23 +305,23 @@ for(sp in as.character(SPECIES)) {
                      position = 'identity', alpha = 0.5, bins = 10) +
       scale_fill_brewer('Detected', type = 'qual', palette = 6))
   
+  elev_k <- if_else(sp == 'Canis lupus', 3, 6)
+  
   rsf <- bam(
     detected ~
       # species-level average resource preference
       s(forest_perc, k = 6, bs = 'tp') +
-      s(elevation_m, k = 6, bs = 'tp') +
-      s(dist_water_m, k = 6, bs = 'bs', m = c(3, 3, 2, 1)) +
+      s(elevation_m, k = elev_k, bs = 'tp') +
+      s(dist_water_m, k = 6, bs = 'tp') +
       # animal-level deviations from the species-level average
       s(animal, bs = 're') +
-      s(forest_perc, animal, k = 4, bs = 'fs', xt = list(bc = 'cr')) +
-      s(elevation_m, animal, k = 4, bs = 'fs', xt = list(bc = 'cr')) +
-      s(dist_water_m, animal, k = 4, bs = 'fs', xt = list(bc = 'cr')) +
+      s(forest_perc, animal, k = 6, bs = 'fs', xt = list(bc = 'cr')) +
+      s(elevation_m, animal, k = 6, bs = 'fs', xt = list(bc = 'cr')) +
+      s(dist_water_m, animal, k = 6, bs = 'fs', xt = list(bc = 'cr')) +
       # changes in preference with temperature
-      #' `k = 6` causes elk model not to converge with `iter < 200`, and
-      #' some terms are too wiggly
-      ti(forest_perc, temperature_C, k = 4, bs = 'tp') +
-      ti(elevation_m, temperature_C, k = 4, bs = 'tp') +
-      ti(dist_water_m, temperature_C, k = 4, bs = 'tp') +
+      ti(forest_perc, temperature_C, k = 6, bs = 'tp') +
+      ti(elevation_m, temperature_C, k = 6, bs = 'tp') +
+      ti(dist_water_m, temperature_C, k = 6, bs = 'tp') +
       # include marginals of temperature to post-stratify over afterwards
       s(temperature_C, k = 4, bs = 'tp') +
       s(temperature_C, animal, k = 4, bs = 'fs', xt = list(bc = 'cr')),
@@ -369,6 +353,7 @@ for(sp in as.character(SPECIES)) {
   if(FALSE) {
     appraise(rsf, type = 'pearson')
   }
+  rm(rsf)
 }
 
 # fit RSFs without temperature
@@ -383,9 +368,9 @@ for(sp in as.character(SPECIES)) {
       s(dist_water_m, k = 6, bs = 'tp') +
       # animal-level deviations from the species-level average
       s(animal, bs = 're') +
-      s(forest_perc, animal, k = 4, bs = 'fs', xt = list(bc = 'cr')) +
-      s(elevation_m, animal, k = 4, bs = 'fs', xt = list(bc = 'cr')) +
-      s(dist_water_m, animal, k = 4, bs = 'fs', xt = list(bc = 'cr')),
+      s(forest_perc, animal, k = 6, bs = 'fs', xt = list(bc = 'cr')) +
+      s(elevation_m, animal, k = 6, bs = 'fs', xt = list(bc = 'cr')) +
+      s(dist_water_m, animal, k = 6, bs = 'fs', xt = list(bc = 'cr')),
     family = poisson(link = 'log'),
     data = d,
     weights = weight,
@@ -416,6 +401,7 @@ for(sp in as.character(SPECIES)) {
   if(FALSE) {
     appraise(rsf, type = 'pearson')
   }
+  rm(rsf)
 }
 
 # find change in AIC values and deviance explained

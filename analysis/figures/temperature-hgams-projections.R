@@ -8,150 +8,177 @@ library('ggplot2')   # for fancy plots
 library('khroma')    # for colorblind-friendly color palettes
 library('cowplot')   # for fancy multi-panel plots
 source('analysis/figures/default-ggplot-theme.R') # bold text and no grids
-source('functions/labeller_perc.R') # for y axis labels in percentage
 plot_scheme(PAL, colours = TRUE)
 
 if(file.exists('data/cc-hgam-projections.rds')) {
   cc_proj <- readRDS('data/cc-hgam-projections.rds')
 } else {
-  # functions for calculating odds and back-transforming
-  odds <- function(p) p / (1 - p)
-  inv_odds <- function(o) 1 / (1 + 1/o)
-  if(FALSE) inv_odds(odds(0.2)) # check the functions
-  
   # import models
   m_1 <- readRDS('models/binomial-gam.rds')
   m_2 <- readRDS('models/gamma-gam.rds')
   
   # terms to exclude from the prediction
   SM <- smooths(m_1)
-  EXCLUDE <- SM[grepl('tod', SM) | grepl('dt', SM) | grepl('animal', SM) |
-                  grepl('dt', SM)]
+  TERMS <- c('(Intercept)', 'species',
+             SM[!(grepl('tod', SM) | grepl('dt', SM) | grepl('animal', SM))])
   
   # import prediction data for each species in the data's extent ----
+  if(file.exists('data/hgam-cc_newd.rds')) {
+    cc_newd <- readRDS('data/hgam-cc_newd.rds')
+  } else {
   cc_newd <- tibble(
     wp = list.files('data', 'weather-projections-', full.names = TRUE) %>%
       map(readRDS)) %>%
     unnest(wp) %>%
-    filter(year >= 2020) %>%
-    # make sure only the necessary column are kept
+    filter(year >= 2025) %>%
+    # make sure only the necessary columns are kept
     transmute(
       scenario,
       year,
-      animal = m_1$model$animal[1],
+      animal = m_1$model$animal[1], #' to use `discrete = TRUE`
       species = gsub('boreal', '(boreal)', species) %>%
         gsub('southern mountain', '(s. mountain)', x = .),
       tod_pdt = 0,
       doy = yday(date_decimal(year + (month - 0.5) / 12)),
       temp_c,
       dt = 1,
-      weight)
+      weight,
+      long, lat)
+  saveRDS(cc_newd, 'data/hgam-cc_newd.rds')
+  }
   
-  cc_proj <- bind_cols(
-    cc_newd,
-    predict(m_1, newdata = cc_newd, type = 'link', se.fit = TRUE,
-            discrete = TRUE, exclude = EXCLUDE) %>%
-      as.data.frame() %>%
-      transmute(p_lwr = inv_link(m_1)(fit - se.fit * 1.96),
-                p = inv_link(m_1)(fit),
-                p_upr = inv_link(m_1)(fit + se.fit * 1.96)),
-    predict(m_2, newdata = cc_newd, type = 'link', se.fit = TRUE,
-            discrete = TRUE, exclude = EXCLUDE) %>%
-      as.data.frame() %>%
-      transmute(s_lwr = inv_link(m_2)(fit - se.fit * 1.96),
-                s = inv_link(m_2)(fit),
-                s_upr = inv_link(m_2)(fit + se.fit * 1.96))) %>%
-    mutate(d_lwr = p_lwr * s_lwr,
-           d = p * s,
-           d_upr = p_upr * s_upr) %>%
-    group_by(scenario, year, species) %>%
-    summarize(p_lwr = weighted.mean(p_lwr, w = weight),
-              s_lwr = weighted.mean(s_lwr, w = weight),
-              d_lwr = weighted.mean(d_lwr, w = weight),
-              p = weighted.mean(p, w = weight),
+  cc_proj <- cc_newd %>%
+    mutate(.,
+           p = predict(m_1, newdata = ., type = 'response', se.fit = FALSE,
+                       discrete = TRUE, terms = TERMS),
+           s = predict(m_2, newdata = ., type = 'response', se.fit = FALSE,
+                       discrete = TRUE, terms = TERMS),
+           d = p * s) %>%
+    # average across day of year
+    group_by(scenario, year, species, long, lat) %>%
+    summarize(p = weighted.mean(p, w = weight),
               s = weighted.mean(s, w = weight),
               d = weighted.mean(d, w = weight),
-              p_upr = weighted.mean(p_upr, w = weight),
-              s_upr = weighted.mean(s_upr, w = weight),
-              d_upr = weighted.mean(d_upr, w = weight),
               .groups = 'drop') %>%
-    # center by the mean of the 2020 estimates for each species
-    arrange(year, species, scenario) %>%
+    # find median and 90% percentile interval of the predicted means
+    # not including CIs because averaging them is not straightforward
+    group_by(scenario, year, species) %>%
+    summarize(p_lwr_05 = quantile(p, 0.05),
+              s_lwr_05 = quantile(s, 0.05),
+              d_lwr_05 = quantile(d, 0.05),
+              p_median = quantile(p, 0.50),
+              s_median = quantile(s, 0.50),
+              d_median = quantile(d, 0.50),
+              p_upr_95 = quantile(p, 0.95),
+              s_upr_95 = quantile(s, 0.95),
+              d_upr_95 = quantile(d, 0.95),
+              .groups = 'drop') %>%
+    # divide by mean of 2025 to find relative change since 2025
     group_by(species) %>%
-    # convert probabilities to odds for figures
-    mutate(o_lwr = odds(p_lwr) / mean(odds(p_lwr[1:4])),
-           s_lwr = s_lwr / mean(s_lwr[1:4]),
-           d_lwr = d_lwr / mean(d_lwr[1:4]),
-           o = odds(p) / mean(odds(p[1:4])),
-           s = s / mean(s[1:4]),
-           d = d / mean(d[1:4]),
-           o_upr = odds(p_upr) / mean(odds(p_upr[1:4])),
-           s_upr = s_upr / mean(s_upr[1:4]),
-           d_upr = d_upr / mean(d_upr[1:4])) %>%
+    mutate(p_ref = mean(p_median[year == 2025]),
+           s_ref = mean(s_median[year == 2025]),
+           d_ref = mean(d_median[year == 2025])) %>%
     ungroup() %>%
-    mutate(scenario = case_when(grepl('126', scenario) ~ 'SSP 1-2.6',
-                                grepl('245', scenario) ~ 'SSP 2-4.5',
-                                grepl('370', scenario) ~ 'SSP 3-7.0',
-                                grepl('585', scenario) ~ 'SSP 5-8.5'),
+    mutate(scenario = case_when(grepl('126', scenario) ~ 'Best scenario (SSP 1-2.6)',
+                                grepl('245', scenario) ~ 'Good scenario (SSP 2-4.5)',
+                                grepl('370', scenario) ~ 'Bad scenario (SSP 3-7.0)',
+                                grepl('585', scenario) ~ 'Worst scenario (SSP 5-8.5)') %>%
+             factor(., levels = unique(.)),
            species = gsub(' ', '~', species) %>%
              gsub('~\\(', '\\)~bold\\((', .) %>%
              paste0('bolditalic(', ., ')') %>%
              factor())
+  cc_proj
+  
+  # sanity check
+  if(FALSE) {
+    ggplot(cc_proj, aes(year, p_median, group = scenario)) +
+      facet_wrap(~ species, scales = 'free') +
+      geom_ribbon(aes(year, ymin = p_lwr_05, ymax = p_upr_95,
+                      fill = scenario), alpha = 0.2) +
+      geom_hline(aes(yintercept = p_ref), lty = 'dashed') +
+      geom_line(color = 'black', lwd = 1.5) +
+      geom_line(aes(color = scenario), lwd = 1) +
+      scale_color_brewer('Climate change scenario', type = 'div',
+                         palette = 5, direction = -1,
+                         aesthetics = c('color', 'fill'))
+    ggplot(cc_proj) +
+      facet_wrap(~ species, scales = 'free') +
+      geom_ribbon(aes(year, ymin = s_lwr_05, ymax = s_upr_95,
+                      fill = scenario), alpha = 0.2) +
+      geom_line(aes(year, s_median, color = scenario)) +
+      scale_color_brewer('Climate change scenario', type = 'div',
+                         palette = 5, direction = -1,
+                         aesthetics = c('color', 'fill'))
+    ggplot(cc_proj) +
+      facet_wrap(~ species, scales = 'free') +
+      geom_ribbon(aes(year, ymin = d_lwr_05, ymax = d_upr_95,
+                      fill = scenario), alpha = 0.2) +
+      geom_line(aes(year, d_median, color = scenario)) +
+      scale_color_brewer('Climate change scenario', type = 'div',
+                         palette = 5, direction = -1,
+                         aesthetics = c('color', 'fill'))
+  }
+  
   saveRDS(cc_proj, 'data/cc-hgam-projections.rds')
   beepr::beep(2)
 }
 
 # make figures ----
-p_o_mov <-
-  ggplot(cc_proj) +
+p_p_mov <-
+  ggplot(cc_proj, aes(year, p_median / p_ref, group = scenario)) +
   facet_wrap(~ species, scales = 'free_y', drop = FALSE,
              labeller = label_parsed) +
-  geom_hline(yintercept = 1, color = 'grey') +
-  geom_ribbon(aes(year, ymin = o_lwr, ymax = o_upr, fill = scenario),
-              alpha = 0.2) +
-  geom_line(aes(year, o, color = scenario)) +
+  geom_ribbon(aes(ymin = p_lwr_05 / p_ref, ymax = p_upr_95 / p_ref,
+                  fill = scenario), alpha = 0.2) +
+  geom_hline(aes(yintercept = 1), lty = 'dashed') +
+  geom_line(color = 'black', lwd = 1.5) +
+  geom_line(aes(color = scenario), lwd = 1) +
   scale_color_brewer('Climate change scenario', type = 'div',
                      palette = 5, direction = -1,
                      aesthetics = c('color', 'fill')) +
-  labs(x = NULL, y = 'Relative change in odds of moving') +
-  scale_y_continuous(labels = labeller_perc) +
+  labs(x = NULL, y = 'Relative change in P(moving)') +
   theme(legend.position = 'inside',
-        legend.position.inside = c(5/6, 1/6)); p_o_mov
-ggsave('figures/odds-moving-local-cc-predictions.png', p_o_mov,
+        legend.position.inside = c(5/6, 1/6)); p_p_mov
+ggsave('figures/odds-moving-local-cc-predictions.png', p_p_mov,
        width = 12, height = 8, dpi = 600, bg = 'white')
 
 p_s <-
-  ggplot(cc_proj) +
+  ggplot(cc_proj, aes(year, s_median / s_ref, group = scenario)) +
   facet_wrap(~ species, scales = 'free_y', drop = FALSE,
              labeller = label_parsed) +
-  geom_hline(yintercept = 1, color = 'grey') +
-  geom_ribbon(aes(year, ymin = s_lwr, ymax = s_upr, fill = scenario),
-              alpha = 0.2) +
-  geom_line(aes(year, s, color = scenario)) +
+  geom_ribbon(aes(ymin = s_lwr_05 / s_ref, ymax = s_upr_95 / s_ref,
+                  fill = scenario), alpha = 0.2) +
+  geom_hline(aes(yintercept = 1), lty = 'dashed') +
+  geom_line(color = 'black', lwd = 1.5) +
+  geom_line(aes(color = scenario), lwd = 1) +
   scale_color_brewer('Climate change scenario', type = 'div',
                      palette = 5, direction = -1,
                      aesthetics = c('color', 'fill')) +
   labs(x = NULL, y = 'Relative change in speed when moving') +
-  scale_y_continuous(labels = labeller_perc) +
   theme(legend.position = 'inside',
         legend.position.inside = c(5/6, 1/6)); p_s
 ggsave('figures/speed-local-cc-predictions.png', p_s,
        width = 12, height = 8, dpi = 600, bg = 'white')
 
 p_d <-
-  ggplot(cc_proj) +
+  ggplot(cc_proj, aes(year, d_median / d_ref, group = scenario)) +
   facet_wrap(~ species, scales = 'free_y', drop = FALSE,
              labeller = label_parsed) +
-  geom_hline(yintercept = 1, color = 'grey') +
-  geom_ribbon(aes(year, ymin = d_lwr, ymax = d_upr, fill = scenario),
-              alpha = 0.2) +
-  geom_line(aes(year, d, color = scenario)) +
+  geom_ribbon(aes(ymin = d_lwr_05 / d_ref, ymax = d_upr_95 / d_ref,
+                  fill = scenario), alpha = 0.2) +
+  geom_hline(aes(yintercept = 1), lty = 'dashed') +
+  geom_line(color = 'black', lwd = 1.5) +
+  geom_line(aes(color = scenario), lwd = 1) +
   scale_color_brewer('Climate change scenario', type = 'div',
                      palette = 5, direction = -1,
                      aesthetics = c('color', 'fill')) +
   labs(x = NULL, y = 'Relative change in distance travelled') +
-  scale_y_continuous(labels = labeller_perc) +
   theme(legend.position = 'inside',
         legend.position.inside = c(5/6, 1/6)); p_d
 ggsave('figures/distance-travelled-local-cc-predictions.png', p_d,
        width = 12, height = 8, dpi = 600, bg = 'white')
+
+# for poster
+ggsave('figures/2024-ubco-grad-symposium/distance-travelled-local-cc-predictions.png',
+       p_d, width = 17.5, height = 9.5, dpi = 300, bg = 'white', scale = 0.75)
