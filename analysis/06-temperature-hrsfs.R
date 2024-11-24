@@ -307,6 +307,9 @@ for(sp in as.character(SPECIES)) {
   
   elev_k <- if_else(sp == 'Canis lupus', 3, 6)
   
+  #' not using `log1p(dist_water_m)` because many times it jumps from 0 m
+  #' to a few hundred meters, which gives a gap from log(0 + 1) = 0 to
+  #' about log(300 + 1) = 5.7 
   rsf <- bam(
     detected ~
       # species-level average resource preference
