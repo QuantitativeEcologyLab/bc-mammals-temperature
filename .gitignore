@@ -84,3 +84,6 @@ data/ecmwf-era5-2m-temperature/*
 # ignore unnecessary  files
 *.log
 *.db
+
+# do not ignore predictions without sensitive data
+!temperature-hrsf-preds.rds
