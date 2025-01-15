@@ -162,7 +162,7 @@ p <-
   scale_x_continuous(paste0('Temperature (\U00B0', 'C)'), expand = c(0, 0),
                      breaks = c(-20, 0, 20)) +
   scale_y_continuous(NULL, expand = c(0, 0)) +
-  scale_fill_sunset(name = 'Relative selection strength', midpoint = 0,
+  scale_fill_PRGn(name = 'Relative selection strength', midpoint = 0,
                     limits = c(-LIM, LIM), breaks = -LIM:LIM,
                     labels = \(x) 2^x) +
   theme(strip.placement = 'outside', strip.background.y = element_blank(),
