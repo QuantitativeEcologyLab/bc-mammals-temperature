@@ -110,7 +110,7 @@ p_mov_tod <-
   labs(x = 'Time of day (PDT)', y = 'P(moving)') +
   theme(legend.position = 'none',
         panel.grid.major.x = element_blank(),
-        panel.grid.major.y = element_line(colour = c(rep('grey', 4), NA)))
+        panel.grid.major.y = element_line(colour = c(rep('grey90', 4), NA)))
 
 speed_tod <-
   ggplot(preds_tod) +
@@ -129,7 +129,7 @@ speed_tod <-
   labs(x = 'Time of day (PDT)', y = 'Relative change in speed') +
   theme(legend.position = 'none',
         panel.grid.major.x = element_blank(),
-        panel.grid.major.y = element_line(colour = c(rep('grey', 4), NA)))
+        panel.grid.major.y = element_line(colour = c(rep('grey90', 4), NA)))
 
 distance_tod <-
   preds_tod %>%
@@ -150,7 +150,7 @@ distance_tod <-
   labs(x = 'Time of day (PDT)', y = 'Relative change in distance travelled') +
   theme(legend.position = 'none',
         panel.grid.major.x = element_blank(),
-        panel.grid.major.y = element_line(colour = c(rep('grey', 5), NA)))
+        panel.grid.major.y = element_line(colour = c(rep('grey90', 5), NA)))
 
 # s(doy) ----
 newd_doy <- expand_grid(animal = 'new animal',
@@ -182,7 +182,7 @@ p_mov_doy <-
   theme(legend.position = 'none',
         axis.ticks.x = element_blank(),
         panel.grid.major.x = element_blank(),
-        panel.grid.major.y = element_line(colour = c(rep('grey', 5), NA)))
+        panel.grid.major.y = element_line(colour = c(rep('grey90', 5), NA)))
 
 speed_doy <-
   ggplot(preds_doy) +
@@ -204,7 +204,7 @@ speed_doy <-
   theme(legend.position = 'none',
         axis.ticks.x = element_blank(),
         panel.grid.major.x = element_blank(),
-        panel.grid.major.y = element_line(colour = c(rep('grey', 5), NA)))
+        panel.grid.major.y = element_line(colour = c(rep('grey90', 5), NA)))
 
 distance_doy <-
   preds_doy %>%
@@ -228,7 +228,7 @@ distance_doy <-
   theme(legend.position = 'none',
         axis.ticks.x = element_blank(),
         panel.grid.major.x = element_blank(),
-        panel.grid.major.y = element_line(colour = c(rep('grey', 4), NA)))
+        panel.grid.major.y = element_line(colour = c(rep('grey90', 4), NA)))
 
 # s(temp_c) ----
 newd_temp_c <- tibble(animal = 'new animal',
@@ -271,7 +271,7 @@ speed_temp <-
   ggplot(preds_temp_c) +
   facet_wrap(~ species, nrow = 1, labeller = label_parsed) +
   geom_rug(aes(temp_c), filter(d, moving), alpha = 0.1) +
-  geom_hline(yintercept = 1, color = 'grey') +
+  geom_hline(yintercept = 1, color = 'grey90') +
   geom_ribbon(aes(temp_c, ymin = s_lwr, ymax = s_upr, fill = species),
               alpha = .2) +
   geom_line(aes(temp_c, s_mu, color = species), linewidth =  1) +
@@ -285,7 +285,7 @@ distance_temp <-
   ggplot(preds_temp_c) +
   facet_wrap(~ species, nrow = 1, labeller = label_parsed,
              scales = 'free_y') +
-  geom_hline(yintercept = 1, color = 'grey') +
+  geom_hline(yintercept = 1, color = 'grey90') +
   geom_ribbon(aes(temp_c, ymin = d_lwr, ymax = d_upr, fill = species),
               alpha = .2) +
   geom_line(aes(temp_c, d_mu, color = species), linewidth =  1) +
@@ -397,7 +397,7 @@ p_mov_tod_int <-
   ggplot(aes(temp_c, tod_pdt, fill = p_mu)) +
   facet_wrap(~ species, labeller = label_parsed, nrow = 3) +
   geom_raster() +
-  geom_contour(aes(temp_c, tod_pdt, z = log2(p_mu)), color = 'grey',
+  geom_contour(aes(temp_c, tod_pdt, z = log2(p_mu)), color = 'grey90',
                inherit.aes = FALSE) +
   scale_x_continuous(paste0('Temperature (\U00B0', 'C)'),
                      breaks = c(-20, 0, 20)) +
@@ -405,7 +405,7 @@ p_mov_tod_int <-
                      breaks = tod_breaks, labels = tod_labs) +
   scale_fill_acton(name = 'P(moving)', limits = c(0, 0.3),
                    breaks = seq(0, 0.3, by = 0.1)) +
-  theme(panel.background = element_rect(fill = 'grey'),
+  theme(panel.background = element_rect(fill = 'grey90'),
         legend.position = 'inside', legend.position.inside = c(0.66, 0.15),
         legend.key.width = rel(1.5),  legend.justification = 'center',
         legend.direction = 'horizontal')
@@ -427,7 +427,7 @@ s_tod_int <-
   scale_fill_gradientn(name = 'Relative change in speed', colors = s_pal,
                        limits = range(z_breaks), breaks = z_breaks,
                        labels = \(x) round(2^x, 2)) +
-  theme(panel.background = element_rect(fill = 'grey'),
+  theme(panel.background = element_rect(fill = 'grey90'),
         legend.position = 'inside', legend.position.inside = c(0.66, 0.15),
         legend.key.width = rel(1.5),  legend.justification = 'center',
         legend.direction = 'horizontal')
@@ -454,7 +454,7 @@ d_tod_int <-
                        colors = d_pal, limits = range(z_breaks) * 2,
                        breaks = z_breaks * 2,
                        labels = \(x) 2^x) +
-  theme(panel.background = element_rect(fill = 'grey'),
+  theme(panel.background = element_rect(fill = 'grey90'),
         legend.position = 'inside', legend.position.inside = c(0.66, 0.15),
         legend.key.width = rel(1.5),  legend.justification = 'center',
         legend.direction = 'horizontal')
@@ -487,14 +487,14 @@ p_mov_doy_int <-
   ggplot(aes(temp_c, doy, fill = p_mu)) +
   facet_wrap(~ species, labeller = label_parsed, nrow = 3) +
   geom_raster() +
-  geom_contour(aes(temp_c, doy, z = log2(p_mu)), color = 'grey',
+  geom_contour(aes(temp_c, doy, z = log2(p_mu)), color = 'grey90',
                inherit.aes = FALSE, bins = 5) +
   scale_x_continuous(paste0('Temperature (\U00B0', 'C)'),
                      breaks = c(-20, 0, 20)) +
   scale_y_continuous('Day of year', expand = c(0, 0),
                      breaks = doy_breaks, labels = doy_labs) +
   scale_fill_acton(name = 'P(moving)', limits = c(0, NA)) +
-  theme(panel.background = element_rect(fill = 'grey'),
+  theme(panel.background = element_rect(fill = 'grey90'),
         legend.position = 'inside', legend.position.inside = c(0.66, 0.15),
         legend.key.width = rel(1.5),  legend.justification = 'center',
         legend.direction = 'horizontal')
@@ -517,7 +517,7 @@ s_doy_int <-
                        limits = range(z_breaks),
                        breaks = z_breaks,
                        labels = \(x) round(2^x, 2)) +
-  theme(panel.background = element_rect(fill = 'grey'),
+  theme(panel.background = element_rect(fill = 'grey90'),
         legend.position = 'inside', legend.position.inside = c(0.66, 0.15),
         legend.key.width = rel(1.5),  legend.justification = 'center',
         legend.direction = 'horizontal')
@@ -544,7 +544,7 @@ d_doy_int <-
                        colors = d_pal, limits = range(z_breaks) * 2,
                        breaks = z_breaks * 2,
                        labels = \(x) round(2^x, 2)) +
-  theme(panel.background = element_rect(fill = 'grey'),
+  theme(panel.background = element_rect(fill = 'grey90'),
         legend.position = 'inside', legend.position.inside = c(0.66, 0.15),
         legend.key.width = rel(1.5),  legend.justification = 'center',
         legend.direction = 'horizontal')
@@ -614,7 +614,7 @@ plot_grid(
                              limits = range(z_breaks) * 2,
                              breaks = z_breaks * 2,
                              labels = \(x) round(2^x, 2)) +
-        theme(panel.background = element_rect(fill = 'grey'),
+        theme(panel.background = element_rect(fill = 'grey90'),
               legend.position = 'right',
               legend.key.width = rel(1),
               legend.justification = 'center',
