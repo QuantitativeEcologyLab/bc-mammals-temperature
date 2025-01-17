@@ -31,7 +31,7 @@ if(file.exists('data/hgam-speed-data.rds')) {
              stringr::str_replace_all('southern mountain',
                                       '(s. mountain)') %>%
              factor()) %>%
-    #' cluster speeds using `kmeans()`
+    #' cluster speeds using `kmeans()` (does a poor job, see below)
     nest(speeds = ! species) %>%
     mutate(speeds = map(speeds, \(.d) {
       km <- kmeans(.d$speed_est, centers = 2)
