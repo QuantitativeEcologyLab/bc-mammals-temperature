@@ -19,19 +19,45 @@ locs_ext <- locs %>%
   st_as_sfc() %>%
   st_as_sf()
 
-# original rasters from http://www.earthenv.org/landcover
+
+# import digital elevation raster (zoom > 6 gives excessively high peaks)
+#' see `analysis/00-download-bc-dem.R` for downloading
 dem <- rast('data/resource-rasters/bc-buffered-dem-z6.tif')
 plot(dem)
 plot(locs_ext, add = TRUE, lwd = 3)
 
-# forest raster
-rast('data/resource-rasters/uncropped-rasters/consensus_full_class_1.tif') %>%
-  crop(dem) %>%
-  writeRaster('data/resource-rasters/forest.tif')
+# forest raster (original rasters from http://www.earthenv.org/landcover)
+f1 <- rast('data/resource-rasters/uncropped-rasters/consensus_full_class_1.tif') %>%
+  crop(dem)
+f2 <- rast('~/../Downloads/consensus_full_class_2.tif') %>%
+  crop(dem)
+f3 <- rast('~/../Downloads/consensus_full_class_3.tif') %>%
+  crop(dem)
+f4 <- rast('~/../Downloads/consensus_full_class_4.tif') %>%
+  crop(dem)
+
+layout(matrix(1:4, ncol = 2))
+plot(f1, main = 'layer 1: Evergreen/Deciduous Needleleaf Trees')
+plot(f2, main = 'layer 2: Evergreen Broadleaf Trees')
+plot(f3, main = 'layer 3: Deciduous Broadleaf Trees')
+plot(f4, main = 'layer 4: Mixed/Other Trees')
+layout(1)
+
+f <- f1 + f2 + f3 + f4
+layout(1:2)
+plot(f1, main = 'Evergreen/Deciduous Needleleaf Trees')
+plot(f, main = 'all trees')
+layout(1)
+
+max(values(f))
+values(f) <- if_else(values(f) > 100, 100, values(f))
+max(values(f))
+
+writeRaster(f, 'data/resource-rasters/forest.tif')
 plot(rast('data/resource-rasters/forest.tif'))
 plot(locs_ext, add = TRUE, lwd = 3)
 
-# raster of open water
+# raster of open water (original rasters from http://www.earthenv.org/landcover)
 layout(matrix(1:8, ncol = 2, byrow = TRUE))
 w <- rast('data/resource-rasters/uncropped-rasters/consensus_full_class_12.tif') %>%
   crop(dem)
@@ -56,32 +82,15 @@ writeRaster(dist, 'data/resource-rasters/distance-from-water.tif')
 source('data/bc-shapefile.R')
 
 # raster of tree cover
-raster('data/resource-rasters/uncropped-rasters/consensus_full_class_1.tif') %>%
+f %>%
   crop(bc_unproj) %>%
   mask(bc_unproj) %>%
   writeRaster('data/resource-rasters/bc-forest.tif')
-plot(raster('data/resource-rasters/bc-forest.tif'))
+plot(rast('data/resource-rasters/bc-forest.tif'))
 
 # raster of open water
-layout(matrix(1:8, ncol = 2, byrow = TRUE))
-w <- rast('data/resource-rasters/uncropped-rasters/consensus_full_class_12.tif') %>%
+dist %>%
   crop(bc_unproj) %>%
-  aggregate(8)
-plot(w, main = 'Percent water')
-hist(w, breaks = 100, main = 'Percent water')
-
-w01 <- ceiling(w / 100) %>% # convert anything above 0 to a 1
-  mask(st_as_sf(bc_unproj)) # remove sea
-plot(w01, main = 'Yes/No water')
-hist(w01, main = 'Yes/No water')
-
-w1 <- classify(w01, cbind(0, NA))
-plot(w1, main = 'Water only', col = 'blue')
-hist(w1, main = 'Water only')
-
-dist <- distance(w1)
-dist <- mask(dist, st_as_sf(bc_unproj))
-plot(dist, main = 'Distance from nearest water')
-hist(dist, main = 'Distance from nearest water')
-writeRaster(dist,
-            'data/resource-rasters/bc-distance-from-water-coarse.tif')
+  mask(bc_unproj) %>%
+  writeRaster('data/resource-rasters/bc-distance-from-water.tif')
+plot(rast('data/resource-rasters/bc-distance-from-water.tif'))

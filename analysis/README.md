@@ -1,7 +1,7 @@
 This folder contains all `R` scripts used for analyses in this project (except for custom functions, which are in the `functions` folder, and those used to create the manuscript which are in the `writing` folder). Below is a list of the scripts, in the order in which they should be run to replicate the analysis.
 
 * `00-compile-goat-tracking-data.R` compiles the goat tracking data into a single `RDS` file.
-* `00-crop-resource-rasters.R` creates the resource rasters necessary for the project.
+* `00-crop-resource-rasters.R` creates the resource rasters necessary for the project using rasters from http://www.earthenv.org/landcover.
 * `00-download-bc-dem.R` downloads Digital Elevation Models (DEMs) necessary for the project.
 * `00-preview-boreal-data.R` previews the boreal data obtained from https://www.bcogris.ca/projects/boreal-caribou-telemetry-data/.
 
