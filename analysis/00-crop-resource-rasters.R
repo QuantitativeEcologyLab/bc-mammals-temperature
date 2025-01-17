@@ -29,11 +29,11 @@ plot(locs_ext, add = TRUE, lwd = 3)
 # forest raster (original rasters from http://www.earthenv.org/landcover)
 f1 <- rast('data/resource-rasters/uncropped-rasters/consensus_full_class_1.tif') %>%
   crop(dem)
-f2 <- rast('~/../Downloads/consensus_full_class_2.tif') %>%
+f2 <- rast('data/resource-rasters/uncropped-rasters/consensus_full_class_2.tif') %>%
   crop(dem)
-f3 <- rast('~/../Downloads/consensus_full_class_3.tif') %>%
+f3 <- rast('data/resource-rasters/uncropped-rasters/consensus_full_class_3.tif') %>%
   crop(dem)
-f4 <- rast('~/../Downloads/consensus_full_class_4.tif') %>%
+f4 <- rast('data/resource-rasters/uncropped-rasters/consensus_full_class_4.tif') %>%
   crop(dem)
 
 layout(matrix(1:4, ncol = 2))
