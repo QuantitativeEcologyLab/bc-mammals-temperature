@@ -325,7 +325,7 @@ for(sp in as.character(SPECIES)) {
       ti(forest_perc, temperature_C, k = 6, bs = 'tp') +
       ti(elevation_m, temperature_C, k = 6, bs = 'tp') +
       ti(dist_water_m, temperature_C, k = 6, bs = 'tp') +
-      # include marginals of temperature to post-stratify over afterwards
+      # include marginals of temperature to remove sampling biases
       s(temperature_C, k = 4, bs = 'tp') +
       s(temperature_C, animal, k = 4, bs = 'fs', xt = list(bc = 'cr')),
     family = poisson(link = 'log'),
