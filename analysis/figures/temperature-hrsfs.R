@@ -21,7 +21,7 @@ if(file.exists('models/temperature-hrsf-preds.rds')) {
                        pattern = gsub('\\(s\\.', 'southern', .sp) %>%
                          gsub('\\(', '', .) %>%
                          gsub('\\)', '', .) %>%
-                         paste0('rsf-', ., '-2024-'),
+                         paste0('rsf-', ., '-2025-'),
                        full.names = TRUE)
       if(length(fn) == 0) fn <- NA_character_
       return(fn)
@@ -121,7 +121,7 @@ if(file.exists('models/temperature-hrsf-preds.rds')) {
   saveRDS(preds, 'models/temperature-hrsf-preds.rds')
 }
 
-# need to divide by median lambda within each variable
+# need to divide by median lambda within each variable to get interpretable results
 preds %>%
   filter(! too_far_1) %>%
   group_by(species, variable) %>%
@@ -173,7 +173,7 @@ p <-
 ggsave('figures/hrsf-surface-plots.png', p, width = 17.5, height = 8,
        units = 'in', dpi = 600, bg = 'white')
 
-# for poster
+# for bio grad symposium poster
 p +
   scale_fill_sunset(name = 'RSS', midpoint = 0,
                     limits = c(-LIM, LIM), breaks = -LIM:LIM,

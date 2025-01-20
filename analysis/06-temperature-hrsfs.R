@@ -70,7 +70,7 @@ if(file.exists('data/tracking-data/rsf-data.rds')) {
     st_as_sf()
   
   # import rasters of resources
-  f <- rast('data/resource-rasters/uncropped-rasters/consensus_full_class_1.tif') %>%
+  f <- rast('data/resource-rasters/forest.tif') %>%
     crop(wide_bounds) %>%
     mask(wide_bounds)
   e <- rast('data/resource-rasters/bc-buffered-dem-z6.tif') %>%
@@ -102,12 +102,12 @@ if(file.exists('data/tracking-data/rsf-data.rds')) {
            dist_water_m = extract(w, tibble(longitude, latitude))[, 2],
            detected = 1)
   
-  # data frame of null locations ----
+  # make a data frame of null locations ----
   # check range of temperatures
   range(d_1$temperature_C, na.rm = TRUE)
   
-  if(file.exists('data/quadrature-data-2024-11-13.rds')) {
-    d_0 <- readRDS('data/quadrature-data-2024-11-13.rds')
+  if(file.exists('data/quadrature-data-2025-01-17.rds')) {
+    d_0 <- readRDS('data/quadrature-data-2025-01-17.rds')
   } else {
     d_0 <- mm %>%
       transmute(
@@ -198,7 +198,7 @@ if(FALSE) {
   
   ggplot(goat_akdes) +
     geom_raster(aes(longitude, latitude, fill = dist_water_m),
-                readRDS('data/quadrature-data-2024-11-12.rds') %>%
+                readRDS('data/quadrature-data-2025-01-17.rds') %>%
                   filter(species == 'Oreamnos americanus')) +
     geom_sf(data = goat_akdes_0999, fill = 'transparent', lwd = 2,
             color = 'red') +
@@ -305,28 +305,26 @@ for(sp in as.character(SPECIES)) {
                      position = 'identity', alpha = 0.5, bins = 10) +
       scale_fill_brewer('Detected', type = 'qual', palette = 6))
   
-  elev_k <- if_else(sp == 'Canis lupus', 3, 6)
-  
   #' not using `log1p(dist_water_m)` because many times it jumps from 0 m
-  #' to a few hundred meters, which gives a gap from log(0 + 1) = 0 to
-  #' about log(300 + 1) = 5.7 
+  #' to 450 m, which gives a gap from log(0 + 1) = 0 to about
+  #' log(451) = 6.1. Using log(x + 100) doesn't change smooths much
   rsf <- bam(
     detected ~
       # species-level average resource preference
-      s(forest_perc, k = 6, bs = 'tp') +
-      s(elevation_m, k = elev_k, bs = 'tp') +
-      s(dist_water_m, k = 6, bs = 'tp') +
+      s(forest_perc, k = 4, bs = 'cr') +
+      s(elevation_m, k = 4, bs = 'cr') +
+      s(dist_water_m, k = 4, bs = 'cr') +
       # animal-level deviations from the species-level average
       s(animal, bs = 're') +
-      s(forest_perc, animal, k = 6, bs = 'fs', xt = list(bc = 'cr')) +
-      s(elevation_m, animal, k = 6, bs = 'fs', xt = list(bc = 'cr')) +
-      s(dist_water_m, animal, k = 6, bs = 'fs', xt = list(bc = 'cr')) +
+      s(forest_perc, animal, k = 4, bs = 'fs', xt = list(bc = 'cr')) +
+      s(elevation_m, animal, k = 4, bs = 'fs', xt = list(bc = 'cr')) +
+      s(dist_water_m, animal, k = 4, bs = 'fs', xt = list(bc = 'cr')) +
       # changes in preference with temperature
-      ti(forest_perc, temperature_C, k = 6, bs = 'tp') +
-      ti(elevation_m, temperature_C, k = 6, bs = 'tp') +
-      ti(dist_water_m, temperature_C, k = 6, bs = 'tp') +
-      # include marginals of temperature to remove sampling biases
-      s(temperature_C, k = 4, bs = 'tp') +
+      ti(forest_perc, temperature_C, k = 4, bs = 'cr') +
+      ti(elevation_m, temperature_C, k = 4, bs = 'cr') +
+      ti(dist_water_m, temperature_C, k = 4, bs = 'cr') +
+      # include marginals of temperature to post-stratify over afterwards
+      s(temperature_C, k = 4, bs = 'cr') +
       s(temperature_C, animal, k = 4, bs = 'fs', xt = list(bc = 'cr')),
     family = poisson(link = 'log'),
     data = d,
@@ -335,6 +333,8 @@ for(sp in as.character(SPECIES)) {
     method = 'fREML',
     discrete = TRUE,
     control = gam.control(trace = TRUE))
+  
+  unique(warnings())
   
   saveRDS(rsf, paste0('models/rsf-', sp, '-', Sys.Date(), '.rds'))
   
@@ -366,14 +366,14 @@ for(sp in as.character(SPECIES)) {
   rsf <- bam(
     detected ~
       # species-level average resource preference
-      s(forest_perc, k = 6, bs = 'tp') +
-      s(elevation_m, k = 6, bs = 'tp') +
-      s(dist_water_m, k = 6, bs = 'tp') +
+      s(forest_perc, k = 4, bs = 'cr') +
+      s(elevation_m, k = 4, bs = 'cr') +
+      s(dist_water_m, k = 4, bs = 'cr') +
       # animal-level deviations from the species-level average
       s(animal, bs = 're') +
-      s(forest_perc, animal, k = 6, bs = 'fs', xt = list(bc = 'cr')) +
-      s(elevation_m, animal, k = 6, bs = 'fs', xt = list(bc = 'cr')) +
-      s(dist_water_m, animal, k = 6, bs = 'fs', xt = list(bc = 'cr')),
+      s(forest_perc, animal, k = 4, bs = 'fs', xt = list(bc = 'cr')) +
+      s(elevation_m, animal, k = 4, bs = 'fs', xt = list(bc = 'cr')) +
+      s(dist_water_m, animal, k = 4, bs = 'fs', xt = list(bc = 'cr')),
     family = poisson(link = 'log'),
     data = d,
     weights = weight,
