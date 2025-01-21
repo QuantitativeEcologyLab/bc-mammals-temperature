@@ -13,7 +13,7 @@ source('data/bc-shapefile.R')
 # import temperature data ----
 SAMPLE <- seq(1, 365 * 24 * 2, by = 50) # sample of rasters for test
 
-if(FALSE) {
+if(! file.exists('data/ecmwf-era5-2m-temperature/aggregated-data.rds')) {
   NCHAR <- nchar('data/ecmwf-era5-2m-temperature/epsg-4326/ecmwf-era5-2m-temp-X')
   
   dem <- rast('data/resource-rasters/bc-dem-z6.tif')
@@ -56,7 +56,7 @@ range(d$monthly_mean)
 
 d
 
-#' some variances are `NA` because there is only 1 value for some (x, y)
+#' no `NA` variances; all values have at least 672 samples
 mean(is.na(d$monthly_mean))
 mean(is.na(d$monthly_var))
 quantile(d$n, probs = c(0, 0.003, 0.005, 0.25, 0.5, 1))
@@ -69,7 +69,7 @@ quantile(d$n, probs = c(0, 0.003, 0.005, 0.25, 0.5, 1))
 #' and the predictions for 2100 would likely not be realistic
 #' fits in ~5 minutes
 #' inverse gaussian distribution fits much worse than Gamma
-if(FALSE) {
+if(! file.exists('models/bc-temperature-var-gamma-2024-06-14.rds')) {
   m_gamma <-
     bam(monthly_var ~
           s(monthly_mean, bs = 'tp', k = 8) +
@@ -148,7 +148,7 @@ if(FALSE) {
 #' account for seasonal and spatial heteroskedasticity with considerations
 #' from above
 #' fits in < 4-5 days
-if(FALSE) {
+if(! file.exists('models/bc-temperature-var-gammals-2024-06-16.rds')) {
   tictoc::tic()
   m_gammals <- gam(list(
     monthly_var ~
@@ -169,14 +169,15 @@ if(FALSE) {
   saveRDS(m_gammals,
           paste0('models/bc-temperature-var-gammals-', Sys.Date(),
                  '.rds'))
+  
+  # good fit, but but residuals have heavy tails
+  layout(matrix(1:4, ncol = 2))
+  gam.check(m_gammals, pch = 19, col = '#00000020')
+  layout(1)
+  
 } else {
   m_gammals <- readRDS('models/bc-temperature-var-gammals-2024-06-16.rds')
 }
-
-# good fit, but but residuals have heavy tails
-layout(matrix(1:4, ncol = 2))
-gam.check(m_gammals, pch = 19, col = '#00000020')
-layout(1)
 
 summary(m_gammals) # dev.expl is quite high
 plot(m_gammals, pages = 1, scheme = c(1, 1, 2, 2, 1, 1, 2), too.far = 0.02)
@@ -237,3 +238,46 @@ weather_proj <-
   ungroup()
 
 saveRDS(weather_proj, 'data/weather-projections.rds')
+
+# simulated weather for only 2025 and 2100 ----
+# get SD(temperature) based on SSP monthly averages
+preds <- readRDS('data/climate-yearly-projections-2025-2100-only-2025-01-21.rds') %>%
+  filter(year %in% c(2025, 2100)) %>%
+  rename(elev_m = elevation,
+         monthly_mean = mean_temperature,
+         lat = latitude,
+         long = longitude) %>%
+  mutate(monthly_mean = if_else(monthly_mean == -9999, NA_real_, monthly_mean)) %>%
+  select(! c(min_temperature, max_temperature)) %>%
+  mutate(sd = sqrt(predict(m_gammals, newdata = ., type = 'response')[, 1]))
+
+range(preds$monthly_mean, na.rm = TRUE)
+range(preds$sd, na.rm = TRUE)
+hist(rnorm(nrow(preds), mean = preds$monthly_mean, sd = preds$sd),
+     main = expression('Gaussian temperatures (n = 1 for each {'~
+                         hat(mu)~','~hat(sigma)~'})'))
+
+saveRDS(preds,
+        paste0('data/climate-yearly-projections-mean-variance-2025-2100-only-',
+               Sys.Date(), '.rds'))
+
+# simulate weather for each month ----
+weather_proj <-
+  readRDS('data/climate-yearly-projections-mean-variance-2025-2100-only-2025-01-20.rds') %>%
+  filter(year %in% c(2025, 2100)) %>%
+  transmute(scenario, year, month, monthly_mean, long, lat,
+            monthly_sd = sd) %>%
+  mutate(., qs = list(tibble(q = seq(0.1, 0.9, by = 0.1)))) %>%
+  unnest(qs) %>%
+  mutate(
+    temp_c = monthly_mean + monthly_sd * q,
+    # weigh each quantile by the probability density
+    weight = dnorm(x = temp_c, mean = monthly_mean, sd = monthly_sd)) %>%
+  # ensure each month has a weight of 1
+  group_by(scenario, long, lat, year, month) %>%
+  mutate(weight = weight / sum(weight)) %>%
+  ungroup()
+
+range(weather_proj$temp_c, na.rm = TRUE) # ensure range is reasonable
+
+saveRDS(weather_proj, 'data/weather-projections-2025-2100-only.rds')
