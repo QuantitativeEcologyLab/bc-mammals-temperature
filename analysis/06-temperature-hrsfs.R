@@ -292,6 +292,7 @@ SPECIES <- d %>%
 
 COMPLETED <- character(0)
 
+# fit HRSFs with temperature
 for(sp in as.character(SPECIES)) {
   cat('Working on ', as.character(sp), '...\n', sep = '')
   print(
@@ -359,7 +360,7 @@ for(sp in as.character(SPECIES)) {
   rm(rsf)
 }
 
-# fit RSFs without temperature
+# fit HRSFs without temperature
 for(sp in as.character(SPECIES)) {
   cat('Working on ', as.character(sp), '...\n', sep = '')
   
@@ -415,12 +416,12 @@ change <- tibble(
     gsub('\\)', '', .),
   w = map_chr(species, \(.sp) {
     list.files(path = 'models',
-               pattern = paste0('rsf-', .sp, '-2024-'),
+               pattern = paste0('rsf-', .sp, '-2025-'),
                full.names = TRUE)
   }),
   wo = map_chr(species, \(.sp) {
     fn <- list.files(path = 'models',
-                     pattern = paste0('rsf-', .sp, '-no-temperature-2024-'),
+                     pattern = paste0('rsf-', .sp, '-no-temperature-2025-'),
                      full.names = TRUE)
     return(fn)
   })) %>%
@@ -445,12 +446,12 @@ fits <- tibble(
     gsub('\\)', '', .),
   w = map_chr(species, \(.sp) {
     list.files(path = 'models',
-               pattern = paste0('rsf-', .sp, '-2024-'),
+               pattern = paste0('rsf-', .sp, '-2025-'),
                full.names = TRUE)
   }),
   wo = map_chr(species, \(.sp) {
     fn <- list.files(path = 'models',
-                     pattern = paste0('rsf-', .sp, '-no-temperature-2024-'),
+                     pattern = paste0('rsf-', .sp, '-no-temperature-2025-'),
                      full.names = TRUE)
     return(fn)
   })) %>%
