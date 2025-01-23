@@ -1,4 +1,5 @@
-library('ggplot2') # for fancy figures
+library('dplyr')   #' for `%>%`
+library('ggplot2') #' for fancy figures
 
 theme_set(theme_bw() +
             theme(panel.grid = element_blank(),
@@ -8,6 +9,8 @@ PAL <- unname(c(khroma::color('bright')(6), brown = '#654321'))
 
 SPECIES <- unique(readRDS('models/gamma-gam.rds')$model$species)
 SPECIES_LABS <- gsub(' ', '~', SPECIES) %>%
-  gsub('~\\(', '\\)~bold\\((', x = .) %>%
+  gsub('~mountain', ' mountain', .) %>%
+  gsub('~\\(', '\\)~bold\\("(', x = .) %>%
+  gsub(')$', ')"', .) %>%
   paste0('bolditalic(', ., ')')
 N_SPECIES <- length(SPECIES)

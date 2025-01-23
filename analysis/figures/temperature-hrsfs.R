@@ -147,16 +147,21 @@ p <-
     variable == 'bold(Elevation~(km))' & species == 'Rangifer tarandus (boreal)' ~ lambda * 5,
     TRUE ~ lambda)) %>%
   ungroup() %>%
-  # cap at 2^(+/-LIM)
-  mutate(
-    log2_lambda = log2(lambda),
-    log2_lambda = case_when(log2_lambda > LIM ~ LIM,
-                            log2_lambda < -LIM ~ -LIM,
-                            TRUE ~ log2_lambda),
-    variable = factor(variable,
-                      levels = c("bold(Forest~cover~('%'))",
-                                 "bold(Elevation~(km))",
-                                 "bold(Distance~from~water~(km))"))) %>%
+  # fix species and variable labs rather than having to re-run all predictions
+  mutate(lab = gsub('\\(boreal\\)', '"\\(boreal\\)"', lab),
+         lab = gsub('\\(s.~mountain\\)', '"\\(s. mountain\\)"', lab),
+         variable = gsub('\\(km\\)', '"(km)"', variable),
+         variable = gsub('\\(\'%\'\\)', '"(%)"', variable),
+         # keep variable sorting consistent to other figures
+         variable = factor(variable,
+                           levels = c('bold(Forest~cover~"(%)")',
+                                      'bold(Elevation~"(km)")',
+                                      'bold(Distance~from~water~"(km)")')),
+         # cap at 2^(+/-LIM)
+         log2_lambda = log2(lambda),
+         log2_lambda = case_when(log2_lambda > LIM ~ LIM,
+                                 log2_lambda < -LIM ~ -LIM,
+                                 TRUE ~ log2_lambda)) %>%
   ggplot() +
   facet_grid(variable ~ lab, scales = 'free', labeller = label_parsed,
              switch = 'y') +

@@ -40,6 +40,15 @@ season_breaks <-
 #' not averaging across uniform `tod_pdt` and `doy` because I want to
 #' preserve the uneaven sampling of `doy` for `E(speed | moving)`
 marginal <- function(newd, term) {
+  newd <- newd %>%
+    mutate(lab = case_when(species == 'Rangifer tarandus (s. mountain)' ~ 'bolditalic(Rangifer~tarandus)~bold("(s. mountain)")',
+                           species == 'Ursus arctos horribilis' ~ 'bolditalic(Ursus~arctos~horribilis)',
+                           species == 'Puma concolor' ~ 'bolditalic(Puma~concolor)',
+                           species == 'Cervus canadensis' ~ 'bolditalic(Cervus~canadensis)',
+                           species == 'Rangifer tarandus (boreal)' ~ 'bolditalic(Rangifer~tarandus)~bold("(boreal)")',
+                           species == 'Canis lupus' ~ 'bolditalic(Canis~lupus)',
+                           species == 'Oreamnos americanus' ~ 'bolditalic(Oreamnos~americanus)'))
+  
   preds_1 <-
     predict(object = m_1, newdata = newd, type = 'link', se.fit = TRUE,
             terms = c('(Intercept)', 'species',
@@ -95,7 +104,7 @@ p_mov_tod <-
   mutate(p_upr = if_else(p_upr > 0.75, 0.75, p_upr)) %>%
   ggplot() +
   coord_polar() +
-  facet_wrap(~ species, nrow = 1, labeller = label_parsed) +
+  facet_wrap(~ lab, nrow = 1, labeller = label_parsed) +
   geom_area(aes(x, 0.75, group = g), tod, fill = 'black', alpha = 0.2) +
   geom_line(aes(tod_pdt, p_mu, color = species), linewidth = 1) +
   geom_ribbon(aes(tod_pdt, ymin = p_lwr, ymax = p_upr, fill = species),
@@ -115,7 +124,7 @@ p_mov_tod <-
 speed_tod <-
   ggplot(preds_tod) +
   coord_polar() +
-  facet_wrap(~ species, nrow = 1, labeller = label_parsed) +
+  facet_wrap(~ lab, nrow = 1, labeller = label_parsed) +
   geom_area(aes(x, 1.5, group = g), tod, fill = 'black', alpha = 0.2) +
   geom_line(aes(tod_pdt, s_mu, color = species), linewidth = 1) +
   geom_ribbon(aes(tod_pdt, ymin = s_lwr, ymax = s_upr, fill = species),
@@ -136,7 +145,7 @@ distance_tod <-
   mutate(d_upr = if_else(d_upr > 4, 4, d_upr)) %>%
   ggplot() +
   coord_polar() +
-  facet_wrap(~ species, nrow = 1, labeller = label_parsed) +
+  facet_wrap(~ lab, nrow = 1, labeller = label_parsed) +
   geom_area(aes(x, 4, group = g), tod, fill = 'black', alpha = 0.2) +
   geom_line(aes(tod_pdt, d_mu, color = species), linewidth = 1) +
   geom_ribbon(aes(tod_pdt, ymin = d_lwr, ymax = d_upr, fill = species),
@@ -165,7 +174,7 @@ preds_doy <- marginal(newd = newd_doy, term = 'doy')
 p_mov_doy <-
   ggplot(preds_doy) +
   coord_polar(start = 11 / 366 * 2 * pi) + # offset to make axes vertical
-  facet_wrap(~ species, nrow = 1, labeller = label_parsed) +
+  facet_wrap(~ lab, nrow = 1, labeller = label_parsed) +
   geom_area(aes(x, 1, fill = season), seasons, alpha = 0.3,
             show.legend = FALSE) +
   scale_fill_manual(values = PAL_SEASONS) +
@@ -187,7 +196,7 @@ p_mov_doy <-
 speed_doy <-
   ggplot(preds_doy) +
   coord_polar(start = 11 / 366 * 2 * pi) + # offset to make axes vertical
-  facet_wrap(~ species, nrow = 1, labeller = label_parsed) +
+  facet_wrap(~ lab, nrow = 1, labeller = label_parsed) +
   geom_area(aes(x, 2, fill = season), seasons, alpha = 0.3,
             show.legend = FALSE) +
   scale_fill_manual(values = PAL_SEASONS) +
@@ -211,7 +220,7 @@ distance_doy <-
   mutate(d_upr = if_else(d_upr > 3, 3, d_upr)) %>%
   ggplot() +
   coord_polar(start = 11 / 366 * 2 * pi) + # offset to make axes vertical
-  facet_wrap(~ species, nrow = 1, labeller = label_parsed) +
+  facet_wrap(~ lab, nrow = 1, labeller = label_parsed) +
   geom_area(aes(x, 3, fill = season), seasons, alpha = 0.3,
             show.legend = FALSE) +
   scale_fill_manual(values = PAL_SEASONS) +
@@ -255,7 +264,7 @@ d <- mutate(d,
 
 p_mov_temp <-
   ggplot(preds_temp_c) +
-  facet_wrap(~ species, nrow = 1, labeller = label_parsed,
+  facet_wrap(~ lab, nrow = 1, labeller = label_parsed,
              scales = 'free') +
   geom_rug(aes(temp_c), d, alpha = 0.1) +
   geom_ribbon(aes(temp_c, ymin = p_lwr, ymax = p_upr, fill = species),
@@ -269,7 +278,7 @@ p_mov_temp <-
 
 speed_temp <-
   ggplot(preds_temp_c) +
-  facet_wrap(~ species, nrow = 1, labeller = label_parsed) +
+  facet_wrap(~ lab, nrow = 1, labeller = label_parsed) +
   geom_rug(aes(temp_c), filter(d, moving), alpha = 0.1) +
   geom_hline(yintercept = 1, color = 'grey90') +
   geom_ribbon(aes(temp_c, ymin = s_lwr, ymax = s_upr, fill = species),
@@ -283,7 +292,7 @@ speed_temp <-
 
 distance_temp <-
   ggplot(preds_temp_c) +
-  facet_wrap(~ species, nrow = 1, labeller = label_parsed,
+  facet_wrap(~ lab, nrow = 1, labeller = label_parsed,
              scales = 'free_y') +
   geom_hline(yintercept = 1, color = 'grey90') +
   geom_ribbon(aes(temp_c, ymin = d_lwr, ymax = d_upr, fill = species),
@@ -339,6 +348,15 @@ doy_labs <- format(doys, format = '%b 1'); doy_labs
 doy_breaks
 # function to calculate predictions
 surface <- function(newd, term) {
+  newd <- newd %>%
+    mutate(lab = case_when(species == 'Rangifer tarandus (s. mountain)' ~ 'bolditalic(Rangifer~tarandus)~bold("(s. mountain)")',
+                           species == 'Ursus arctos horribilis' ~ 'bolditalic(Ursus~arctos~horribilis)',
+                           species == 'Puma concolor' ~ 'bolditalic(Puma~concolor)',
+                           species == 'Cervus canadensis' ~ 'bolditalic(Cervus~canadensis)',
+                           species == 'Rangifer tarandus (boreal)' ~ 'bolditalic(Rangifer~tarandus)~bold("(boreal)")',
+                           species == 'Canis lupus' ~ 'bolditalic(Canis~lupus)',
+                           species == 'Oreamnos americanus' ~ 'bolditalic(Oreamnos~americanus)'))
+  
   preds_1 <-
     predict(object = m_1, newdata = newd, type = 'link',
             se.fit = FALSE,
@@ -395,7 +413,7 @@ p_mov_tod_int <-
   mutate(ti_tod,
          p_mu = if_else(p_mu > 0.4, 0.4, p_mu)) %>%
   ggplot(aes(temp_c, tod_pdt, fill = p_mu)) +
-  facet_wrap(~ species, labeller = label_parsed, nrow = 3) +
+  facet_wrap(~ lab, labeller = label_parsed, nrow = 3) +
   geom_raster() +
   geom_contour(aes(temp_c, tod_pdt, z = log2(p_mu)), color = 'grey90',
                inherit.aes = FALSE) +
@@ -416,7 +434,7 @@ ggsave('figures/p-moving-tod-interaction.png', p_mov_tod_int,
 # E(speed | moving)
 s_tod_int <-
   ggplot(ti_tod, aes(temp_c, tod_pdt, fill = log2(s_mu))) +
-  facet_wrap(~ species, labeller = label_parsed, nrow = 3) +
+  facet_wrap(~ lab, labeller = label_parsed, nrow = 3) +
   geom_raster() +
   geom_contour(aes(temp_c, tod_pdt, z = log2(s_mu)), color = 'black',
                inherit.aes = FALSE, bins = 5) +
@@ -442,7 +460,7 @@ d_tod_int <-
                           d_mu > 4 ~ 4,
                           TRUE ~ d_mu)) %>%
   ggplot(aes(temp_c, tod_pdt, fill = log2(d_mu))) +
-  facet_wrap(~ species, labeller = label_parsed, nrow = 3) +
+  facet_wrap(~ lab, labeller = label_parsed, nrow = 3) +
   geom_raster() +
   geom_contour(aes(temp_c, tod_pdt, z = log2(d_mu)), color = 'black',
                inherit.aes = FALSE, bins = 5) +
@@ -485,7 +503,7 @@ p_mov_doy_int <-
   mutate(ti_doy,
          p_mu = if_else(p_mu > 0.4, 0.4, p_mu)) %>%
   ggplot(aes(temp_c, doy, fill = p_mu)) +
-  facet_wrap(~ species, labeller = label_parsed, nrow = 3) +
+  facet_wrap(~ lab, labeller = label_parsed, nrow = 3) +
   geom_raster() +
   geom_contour(aes(temp_c, doy, z = log2(p_mu)), color = 'grey90',
                inherit.aes = FALSE, bins = 5) +
@@ -505,7 +523,7 @@ ggsave('figures/p-moving-doy-interaction.png', p_mov_doy_int,
 # E(speed | moving)
 s_doy_int <-
   ggplot(ti_doy, aes(temp_c, doy, fill = log2(s_mu))) +
-  facet_wrap(~ species, labeller = label_parsed, nrow = 3) +
+  facet_wrap(~ lab, labeller = label_parsed, nrow = 3) +
   geom_raster() +
   geom_contour(aes(temp_c, doy, z = log2(s_mu)), color = 'black',
                inherit.aes = FALSE, bins = 5) +
@@ -532,7 +550,7 @@ d_doy_int <-
                           d_mu > 4 ~ 4,
                           TRUE ~ d_mu)) %>%
   ggplot(aes(temp_c, doy, fill = log2(d_mu))) +
-  facet_wrap(~ species, labeller = label_parsed, nrow = 3) +
+  facet_wrap(~ lab, labeller = label_parsed, nrow = 3) +
   geom_raster() +
   geom_contour(aes(temp_c, doy, z = log2(d_mu)), color = 'black',
                inherit.aes = FALSE, bins = 5) +
@@ -562,10 +580,10 @@ get_legend <- function(.plot) {
 p_mov <- plot_grid(
   get_legend(p_mov_tod_int),
   p_mov_tod_int +
-    facet_wrap(~ species, labeller = label_parsed, nrow = 1) +
+    facet_wrap(~ lab, labeller = label_parsed, nrow = 1) +
     theme(legend.position = 'none'),
   p_mov_doy_int +
-    facet_wrap(~ species, labeller = label_parsed, nrow = 1) +
+    facet_wrap(~ lab, labeller = label_parsed, nrow = 1) +
     theme(legend.position = 'none'),
   labels = c('', 'A', 'B'), ncol = 1, rel_heights = c(0.2, 1, 1))
 ggsave('figures/p-moving.png', p_mov,
@@ -574,10 +592,10 @@ ggsave('figures/p-moving.png', p_mov,
 speed <- plot_grid(
   get_legend(s_tod_int),
   s_tod_int +
-    facet_wrap(~ species, labeller = label_parsed, nrow = 1) +
+    facet_wrap(~ lab, labeller = label_parsed, nrow = 1) +
     theme(legend.position = 'none'),
   s_doy_int +
-    facet_wrap(~ species, labeller = label_parsed, nrow = 1) +
+    facet_wrap(~ lab, labeller = label_parsed, nrow = 1) +
     theme(legend.position = 'none'),
   labels = c('', 'A', 'B'), ncol = 1, rel_heights = c(0.2, 1, 1))
 ggsave('figures/speed.png', speed,
@@ -586,10 +604,10 @@ ggsave('figures/speed.png', speed,
 distance <- plot_grid(
   get_legend(d_tod_int),
   d_tod_int +
-    facet_wrap(~ species, labeller = label_parsed, nrow = 1) +
+    facet_wrap(~ lab, labeller = label_parsed, nrow = 1) +
     theme(legend.position = 'none'),
   d_doy_int +
-    facet_wrap(~ species, labeller = label_parsed, nrow = 1) +
+    facet_wrap(~ lab, labeller = label_parsed, nrow = 1) +
     theme(legend.position = 'none'),
   labels = c('', 'A', 'B'), ncol = 1, rel_heights = c(0.2, 1, 1))
 ggsave('figures/distance.png', distance,

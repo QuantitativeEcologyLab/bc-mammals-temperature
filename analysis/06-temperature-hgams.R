@@ -242,22 +242,19 @@ if(file.exists('models/binomial-gam.rds')) {
 # check predictions ----
 p_op <- 
   transmute(d,
-            species,
+            lab,
             moving,
             est = predict(m_1, type = 'response') %>%
               round(2)) %>%
-  group_by(species, est) %>%
+  group_by(lab, est) %>%
   summarise(empirical_mean = mean(moving),
             n = n(),
             se = sd(moving) / sqrt(n),
             lwr = empirical_mean - se,
             upr = empirical_mean + se,
             .groups = 'drop') %>%
-  mutate(species = gsub(' ', '~', species),
-         species = gsub('~\\(', '\\)~bold\\((', species),
-         species = paste0('bolditalic(', species, ')')) %>%
   ggplot(aes(est, empirical_mean, color = log2(n))) +
-  facet_wrap(~ species, nrow = 2, labeller = label_parsed) +
+  facet_wrap(~ lab, nrow = 2, labeller = label_parsed) +
   geom_abline(slope = 1, intercept = 0, color = 'grey') +
   geom_errorbar(aes(est, ymin = lwr, ymax = upr), width = 0, alpha = 0.3) +
   geom_point() +
@@ -369,12 +366,9 @@ if(file.exists('models/gamma-gam.rds')) {
 }
 
 s_op <-
-  mutate(d_2, mu = predict(m_2, type = 'response'),
-         species = gsub(' ', '~', species),
-         species = gsub('~\\(', '\\)~bold\\((', species),
-         species = paste0('bolditalic(', species, ')')) %>%
+  mutate(d_2, mu = predict(m_2, type = 'response')) %>%
   ggplot(aes(mu, speed_est, color = species)) +
-  facet_wrap(~ species, scales = 'free', nrow = 2, labeller = label_parsed) +
+  facet_wrap(~ lab, scales = 'free', nrow = 2, labeller = label_parsed) +
   geom_point(alpha = 0.1, size = 0.1) +
   geom_abline(intercept = 0, slope = 1, color = 'grey') +
   theme(legend.position = 'none') +
@@ -398,23 +392,19 @@ dt_breaks <- c(-5, 0, 5)
 dt_labs <- round(exp(dt_breaks), c(3, 0, 0))
 
 p_dt <-
-  d %>%
-  mutate(species = gsub(' ', '~', species),
-         species = gsub('~\\(', '\\)~bold\\((', species),
-         species = paste0('bolditalic(', species, ')')) %>%
-  ggplot() +
-  facet_wrap(~ species, labeller = label_parsed, nrow = 1) +
+  ggplot(d) +
+  facet_wrap(~ lab, labeller = label_parsed, nrow = 1) +
   geom_histogram(aes(log(dt), color = species, fill = species), bins = 15,
                  alpha = 0.2) +
   scale_x_continuous(name = expression(bold(paste('\U0394', 't (hours, log scale)'))),
                      breaks = dt_breaks, labels = dt_labs) +
-  scale_y_log10(expression(bold(Count~(log[10]~scale)))) +
+  scale_y_log10(expression(bold(Count~(log["10"]~scale)))) +
   scale_color_manual(values = PAL, aesthetics = c('color', 'fill')) +
   theme(legend.position = 'none')
 
 preds_dt <-
   d %>%
-  group_by(species) %>%
+  group_by(species, lab) %>%
   summarize(min_log_dt = min(log(dt)),
             max_log_dt = max(log(dt)),
             animal = 'new animal',
@@ -441,14 +431,11 @@ preds_dt <-
       bind_cols() %>%
       transmute(s = m_2$family$linkinv(fit),
                 s_lwr = m_2$family$linkinv(fit - 1.96 * se.fit),
-                s_upr = m_2$family$linkinv(fit + 1.96 * se.fit))) %>%
-  mutate(species = gsub(' ', '~', species),
-         species = gsub('~\\(', '\\)~bold\\((', species),
-         species = paste0('bolditalic(', species, ')'))
+                s_upr = m_2$family$linkinv(fit + 1.96 * se.fit)))
 
 p_1_dt <-
   ggplot(preds_dt) +
-  facet_wrap(~ species, labeller = label_parsed, nrow = 1) +
+  facet_wrap(~ lab, labeller = label_parsed, nrow = 1) +
   geom_ribbon(aes(log(dt), ymin = p_lwr, ymax = p_upr, fill = species),
               alpha = 0.2) +
   geom_line(aes(log(dt), p, color = species)) +
@@ -460,7 +447,7 @@ p_1_dt <-
 
 p_2_dt <-
   ggplot(preds_dt) +
-  facet_wrap(~ species, labeller = label_parsed, nrow = 1) +
+  facet_wrap(~ lab, labeller = label_parsed, nrow = 1) +
   geom_hline(yintercept = 1, color = 'grey', linetype = 'dashed') +
   geom_ribbon(aes(log(dt), ymin = s_lwr, ymax = s_upr, fill = species),
               alpha = 0.2) +

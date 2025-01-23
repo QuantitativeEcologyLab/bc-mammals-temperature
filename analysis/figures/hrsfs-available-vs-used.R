@@ -12,15 +12,13 @@ ANIMALS <- readr::read_csv('data/tracking-data/telemetry-metadata.csv',
 d <- readRDS('data/tracking-data/rsf-data.rds') %>%
   filter(animal %in% ANIMALS)
 
-SPECIES <- unique(as.character(d$species))
-
 a_u <- d %>%
   mutate(elevation_m = elevation_m / 1e3,
          dist_water_m = dist_water_m / 1e3) %>%
   pivot_longer(c(forest_perc, elevation_m, dist_water_m),
                names_to = 'variable') %>%
   mutate(
-    species = case_when(species == SPECIES[1] ~ SPECIES_LABS[1],
+    lab = case_when(species == SPECIES[1] ~ SPECIES_LABS[1],
                         species == SPECIES[2] ~ SPECIES_LABS[2],
                         species == SPECIES[3] ~ SPECIES_LABS[3],
                         species == SPECIES[4] ~ SPECIES_LABS[4],
@@ -28,15 +26,14 @@ a_u <- d %>%
                         species == SPECIES[6] ~ SPECIES_LABS[6],
                         species == SPECIES[7] ~ SPECIES_LABS[7]),
     variable =
-      case_when(variable == 'forest_perc' ~ "bold(Forest~cover~('%'))",
-                variable == 'elevation_m' ~ "bold(Elevation~(km))",
-                variable == 'dist_water_m' ~ "bold(Distance~from~water~(km))") %>%
-      factor(levels = c("bold(Forest~cover~('%'))",
-                        "bold(Elevation~(km))",
-                        "bold(Distance~from~water~(km))")),
-    variable = factor(variable, levels = unique(variable))) %>%
+      case_when(variable == 'forest_perc' ~ "bold(Forest~cover~'(%)')",
+                variable == 'elevation_m' ~ "bold(Elevation~'(km)')",
+                variable == 'dist_water_m' ~ "bold(Distance~from~water~'(km)')") %>%
+      factor(levels = c("bold(Forest~cover~'(%)')",
+                        "bold(Elevation~'(km)')",
+                        "bold(Distance~from~water~'(km)')"))) %>%
   ggplot() +
-  facet_grid(species ~ variable, scales = 'free', labeller = label_parsed,
+  facet_grid(lab ~ variable, scales = 'free', labeller = label_parsed,
              switch = 'x') +
   geom_histogram(aes(value, fill = factor(detected)),
                  position = 'identity', alpha = 0.5, bins = 10) +
@@ -64,13 +61,12 @@ a_u_w <- d %>%
                         species == SPECIES[6] ~ SPECIES_LABS[6],
                         species == SPECIES[7] ~ SPECIES_LABS[7]),
     variable =
-      case_when(variable == 'forest_perc' ~ "bold(Forest~cover~('%'))",
-                variable == 'elevation_m' ~ "bold(Elevation~(km))",
-                variable == 'dist_water_m' ~ "bold(Distance~from~water~(km))") %>%
-      factor(levels = c("bold(Forest~cover~('%'))",
-                        "bold(Elevation~(km))",
-                        "bold(Distance~from~water~(km))")),
-    variable = factor(variable, levels = unique(variable))) %>%
+      case_when(variable == 'forest_perc' ~ "bold(Forest~cover~'(%)')",
+                variable == 'elevation_m' ~ "bold(Elevation~'(km)')",
+                variable == 'dist_water_m' ~ "bold(Distance~from~water~'(km)')") %>%
+      factor(levels = c("bold(Forest~cover~'(%)')",
+                        "bold(Elevation~'(km)')",
+                        "bold(Distance~from~water~'(km)')"))) %>%
   ggplot() +
   facet_grid(species ~ variable, scales = 'free', labeller = label_parsed,
              switch = 'x') +

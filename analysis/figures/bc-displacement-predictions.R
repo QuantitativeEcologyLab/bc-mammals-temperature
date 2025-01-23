@@ -16,7 +16,7 @@ source('data/bc-shapefile.R') # import shapefile of bc
 
 # import climate data ----
 if(file.exists('data/cc-hgam-bc-projections-albers.rds')) {
-  cc_proj <- readRDS('data/cc-hgam-bc-projections-albers.rds')
+  bc_preds <- readRDS('data/cc-hgam-bc-projections-albers.rds')
 } else {
   # import models
   m_1 <- readRDS('models/binomial-gam.rds')
@@ -86,15 +86,6 @@ if(file.exists('data/cc-hgam-bc-projections-albers.rds')) {
                  names_to = c('parameter', 'scenario', 'lab'),
                  names_sep = '_', values_to = 'value') %>%
     pivot_wider(values_from = value, names_from = parameter) %>%
-    # improve scenario labels
-    mutate(scenario = case_when(grepl('1-2.6', scenario) ~ 'bold(Best~scenario~(SSP~1-2.6))',
-                                grepl('2-4.5', scenario) ~ 'bold(Good~scenario~(SSP~2-4.5))',
-                                grepl('3-7.0', scenario) ~ 'bold(Bad~scenario~(SSP~3-7.0))',
-                                grepl('5-8.5', scenario) ~ 'bold(Worst~scenario~(SSP~5-8.5))') %>%
-             factor(levels = c('bold(Best~scenario~(SSP~1-2.6))',
-                               'bold(Good~scenario~(SSP~2-4.5))',
-                               'bold(Bad~scenario~(SSP~3-7.0))',
-                               'bold(Worst~scenario~(SSP~5-8.5))'))) %>%
     # reproject the rasters from lat-long to BC Albers
     nest(r_p = c(long, lat, p),
          r_s = c(long, lat, s),
@@ -116,7 +107,20 @@ if(file.exists('data/cc-hgam-bc-projections-albers.rds')) {
     r_p = map(r_p, \(a) rename(a, p = z)),
     r_s = map(r_s, \(a) transmute(a, s = z)),
     r_d = map(r_d, \(a) transmute(a, d = z))) %>%
-    unnest(c(r_p, r_s, r_d))
+    unnest(c(r_p, r_s, r_d)) %>%
+    #' prevent `label_parsed()` from removing the zero in "3-7.0"
+    # improve scenario labels
+    mutate(scenario = case_when(grepl('1-2.6', scenario) ~ 'bold("Best scenario (SSP 1-2.6)")',
+                                grepl('2-4.5', scenario) ~ 'bold("Good scenario (SSP 2-4.5)")',
+                                grepl('3-7.0', scenario) ~ 'bold("Bad scenario (SSP 3-7.0)")',
+                                grepl('5-8.5', scenario) ~ 'bold("Worst scenario (SSP 5-8.5)")') %>%
+             factor(levels = c('bold("Best scenario (SSP 1-2.6)")',
+                               'bold("Good scenario (SSP 2-4.5)")',
+                               'bold("Bad scenario (SSP 3-7.0)")',
+                               'bold("Worst scenario (SSP 5-8.5)")')),
+           # fix species labs rather than having to re-run all predictions
+           lab = gsub('\\(boreal\\)', '"\\(boreal\\)"', lab),
+           lab = gsub('\\(s.~mountain\\)', '"\\(s. mountain\\)"', lab))
   
   gc()
   bc_preds
@@ -182,7 +186,6 @@ p <- bc_preds %>%
   geom_sf(data = bc, fill = 'transparent') +
   scale_fill_distiller('Relative change in yearly distance travelled',
                        palette = 'PuOr', limits = range(z_breaks),
-                       values = c(0, 3, 5, 7, 10) / 10,
                        breaks = z_breaks, labels = \(x) round(2^x, 2)) +
   labs(x = NULL, y = NULL) +
   theme(legend.position = 'top', legend.key.width = rel(3))

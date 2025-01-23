@@ -109,6 +109,10 @@ if(file.exists('data/cc-rsf-projections.rds')) {
   cc_proj <- map_dfr(list.files('data', 'cc-rsf-projections-', full.names = TRUE), readRDS)
   saveRDS(cc_proj, 'data/cc-rsf-projections.rds')
 }
+# fix species labs rather than having to re-run all predictions
+cc_proj <- cc_proj %>%
+  mutate(lab = gsub('\\(boreal\\)', '"\\(boreal\\)"', lab),
+         lab = gsub('\\(s.~mountain\\)', '"\\(s. mountain\\)"', lab))
 
 # figures of habitat quality ----
 cc_proj %>%
@@ -126,7 +130,7 @@ cc_proj %>%
   theme(legend.position = 'inside', legend.position.inside = c(5/6, 1/6 - 0.03))
 
 ggsave('figures/rss-local-cc-predictions.png',
-       width = 10, height = 5, dpi = 600, bg = 'white')
+       width = 12, height = 8, dpi = 600, bg = 'white')
 
 ggsave('figures/2024-ubco-grad-symposium/rss-local-cc-predictions.png',
        width = 17.5, height = 9.5, dpi = 300, bg = 'white', scale = 0.75)

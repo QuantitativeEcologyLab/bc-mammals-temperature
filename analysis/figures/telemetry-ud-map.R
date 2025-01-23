@@ -18,9 +18,12 @@ d <- readRDS('models/movement-models-akdes-2024-06-06.rds') %>%
     dataset_name == 'Elk in southwestern Alberta' ~ 'Cervus canadensis',
     dataset_name == 'Oreamnos_americanus' ~ 'Oreamnos americanus',
     dataset_name == 'Ursus_arctos_horribilis' ~ 'Ursus arctos horribilis')) %>%
-  mutate(dataset_name = gsub(' ', '~', dataset_name),
-         dataset_name = gsub('~\\(', '\\)~bold\\((', dataset_name),
-         dataset_name = paste0('bolditalic(', dataset_name, ')'))
+  mutate(dataset_name = gsub(' ', '~', dataset_name) %>%
+           gsub('southern~', 'southern ', .) %>%
+           gsub('~\\(', '\\)~bold\\("(', .),
+         dataset_name = if_else(grepl('bold\\(', dataset_name),
+                                paste0('bolditalic(', dataset_name, '")'),
+                                paste0('bolditalic(', dataset_name, ')')))
 
 tels <- transmute(d,
                   dataset_name,

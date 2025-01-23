@@ -26,25 +26,25 @@ if(file.exists('data/cc-hgam-projections.rds')) {
   if(file.exists('data/hgam-cc_newd.rds')) {
     cc_newd <- readRDS('data/hgam-cc_newd.rds')
   } else {
-  cc_newd <- tibble(
-    wp = list.files('data', 'weather-projections-', full.names = TRUE) %>%
-      map(readRDS)) %>%
-    unnest(wp) %>%
-    filter(year >= 2025) %>%
-    # make sure only the necessary columns are kept
-    transmute(
-      scenario,
-      year,
-      animal = m_1$model$animal[1], #' to use `discrete = TRUE`
-      species = gsub('boreal', '(boreal)', species) %>%
-        gsub('southern mountain', '(s. mountain)', x = .),
-      tod_pdt = 0,
-      doy = yday(date_decimal(year + (month - 0.5) / 12)),
-      temp_c,
-      dt = 1,
-      weight,
-      long, lat)
-  saveRDS(cc_newd, 'data/hgam-cc_newd.rds')
+    cc_newd <- tibble(
+      wp = list.files('data', 'weather-projections-', full.names = TRUE) %>%
+        map(readRDS)) %>%
+      unnest(wp) %>%
+      filter(year >= 2025) %>%
+      # make sure only the necessary columns are kept
+      transmute(
+        scenario,
+        year,
+        animal = m_1$model$animal[1], #' to use `discrete = TRUE`
+        species = gsub('boreal', '(boreal)', species) %>%
+          gsub('southern mountain', '(s. mountain)', x = .),
+        tod_pdt = 0,
+        doy = yday(date_decimal(year + (month - 0.5) / 12)),
+        temp_c,
+        dt = 1,
+        weight,
+        long, lat)
+    saveRDS(cc_newd, 'data/hgam-cc_newd.rds')
   }
   
   cc_proj <- cc_newd %>%
@@ -123,6 +123,11 @@ if(file.exists('data/cc-hgam-projections.rds')) {
   saveRDS(cc_proj, 'data/cc-hgam-projections.rds')
   beepr::beep(2)
 }
+
+# fix species labs rather than having to re-run all predictions
+cc_proj <- mutate(cc_proj,
+                  species = gsub('\\(boreal\\)', '"\\(boreal\\)"', species),
+                  species = gsub('\\(s.~mountain\\)', '"\\(s. mountain\\)"', species))
 
 # make figures ----
 p_p_mov <-

@@ -444,6 +444,7 @@ fits <- tibble(
     gsub('\\(s\\.', 'southern', .) %>%
     gsub('\\(', '', .) %>%
     gsub('\\)', '', .),
+  lab = SPECIES_LABS,
   w = map_chr(species, \(.sp) {
     list.files(path = 'models',
                pattern = paste0('rsf-', .sp, '-2025-'),
@@ -464,14 +465,7 @@ fits <- tibble(
       .m <- readRDS(.fn)
       tibble(fits_wo = predict(.m, type = 'link'))
     })) %>%
-  unnest(c(w, wo)) %>%
-  mutate(lab = case_when(species == 'Canis lupus' ~ 'bolditalic(Canis~lupus)',
-                         species == 'Cervus canadensis' ~ 'bolditalic(Cervus~canadensis)',
-                         species == 'Oreamnos americanus' ~ 'bolditalic(Oreamnos~americanus)',
-                         species == 'Puma concolor' ~ 'bolditalic(Puma~concolor)',
-                         species == 'Rangifer tarandus boreal' ~ 'bolditalic(Rangifer~tarandus)~bold((boreal))',
-                         species == 'Rangifer tarandus southern mountain' ~ 'bolditalic(Rangifer~tarandus)~bold((s.~mountain))',
-                         species == 'Ursus arctos horribilis'~ 'bolditalic(Ursus~arctos~horribilis)'))
+  unnest(c(w, wo))
 
 p_fits <-
   fits %>%
