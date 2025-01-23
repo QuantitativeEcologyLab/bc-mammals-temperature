@@ -112,19 +112,18 @@ if(file.exists('data/cc-rsf-projections.rds')) {
 
 # figures of habitat quality ----
 cc_proj %>%
+  filter(year >= 2025) %>% # 2025 is the reference year
   ggplot() +
   facet_wrap(~ lab, scales = 'free_y', labeller = label_parsed) +
-  geom_ribbon(aes(year, ymin = l_lwr_05 / l_ref, ymax = l_upr_95 / l_ref,
-                  fill = scenario), alpha = 0.2) +
   geom_line(aes(year, l_upr_95 / l_ref, color = scenario), lwd = 0.5) +
   geom_line(aes(year, l_lwr_05 / l_ref, color = scenario), lwd = 0.5) +
   geom_hline(yintercept = 1, color = 'black', lty = 'dashed') +
   geom_line(aes(year, l_median / l_ref, color = scenario), lwd = 1) +
-  xlab(NULL) +
-  scale_y_continuous('Change in relative selection strength') +
+  scale_x_continuous(NULL, breaks = c(2025, 2050, 2075, 2100)) +
+  scale_y_continuous('Relative change in RSS', limits = c(0, NA)) +
   scale_color_brewer('Scenario', type = 'div', palette = 5, direction = -1,
                      aesthetics = c('color', 'fill')) +
-  theme(legend.position = 'inside', legend.position.inside = c(5/6, 1/6))
+  theme(legend.position = 'inside', legend.position.inside = c(5/6, 1/6 - 0.03))
 
 ggsave('figures/rss-local-cc-predictions.png',
        width = 10, height = 5, dpi = 600, bg = 'white')
