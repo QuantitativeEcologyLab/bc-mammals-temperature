@@ -183,5 +183,5 @@ p <- ggplot() +
   labs(x = NULL, y = NULL) +
   theme(legend.position = 'top', legend.key.width = rel(3))
 
-ggsave('figures/bc-speeds-2100.png', p, width = 15, height = 8,
+ggsave('figures/bc-displ-2100.png', p, width = 15, height = 8,
        units = 'in', dpi = 600, bg = 'white', scale = 1.2)
