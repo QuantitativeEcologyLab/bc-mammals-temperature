@@ -242,12 +242,11 @@ saveRDS(weather_proj, 'data/weather-projections.rds')
 # simulated weather for only 2025 and 2100 ----
 # get SD(temperature) based on SSP monthly averages
 preds <- readRDS('data/climate-yearly-projections-2025-2100-only-2025-01-21.rds') %>%
-  filter(year %in% c(2025, 2100)) %>%
+  filter(mean_temperature != -9999) %>%
   rename(elev_m = elevation,
          monthly_mean = mean_temperature,
          lat = latitude,
          long = longitude) %>%
-  mutate(monthly_mean = if_else(monthly_mean == -9999, NA_real_, monthly_mean)) %>%
   select(! c(min_temperature, max_temperature)) %>%
   mutate(sd = sqrt(predict(m_gammals, newdata = ., type = 'response')[, 1]))
 
@@ -263,9 +262,9 @@ saveRDS(preds,
 
 # simulate weather for each month ----
 weather_proj <-
-  readRDS('data/climate-yearly-projections-mean-variance-2025-2100-only-2025-01-20.rds') %>%
+  readRDS('data/climate-yearly-projections-mean-variance-2025-2100-only-2025-01-21.rds') %>%
   filter(year %in% c(2025, 2100)) %>%
-  transmute(scenario, year, month, monthly_mean, long, lat,
+  transmute(scenario, year, month, dec_date, long, lat, monthly_mean,
             monthly_sd = sd) %>%
   mutate(., qs = list(tibble(q = seq(0.1, 0.9, by = 0.1)))) %>%
   unnest(qs) %>%
