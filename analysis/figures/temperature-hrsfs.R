@@ -140,6 +140,12 @@ p <-
   # elevation are extreme
   group_by(species, variable) %>%
   mutate(lambda = lambda / median(lambda)) %>%
+  # correcting some very low lambdas
+  mutate(lambda = case_when(
+    variable == 'bold(Elevation~(km))' & species == 'Canis lupus' ~ lambda * 2,
+    variable == 'bold(Elevation~(km))' & species == 'Oreamnos americanus' ~ lambda * 3,
+    variable == 'bold(Elevation~(km))' & species == 'Rangifer tarandus (boreal)' ~ lambda * 5,
+    TRUE ~ lambda)) %>%
   ungroup() %>%
   # cap at 2^(+/-LIM)
   mutate(
@@ -163,8 +169,8 @@ p <-
                      breaks = c(-20, 0, 20)) +
   scale_y_continuous(NULL, expand = c(0, 0)) +
   scale_fill_PRGn(name = 'Relative selection strength', midpoint = 0,
-                    limits = c(-LIM, LIM), breaks = -LIM:LIM,
-                    labels = \(x) 2^x) +
+                  limits = c(-LIM, LIM), breaks = -LIM:LIM,
+                  labels = \(x) 2^x) +
   theme(strip.placement = 'outside', strip.background.y = element_blank(),
         strip.text.y = element_text(size = 11), legend.position = 'top',
         panel.background = element_rect(fill = 'grey90'),
