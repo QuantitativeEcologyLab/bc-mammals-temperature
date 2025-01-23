@@ -137,7 +137,8 @@ p_p_mov <-
   scale_color_brewer('Climate change scenario', type = 'div',
                      palette = 5, direction = -1,
                      aesthetics = c('color', 'fill')) +
-  labs(x = NULL, y = 'Relative change in P(moving)') +
+  labs(x = NULL, y = 'Relative change in annual P(moving)') +
+  scale_x_continuous(breaks = c(2025, 2050, 2075, 2100)) +
   theme(legend.position = 'inside',
         legend.position.inside = c(5/6, 1/6)); p_p_mov
 ggsave('figures/odds-moving-local-cc-predictions.png', p_p_mov,
@@ -155,7 +156,8 @@ p_s <-
   scale_color_brewer('Climate change scenario', type = 'div',
                      palette = 5, direction = -1,
                      aesthetics = c('color', 'fill')) +
-  labs(x = NULL, y = 'Relative change in speed when moving') +
+  labs(x = NULL, y = 'Relative change in annual speed when moving') +
+  scale_x_continuous(breaks = c(2025, 2050, 2075, 2100)) +
   theme(legend.position = 'inside',
         legend.position.inside = c(5/6, 1/6)); p_s
 ggsave('figures/speed-local-cc-predictions.png', p_s,
@@ -173,7 +175,8 @@ p_d <-
   scale_color_brewer('Climate change scenario', type = 'div',
                      palette = 5, direction = -1,
                      aesthetics = c('color', 'fill')) +
-  labs(x = NULL, y = 'Relative change in distance travelled') +
+  labs(x = NULL, y = 'Relative change in annual distance travelled') +
+  scale_x_continuous(breaks = c(2025, 2050, 2075, 2100)) +
   theme(legend.position = 'inside',
         legend.position.inside = c(5/6, 1/6)); p_d
 ggsave('figures/distance-travelled-local-cc-predictions.png', p_d,

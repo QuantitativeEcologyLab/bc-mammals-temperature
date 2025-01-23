@@ -90,3 +90,4 @@ data/ecmwf-era5-2m-temperature/*
 !climate-yearly-projections-mean-variance-2025-2100-only-2025-01-21.rds
 !data/cc-hgam-bc-projections-albers.rds
 !data/cc-rsf-projections.rds
+!data/cc-hgam-projections.rds
