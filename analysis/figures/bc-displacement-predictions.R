@@ -155,6 +155,7 @@ bc_preds %>%
                      aesthetics = c('color', 'fill')) +
   labs(x = 'Change in distance travelled relative to 2025 (%)',
        y = 'Probability density') +
+  xlim(c(-10, 20)) +
   theme(legend.position = 'inside', legend.position.inside = c(0.85, 0.15))
 
 # check color scheme
@@ -170,11 +171,14 @@ p_0 <- filter(bc_preds, lab == lab[1], scenario == scenario[1]) %>%
 colorblindr::cvd_grid(p_0)
 
 # figure of estimated speeds for each species ----
-z_breaks <- seq(-log2(1.25), log2(1.25), length.out = 5)
+z_breaks <- seq(-log2(1.2), log2(1.2), length.out = 5)
 
-p <- ggplot() +
+p <- bc_preds %>%
+  # cap values at +20% for readability
+  mutate(d = if_else(d > 1.2, 1.2, d)) %>%
+  ggplot() +
   facet_grid(scenario ~ lab, labeller = label_parsed) +
-  geom_raster(aes(x, y, fill = log2(d)), bc_preds) +
+  geom_raster(aes(x, y, fill = log2(d))) +
   geom_sf(data = bc, fill = 'transparent') +
   scale_fill_distiller('Relative change in yearly distance travelled',
                        palette = 'PuOr', limits = range(z_breaks),
