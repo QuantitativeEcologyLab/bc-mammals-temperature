@@ -14,6 +14,9 @@ library('cowplot')   # to add phylopic once (not in each facet)
 source('analysis/figures/default-ggplot-theme.R') # for consistent theme
 source('data/bc-shapefile.R') # import shapefile of bc
 
+d_pal <- colorRampPalette(c('#9A2600', '#EBE8DB', '#00605C'))(1e3)
+plot_scheme_colorblind(d_pal)
+
 # import climate data ----
 if(file.exists('data/cc-hgam-bc-projections-albers.rds')) {
   bc_preds <- readRDS('data/cc-hgam-bc-projections-albers.rds')
@@ -165,10 +168,10 @@ bc_preds %>%
 # check color scheme
 p_0 <- filter(bc_preds, lab == lab[1], scenario == scenario[1]) %>%
   ggplot() +
-  geom_raster(aes(x, y, fill = d)) +
+  geom_raster(aes(x, y, fill = log2(d))) +
   geom_sf(data = bc, fill = 'transparent') +
-  scale_fill_distiller('Relative change in yearly distance travelled',
-                       palette = 'PuOr') +
+  scale_fill_gradientn(name = 'Relative change in distance travelled',
+                       colors = d_pal) +
   labs(x = NULL, y = NULL) +
   theme(legend.position = 'top')
 
@@ -184,8 +187,8 @@ p <- bc_preds %>%
   facet_grid(scenario ~ lab, labeller = label_parsed) +
   geom_raster(aes(x, y, fill = log2(d))) +
   geom_sf(data = bc, fill = 'transparent') +
-  scale_fill_distiller('Relative change in yearly distance travelled',
-                       palette = 'PuOr', limits = range(z_breaks),
+  scale_fill_gradientn(name = 'Relative change in distance travelled',
+                       colors = d_pal, limits = range(z_breaks),
                        breaks = z_breaks, labels = \(x) round(2^x, 2)) +
   labs(x = NULL, y = NULL) +
   theme(legend.position = 'top', legend.key.width = rel(3))
