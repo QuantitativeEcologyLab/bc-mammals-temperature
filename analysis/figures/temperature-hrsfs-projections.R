@@ -23,8 +23,8 @@ if(FALSE) {
 }
 
 # import models and predict ----
-if(file.exists('data/cc-rsf-projections.rds')) {
-  cc_proj <- readRDS('data/cc-rsf-projections.rds')
+if(file.exists('data/cc-hrsf-projections.rds')) {
+  cc_proj <- readRDS('data/cc-hrsf-projections.rds')
 } else {
   # terms to exclude from the predictions
   EXCLUDE <- c('s(animal)', 's(forest_perc,animal)',
@@ -101,13 +101,13 @@ if(file.exists('data/cc-rsf-projections.rds')) {
                                   grepl('370', scenario) ~ 'Bad scenario (SSP 3-7.0)',
                                   grepl('585', scenario) ~ 'Worst scenario (SSP 5-8.5)') %>%
                factor(., levels = unique(.)))
-    saveRDS(x, paste0('data/cc-rsf-projections-', sp, '.rds'))
+    saveRDS(x, paste0('data/cc-hrsf-projections-', sp, '.rds'))
     
     return(sp)
   })
   
-  cc_proj <- map_dfr(list.files('data', 'cc-rsf-projections-', full.names = TRUE), readRDS)
-  saveRDS(cc_proj, 'data/cc-rsf-projections.rds')
+  cc_proj <- map_dfr(list.files('data', 'cc-hrsf-projections-', full.names = TRUE), readRDS)
+  saveRDS(cc_proj, 'data/cc-hrsf-projections.rds')
 }
 # fix species labs rather than having to re-run all predictions
 cc_proj <- cc_proj %>%
