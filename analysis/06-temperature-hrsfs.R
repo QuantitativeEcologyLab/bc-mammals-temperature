@@ -308,7 +308,10 @@ for(sp in as.character(SPECIES)) {
   
   #' not using `log1p(dist_water_m)` because many times it jumps from 0 m
   #' to 450 m, which gives a gap from log(0 + 1) = 0 to about
-  #' log(451) = 6.1. Using log(x + 100) doesn't change smooths much
+  #' log(451) = 6.1. Using log(x + 100) doesn't change smooths much.
+  #' not using `sqrt(dist_water_m)` because trends stay about the same,
+  #' but `ti()` terms get too extreme.
+  #' using smooth terms gets around the need for nonlinear transformations.
   rsf <- bam(
     detected ~
       # species-level average resource preference
