@@ -9,8 +9,6 @@ library('gratia')    # for useful functions for generalized additive models
 library('ggplot2')   # for fancy figures
 library('khroma')    # for colorblind-friendly palettes
 library('stringr')   # for working with strings
-library('rphylopic') # for animal silhouettes to plots
-library('cowplot')   # to add phylopic once (not in each facet)
 source('analysis/figures/default-ggplot-theme.R') # for consistent theme
 source('data/bc-shapefile.R') # import shapefile of bc
 
