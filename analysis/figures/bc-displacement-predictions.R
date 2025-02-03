@@ -27,22 +27,23 @@ if(file.exists('data/cc-hgam-bc-projections-albers.rds')) {
   SM <- unique(c(smooths(m_1), smooths(m_2)))
   EXCLUDE <- SM[grepl('tod', SM) | grepl('animal', SM)]
   
+  weather <- readRDS('data/weather-projections-2025-2100-only.rds') %>%
+    filter(! is.na(temp_c)) %>% # there's some NA values even after masking
+    select(scenario, year, month, lat, long, temp_c, weight)
+  
   # predict movement rates
   bc_preds <-
-    readRDS('data/weather-projections-2025-2100-only.rds') %>%
-    filter(! is.na(temp_c)) %>% # there's some NA values even after masking
-    select(scenario, year, month, lat, long, temp_c, weight) %>%
-    #' ******\/ for testing *****************************************
-    # group_by(year, scenario, long) %>%
-    # slice(1:3) %>%
-    # ungroup() %>%
-    # mutate(lat = list(tibble(lat = c(55, 56)))) %>%
-    # unnest(lat) %>%
-    #' ******/\ for testing *****************************************
     # add columns of species and species labels
-    mutate(spp = list(tibble(species = SPECIES)),
-           labs = list(tibble(lab = SPECIES_LABS))) %>%
-    unnest(c(spp, labs)) %>%
+    tibble(species = SPECIES,
+           lab = SPECIES_LABS,
+           w = weather %>%
+             filter(! is.na(temp_c)) %>% # some NA values after masking
+             select(scenario, year, month, lat, long, temp_c, weight) %>%
+             list()) %>%
+    unnest(w) %>%
+    #' ******\/ for testing *****************************************
+    # filter(species == species[1], lat > 58) %>%
+    #' ******/\ for testing *****************************************
     # make sure only the necessary column are kept
     transmute(scenario, year, lat, long,
               animal = m_1$model$animal[1],
@@ -71,10 +72,10 @@ if(file.exists('data/cc-hgam-bc-projections-albers.rds')) {
               .groups = 'drop') %>%
     # calculate change over space relative to the mean 2025 values 
     arrange(lab, scenario, long, lat) %>%
-    group_by(lab, long, lat) %>%
-    mutate(p = p / mean(p[1:4]),
-           s = s / mean(s[1:4]),
-           d = d / mean(d[1:4])) %>%
+    group_by(lab) %>%
+    mutate(p = p / mean(p[scenario == '2025']),
+           s = s / mean(s[scenario == '2025']),
+           d = d / mean(d[scenario == '2025'])) %>%
     ungroup() %>%
     filter(scenario != '2025') %>%
     mutate(scenario = case_when(grepl('126', scenario) ~ 'SSP~1-2.6',
@@ -92,6 +93,8 @@ if(file.exists('data/cc-hgam-bc-projections-albers.rds')) {
          r_s = c(long, lat, s),
          r_d = c(long, lat, d)) %>%
     mutate(across(c(r_p, r_s, r_d), \(a) map(a, \(.a) {
+      #' the code below may fail due to collinearity issues. if so, see the
+      #' approach used in `analysis/figures/bc-rss-predictions.R`
       # interpolate between points to fill the raster
       interp::interp(x = .a$long, y = .a$lat, z = .a[[3]],
                      nx = n_distinct(.a$long), ny = n_distinct(.a$lat)) %>%
@@ -119,8 +122,6 @@ if(file.exists('data/cc-hgam-bc-projections-albers.rds')) {
                                'bold("Good scenario (SSP 2-4.5)")',
                                'bold("Bad scenario (SSP 3-7.0)")',
                                'bold("Worst scenario (SSP 5-8.5)")')),
-           # fix species labs rather than having to re-run all predictions
-           lab = gsub('\\(boreal\\)', '"\\(boreal\\)"', lab),
            lab = gsub('\\(s.~mountain\\)', '"\\(s. mountain\\)"', lab))
   
   gc()
@@ -142,13 +143,6 @@ if(file.exists('data/cc-hgam-bc-projections-albers.rds')) {
   saveRDS(bc_preds, 'data/cc-hgam-bc-projections-albers.rds')
 }
 
-# check overall changes from 2025 to 2100
-bc_preds %>%
-  group_by(lab, scenario) %>%
-  summarise(mean_change = paste0(round(mean(d) * 100 - 100, 1), '%'),
-            sd_change = paste0(round(sd(d) * 100, 1), '%')) %>%
-  print(n = length(SPECIES) * 4)
-
 # check changes with density functions
 bc_preds %>%
   mutate(change = d * 100 - 100) %>%
@@ -160,7 +154,7 @@ bc_preds %>%
                      aesthetics = c('color', 'fill')) +
   labs(x = 'Change in distance travelled relative to 2025 (%)',
        y = 'Probability density') +
-  xlim(c(-10, 20)) +
+  xlim(c(-30, 30)) +
   theme(legend.position = 'inside', legend.position.inside = c(0.85, 0.15))
 
 # check color scheme
@@ -176,11 +170,13 @@ p_0 <- filter(bc_preds, lab == lab[1], scenario == scenario[1]) %>%
 colorblindr::cvd_grid(p_0)
 
 # figure of estimated speeds for each species ----
-z_breaks <- seq(-log2(1.2), log2(1.2), length.out = 5)
+z_breaks <- seq(-log2(1.5), log2(1.5), length.out = 5)
 
 p <- bc_preds %>%
-  # cap values at +20% for readability
-  mutate(d = if_else(d > 1.2, 1.2, d)) %>%
+  # cap values for readability
+  mutate(d = case_when(d < 2^min(z_breaks) ~ 2^min(z_breaks),
+                       d > 2^max(z_breaks) ~ 2^max(z_breaks),
+                       TRUE ~ d)) %>%
   ggplot() +
   facet_grid(scenario ~ lab, labeller = label_parsed) +
   geom_raster(aes(x, y, fill = log2(d))) +
