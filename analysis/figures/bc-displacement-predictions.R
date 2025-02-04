@@ -27,9 +27,13 @@ if(file.exists('data/cc-hgam-bc-projections-albers.rds')) {
   SM <- unique(c(smooths(m_1), smooths(m_2)))
   EXCLUDE <- SM[grepl('tod', SM) | grepl('animal', SM)]
   
+  # approximate Gaussian distributions of weather
   weather <- readRDS('data/weather-projections-2025-2100-only.rds') %>%
     filter(! is.na(temp_c)) %>% # there's some NA values even after masking
     select(scenario, year, month, lat, long, temp_c, weight)
+  
+  # for creating a raster of predictions
+  e <- rast('data/resource-rasters/bc-buffered-dem-z3.tif')
   
   # predict movement rates
   bc_preds <-
@@ -93,19 +97,14 @@ if(file.exists('data/cc-hgam-bc-projections-albers.rds')) {
          r_s = c(long, lat, s),
          r_d = c(long, lat, d)) %>%
     mutate(across(c(r_p, r_s, r_d), \(a) map(a, \(.a) {
-      #' the code below may fail due to collinearity issues. if so, see the
-      #' approach used in `analysis/figures/bc-rss-predictions.R`
-      # interpolate between points to fill the raster
-      interp::interp(x = .a$long, y = .a$lat, z = .a[[3]],
-                     nx = n_distinct(.a$long), ny = n_distinct(.a$lat)) %>%
-        interp::interp2xyz() %>%
-        as.data.frame() %>%
-        setNames(c('x', 'y', 'z')) %>%
-        rast(type = 'xyz', crs = 'EPSG:4326') %>%
+      .a %>%
+        select(long, lat) %>%
+        as.matrix() %>%
+        rasterize(y = e, values = .a[[3]], fun = mean) %>%
         project('EPSG:3005') %>%
-        crop(bc) %>%
-        mask(bc) %>%
-        as.data.frame(xy = TRUE)
+        crop(bc, mask = TRUE, touches = FALSE) %>%
+        as.data.frame(xy = TRUE) %>%
+        rename(z = 3)
     })),
     # rename back to correct columns (p, s, d) and drop repeated columns
     r_p = map(r_p, \(a) rename(a, p = z)),
@@ -170,9 +169,10 @@ p_0 <- filter(bc_preds, lab == lab[1], scenario == scenario[1]) %>%
   geom_raster(aes(x, y, fill = log2(d))) +
   geom_sf(data = bc, fill = 'transparent') +
   scale_fill_distiller(name = 'Relative change in distance travelled',
-                       palette = 'PuOr', limits = c(-2, 2)) +
+                       palette = 'PuOr', direction = 1,
+                       labels = \(x) round(2^x, 2)) +
   labs(x = NULL, y = NULL) +
-  theme(legend.position = 'top')
+  theme(legend.position = 'top'); p_0
 
 colorblindr::cvd_grid(p_0)
 
@@ -186,9 +186,10 @@ p <- bc_preds %>%
   facet_grid(scenario ~ lab, labeller = label_parsed) +
   geom_raster(aes(x, y, fill = log2(d))) +
   geom_sf(data = bc, fill = 'transparent') +
-  scale_fill_gradientn(name = 'Relative change in distance travelled',
-                       colors = pal, limits = range(z_breaks),
-                       breaks = z_breaks, labels = \(x) round(2^x, 2)) +
+  scale_fill_distiller(name = 'Relative change in distance travelled',
+                       palette = 'PuOr', limits = range(z_breaks),
+                       breaks = z_breaks, labels = \(x) round(2^x, 2),
+                       direction = 1) +
   labs(x = NULL, y = NULL) +
   theme(legend.position = 'top', legend.key.width = rel(3))
 
