@@ -12,8 +12,8 @@ library('stringr')   # for working with strings
 source('analysis/figures/default-ggplot-theme.R') # for consistent theme
 source('data/bc-shapefile.R') # import shapefile of bc
 
-pal <- colorRampPalette(RColorBrewer::brewer.pal(11, 'PRGn'))(1e3)
-plot_scheme_colorblind(pal)
+colorRampPalette(RColorBrewer::brewer.pal(11, 'PiYG'))(1e3) %>%
+  plot_scheme_colorblind()
 
 # import climate data ----
 if(file.exists('data/cc-hrsf-bc-projections-albers.rds')) {
@@ -29,9 +29,9 @@ if(file.exists('data/cc-hrsf-bc-projections-albers.rds')) {
   EXCLUDE <- SM[grepl('animal', SM)]
   
   # import resource rasters
-  f <- rast('data/resource-rasters/bc-forest.tif')
-  e <- rast('data/resource-rasters/bc-dem-z3.tif')
-  w <- rast('data/resource-rasters/bc-distance-from-water.tif')
+  f <- rast('data/resource-rasters/forest.tif')
+  e <- rast('data/resource-rasters/bc-buffered-dem-z3.tif')
+  w <- rast('data/resource-rasters/distance-from-water.tif')
   
   layout(t(1:3))
   plot(f)
@@ -115,8 +115,8 @@ if(file.exists('data/cc-hrsf-bc-projections-albers.rds')) {
     group_by(scenario, lab, long, lat) %>%
     summarize(lambda = weighted.mean(lambda, w = weight),
               .groups = 'drop') %>%
-    # calculate change over space relative to the mean 2025 values
-    group_by(lab) %>%
+    # calculate relative change from 2025 to 2100, for each location
+    group_by(lab, long, lat) %>%
     mutate(lambda = lambda / median(lambda[scenario == '2025'],
                                     na.rm = TRUE)) %>%
     ungroup() %>%
@@ -183,19 +183,23 @@ bc_preds %>%
   geom_density(aes(change, fill = scenario, color = scenario), alpha = 0.3) +
   scale_color_manual('Scenario', values = khroma::color('sunset')(4),
                      aesthetics = c('color', 'fill'), labels = scales::parse_format()) +
-  labs(x = 'RSS',
+  labs(x = 'Change in RSS',
        y = 'Probability density') +
   theme(legend.position = 'inside', legend.position.inside = c(0.85, 0.15))
 
 # check color scheme
 p_0 <- filter(bc_preds, lab == lab[1], scenario == scenario[1]) %>%
+  mutate(log2_l = log2(lambda),
+         log2_l = if_else(abs(log2_l) > 2, 2 * sign(log2_l), log2_l)) %>%
   ggplot() +
-  geom_raster(aes(x, y, fill = log2(lambda))) +
+  geom_raster(aes(x, y, fill = log2_l)) +
   geom_sf(data = bc, fill = 'transparent') +
-  scale_fill_PRGn(name = 'Relative selection strength', midpoint = 0,
-                  labels = \(x) round(2^x, 2), limits = c(-1, 1)) +
+  scale_fill_distiller(name = 'Relative selection strength',
+                       type = 'div', palette = 2, direction = 1,
+                       labels = \(x) round(2^x, 2),
+                       limits = c(-2, 2)) +
   labs(x = NULL, y = NULL) +
-  theme(legend.position = 'top')
+  theme(legend.position = 'top'); p_0
 
 colorblindr::cvd_grid(p_0)
 
@@ -210,9 +214,10 @@ p <- bc_preds %>%
   facet_grid(scenario ~ lab, labeller = label_parsed) +
   geom_raster(aes(x, y, fill = log2_l)) +
   geom_sf(data = bc, fill = 'transparent') +
-  scale_fill_PRGn(name = 'Relative selection strength', midpoint = 0,
-                  labels = \(x) round(2^x, 2),  limits = range(z_breaks),
-                  breaks = z_breaks) +
+  scale_fill_distiller(name = 'Relative selection strength',
+                       type = 'div', palette = 2, direction = 1,
+                       labels = \(x) round(2^x, 2),  limits = range(z_breaks),
+                       breaks = z_breaks) +
   labs(x = NULL, y = NULL) +
   theme(legend.position = 'top', legend.key.width = rel(3))
 

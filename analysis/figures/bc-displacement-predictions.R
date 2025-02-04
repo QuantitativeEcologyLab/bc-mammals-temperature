@@ -12,8 +12,8 @@ library('stringr')   # for working with strings
 source('analysis/figures/default-ggplot-theme.R') # for consistent theme
 source('data/bc-shapefile.R') # import shapefile of bc
 
-d_pal <- colorRampPalette(c('#9A2600', '#EBE8DB', '#00605C'))(1e3)
-plot_scheme_colorblind(d_pal)
+colorRampPalette(RColorBrewer::brewer.pal(11, 'PuOr'))(1e3) %>%
+  plot_scheme_colorblind()
 
 # import climate data ----
 if(file.exists('data/cc-hgam-bc-projections-albers.rds')) {
@@ -70,9 +70,9 @@ if(file.exists('data/cc-hgam-bc-projections-albers.rds')) {
               s = weighted.mean(s, w = weight),
               d = weighted.mean(d, w = weight),
               .groups = 'drop') %>%
-    # calculate change over space relative to the mean 2025 values 
+    # calculate relative change from 2025 to 2100, for each location
     arrange(lab, scenario, long, lat) %>%
-    group_by(lab) %>%
+    group_by(lab, long, lat) %>%
     mutate(p = p / mean(p[scenario == '2025']),
            s = s / mean(s[scenario == '2025']),
            d = d / mean(d[scenario == '2025'])) %>%
@@ -157,21 +157,26 @@ bc_preds %>%
   xlim(c(-30, 30)) +
   theme(legend.position = 'inside', legend.position.inside = c(0.85, 0.15))
 
+# figure of estimated speeds for each species ----
+z_breaks <- seq(-log2(1.5), log2(1.5), length.out = 5)
+
 # check color scheme
 p_0 <- filter(bc_preds, lab == lab[1], scenario == scenario[1]) %>%
+  # cap values for readability
+  mutate(d = case_when(d < 2^min(z_breaks) ~ 2^min(z_breaks),
+                       d > 2^max(z_breaks) ~ 2^max(z_breaks),
+                       TRUE ~ d)) %>%
   ggplot() +
   geom_raster(aes(x, y, fill = log2(d))) +
   geom_sf(data = bc, fill = 'transparent') +
-  scale_fill_gradientn(name = 'Relative change in distance travelled',
-                       colors = d_pal) +
+  scale_fill_distiller(name = 'Relative change in distance travelled',
+                       palette = 'PuOr', limits = c(-2, 2)) +
   labs(x = NULL, y = NULL) +
   theme(legend.position = 'top')
 
 colorblindr::cvd_grid(p_0)
 
-# figure of estimated speeds for each species ----
-z_breaks <- seq(-log2(1.5), log2(1.5), length.out = 5)
-
+# make figure
 p <- bc_preds %>%
   # cap values for readability
   mutate(d = case_when(d < 2^min(z_breaks) ~ 2^min(z_breaks),
@@ -182,7 +187,7 @@ p <- bc_preds %>%
   geom_raster(aes(x, y, fill = log2(d))) +
   geom_sf(data = bc, fill = 'transparent') +
   scale_fill_gradientn(name = 'Relative change in distance travelled',
-                       colors = d_pal, limits = range(z_breaks),
+                       colors = pal, limits = range(z_breaks),
                        breaks = z_breaks, labels = \(x) round(2^x, 2)) +
   labs(x = NULL, y = NULL) +
   theme(legend.position = 'top', legend.key.width = rel(3))
