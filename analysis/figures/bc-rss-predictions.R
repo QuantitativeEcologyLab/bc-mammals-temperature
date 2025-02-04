@@ -16,8 +16,8 @@ colorRampPalette(RColorBrewer::brewer.pal(11, 'PiYG'))(1e3) %>%
   plot_scheme_colorblind()
 
 # import climate data ----
-if(file.exists('data/cc-hrsf-bc-projections-albers.rds')) {
-  bc_preds <- readRDS('data/cc-hrsf-bc-projections-albers.rds')
+if(file.exists('data/cc-rss-bc-projections-albers.rds')) {
+  bc_preds <- readRDS('data/cc-rss-bc-projections-albers.rds')
 } else {
   # get file names
   fn <- list.files(path = 'models', pattern = '^rsf-', recursive = FALSE,
@@ -95,20 +95,11 @@ if(file.exists('data/cc-hrsf-bc-projections-albers.rds')) {
         mutate(.d,
                lambda = predict(object = m, newdata = .d,
                                 type = 'response', se.fit = FALSE,
-                                exclude = EXCLUDE, discrete = FALSE),
-               # to remove extreme elevations and distances from water
-               min_elevation_m = min(filter(m$model, detected == 1)$elevation_m),
-               max_elevation_m = max(filter(m$model, detected == 1)$elevation_m),
-               min_dist_water_m = min(filter(m$model, detected == 1)$dist_water_m),
-               max_dist_water_m = max(filter(m$model, detected == 1)$dist_water_m))
+                                exclude = EXCLUDE, discrete = FALSE))
       })) %>%
     unnest(newd) %>%
-    # # make sure only the necessary column are kept
-    # filter(elevation_m > min_elevation_m - 1e3,
-    #        elevation_m < max_elevation_m + 1e3,
-    #        dist_water_m > min_dist_water_m - 1e3,
-    #        dist_water_m < max_dist_water_m + 1e3) %>%
-  select(scenario, year, lat, long, lab, weight, lambda) %>%
+    # make sure only the necessary column are kept
+    select(scenario, year, lat, long, lab, weight, lambda) %>%
     # take the weighted mean of the approximated gaussian distributions
     # after grouping all the 2025 scenarios together
     mutate(scenario = if_else(year == 2025, '2025', scenario)) %>%
@@ -169,7 +160,7 @@ if(file.exists('data/cc-hrsf-bc-projections-albers.rds')) {
       labs(x = NULL, y = NULL)
   }
   
-  saveRDS(bc_preds, 'data/cc-hrsf-bc-projections-albers.rds')
+  saveRDS(bc_preds, 'data/cc-rss-bc-projections-albers.rds')
 }
 
 # check changes with density functions
@@ -204,12 +195,13 @@ p_0 <- filter(bc_preds, lab == lab[1], scenario == scenario[1]) %>%
 colorblindr::cvd_grid(p_0)
 
 # figure of estimated speeds for each species ----
-z_breaks <- seq(-2, 2, length.out = 5)
+z_breaks <- seq(-1, 1, length.out = 5)
 
 p <- bc_preds %>%
   # cap log2(values) for readability
   mutate(log2_l = log2(lambda),
-         log2_l = if_else(abs(log2_l) > 2, 2 * sign(log2_l), log2_l)) %>%
+         log2_l = if_else(abs(log2_l) > max(z_breaks),
+                          max(z_breaks) * sign(log2_l), log2_l)) %>%
   ggplot() +
   facet_grid(scenario ~ lab, labeller = label_parsed) +
   geom_raster(aes(x, y, fill = log2_l)) +
