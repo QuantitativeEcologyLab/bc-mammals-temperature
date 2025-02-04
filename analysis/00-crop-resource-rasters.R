@@ -19,7 +19,6 @@ locs_ext <- locs %>%
   st_as_sfc() %>%
   st_as_sf()
 
-
 # import digital elevation raster (zoom > 6 gives excessively high peaks)
 #' see `analysis/00-download-bc-dem.R` for downloading
 dem <- rast('data/resource-rasters/bc-buffered-dem-z6.tif')
@@ -49,6 +48,7 @@ plot(f1, main = 'Evergreen/Deciduous Needleleaf Trees')
 plot(f, main = 'all trees')
 layout(1)
 
+# ensure max is not above 100%
 max(values(f))
 values(f) <- if_else(values(f) > 100, 100, values(f))
 max(values(f))
