@@ -12,7 +12,7 @@ library('stringr')   # for working with strings
 source('analysis/figures/default-ggplot-theme.R') # for consistent theme
 source('data/bc-shapefile.R') # import shapefile of bc
 
-pal <- colorRampPalette(RColorBrewer::brewer.pal(3, 'PRGn'))(1e3)
+pal <- colorRampPalette(RColorBrewer::brewer.pal(11, 'PRGn'))(1e3)
 plot_scheme_colorblind(pal)
 
 # import climate data ----
@@ -172,18 +172,10 @@ if(file.exists('data/cc-hrsf-bc-projections-albers.rds')) {
   saveRDS(bc_preds, 'data/cc-hrsf-bc-projections-albers.rds')
 }
 
-# check overall changes from 2025 to 2100
-bc_preds %>%
-  group_by(lab, scenario) %>%
-  summarise(mean_change = paste0(round(mean(lambda) * 100 - 100, 1), '%'),
-            sd_change = paste0(round(sd(lambda) * 100, 1), '%')) %>%
-  print(n = length(SPECIES) * 4)
-
 # check changes with density functions
 bc_preds %>%
-  mutate(change = lambda * 100 - 100,
-         change = case_when(change > 100 ~ 100,
-                            change < -100 ~ -100,
+  mutate(change = lambda,
+         change = case_when(change > 2 ~ 2,
                             TRUE ~ change)) %>%
   ggplot() +
   facet_wrap(~ lab, scales = 'free_y', labeller = label_parsed) +
@@ -191,7 +183,7 @@ bc_preds %>%
   geom_density(aes(change, fill = scenario, color = scenario), alpha = 0.3) +
   scale_color_manual('Scenario', values = khroma::color('sunset')(4),
                      aesthetics = c('color', 'fill'), labels = scales::parse_format()) +
-  labs(x = 'Change in RSS relative to 2025 (%)',
+  labs(x = 'RSS',
        y = 'Probability density') +
   theme(legend.position = 'inside', legend.position.inside = c(0.85, 0.15))
 
