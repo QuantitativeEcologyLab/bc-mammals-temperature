@@ -144,20 +144,21 @@ if(file.exists('data/cc-hgam-bc-projections-albers.rds')) {
 
 # check changes with density functions
 bc_preds %>%
-  mutate(change = d * 100 - 100) %>%
+  mutate(change = d * 100 - 100,
+         change = if_else(change > 10 & grepl('boreal', lab), 10, change)) %>%
   ggplot() +
-  facet_wrap(~ lab, scales = 'free_y', labeller = label_parsed) +
+  facet_wrap(~ lab, scales = 'free', labeller = label_parsed) +
   geom_vline(xintercept = 0, color = 'grey', linetype = 'dashed') +
   geom_density(aes(change, fill = scenario, color = scenario), alpha = 0.3) +
   scale_color_manual('Scenario', values = khroma::color('sunset')(4),
-                     aesthetics = c('color', 'fill')) +
+                     aesthetics = c('color', 'fill'),
+                     labels = scales::parse_format()) +
   labs(x = 'Change in distance travelled relative to 2025 (%)',
        y = 'Probability density') +
-  xlim(c(-30, 30)) +
   theme(legend.position = 'inside', legend.position.inside = c(0.85, 0.15))
 
 # figure of estimated speeds for each species ----
-z_breaks <- seq(-log2(1.5), log2(1.5), length.out = 5)
+z_breaks <- seq(-log2(1.25), log2(1.25), length.out = 5)
 
 # check color scheme
 p_0 <- filter(bc_preds, lab == lab[1], scenario == scenario[1]) %>%
