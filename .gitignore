@@ -67,6 +67,9 @@ writing/manuscript.log
 !data/climate-anomalies/*
 !data/climate-anomalies/data.csv
 !data/climate-anomalies/download-link.txt
+!data/tracking-data
+data/tracking-data/*
+!data/tracking-data/download-links.txt
 
 !data/ecmwf-era5-2m-temperature
 data/ecmwf-era5-2m-temperature/*

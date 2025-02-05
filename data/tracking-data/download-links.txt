@@ -1,0 +1,7 @@
+Elk movement data ("Elk in southwestern Alberta"):
+https://www.datarepository.movebank.org/handle/10255/move.1069
+
+boreal wolf and caribou data
+https://www.bcogris.ca/projects/boreal-caribou-telemetry-data/
+
+Unfortunately, all other telemetry data cannot be shared.
