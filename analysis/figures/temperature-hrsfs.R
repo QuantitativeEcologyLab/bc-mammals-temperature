@@ -60,47 +60,43 @@ if(file.exists('models/temperature-hrsf-preds.rds')) {
         temperature_C,
         x = forest_perc,
         variable = 'bold(Forest~cover~(\'\U0025\'))',
-        lambda =
-          predict(object = m, newdata = newd, type = 'response',
-                  se.fit = FALSE, discrete = FALSE,
-                  newdata.guaranteed = TRUE,
-                  terms = c('s(forest_perc)',
-                            'ti(forest_perc,temperature_C)')),
         too_far_1 = too_far(temperature_C, x,
                             filter(m$model, detected == 1)$temperature_C,
                             filter(m$model, detected == 1)$forest_perc,
                             dist = dist),
-        too_far_2 = FALSE),
+        too_far_2 = FALSE) %>%
+        bind_cols(.,
+                  predict(object = m, newdata = newd, type = 'link',
+                          se.fit = TRUE, discrete = FALSE,
+                          newdata.guaranteed = TRUE,
+                          terms = c('s(forest_perc)',
+                                    'ti(forest_perc,temperature_C)')) %>%
+                    as.data.frame()),
       transmute(
         newd,
         temperature_C,
         x = elevation_m,
         variable = 'bold(Elevation~(km))',
-        lambda =
-          predict(object = m, newdata = newd, type = 'response',
-                  se.fit = FALSE, discrete = FALSE,
-                  newdata.guaranteed = TRUE,
-                  terms = c('s(elevation_m)',
-                            'ti(elevation_m,temperature_C)')),
         too_far_1 = too_far(temperature_C, x,
                             filter(m$model, detected == 1)$temperature_C,
                             filter(m$model, detected == 1)$elevation_m,
                             dist = dist),
         too_far_2 =
-          x < min(filter(m$model, detected == 1)$elevation_m) - 500 |
-          x > max(filter(m$model, detected == 1)$elevation_m) + 500,
-        x = x / 1e3),
+          x < min(filter(m$model, detected == 1)$elevation_m) - 250 |
+          x > max(filter(m$model, detected == 1)$elevation_m) + 250,
+        x = x / 1e3) %>%
+        bind_cols(.,
+                  predict(object = m, newdata = newd, type = 'link',
+                          se.fit = TRUE, discrete = FALSE,
+                          newdata.guaranteed = TRUE,
+                          terms = c('s(elevation_m)',
+                                    'ti(elevation_m,temperature_C)')) %>%
+                    as.data.frame()),
       transmute(
         newd,
         temperature_C,
         x = dist_water_m,
         variable = 'bold(Distance~from~water~(km))',
-        lambda =
-          predict(object = m, newdata = newd, type = 'response',
-                  se.fit = FALSE, discrete = FALSE,
-                  newdata.guaranteed = TRUE,
-                  terms = c('s(dist_water_m)',
-                            'ti(dist_water_m,temperature_C)')),
         too_far_1 = too_far(temperature_C, x,
                             filter(m$model, detected == 1)$temperature_C,
                             filter(m$model, detected == 1)$dist_water_m,
@@ -108,7 +104,17 @@ if(file.exists('models/temperature-hrsf-preds.rds')) {
         too_far_2 =
           x < min(filter(m$model, detected == 1)$dist_water_m) - 1e3 |
           x > max(filter(m$model, detected == 1)$dist_water_m) + 1e3,
-        x = x / 1e3))
+        x = x / 1e3) %>%
+        bind_cols(.,
+                  predict(object = m, newdata = newd, type = 'link',
+                          se.fit = TRUE, discrete = FALSE,
+                          newdata.guaranteed = TRUE,
+                          terms = c('s(dist_water_m)',
+                                    'ti(dist_water_m,temperature_C)')) %>%
+                    as.data.frame())) %>%
+      mutate(lambda = exp(fit),
+             lwr_95 = exp(fit - 1.96 * se.fit),
+             upr_95 = exp(fit + 1.96 * se.fit))
   }
   
   # predict partial effects
@@ -116,11 +122,23 @@ if(file.exists('models/temperature-hrsf-preds.rds')) {
     transmute(species,
               lab,
               lambdas = map(rsf, surface)) %>%
-    unnest(lambdas)
+    unnest(lambdas) %>%
+    # fix species and variable labs
+    mutate(
+      lab = gsub('\\(boreal\\)', '"\\(boreal\\)"', lab),
+      lab = gsub('\\(s.~mountain\\)', '"\\(s. mountain\\)"', lab),
+      variable = gsub('\\(km\\)', '"(km)"', variable),
+      variable = gsub('\\(\'%\'\\)', '"(%)"', variable),
+      # keep variable sorting consistent to other figures
+      variable = factor(variable,
+                        levels = c('bold(Forest~cover~"(%)")',
+                                   'bold(Elevation~"(km)")',
+                                   'bold(Distance~from~water~"(km)")')))
   
   saveRDS(preds, 'models/temperature-hrsf-preds.rds')
 }
 
+# plot of RSS ----
 # need to divide by median lambda within each variable to get interpretable results
 preds %>%
   filter(! too_far_1) %>%
@@ -135,30 +153,23 @@ p <-
   preds %>%
   filter((! too_far_2)) %>%
   select(species, lab, x, temperature_C, variable, lambda, too_far_1) %>%
+  # make detection rates homogeneous across temperature
+  group_by(species, variable, temperature_C) %>%
+  mutate(lambda = lambda / mean(lambda)) %>%
   # re-scale the center (lambda = 1) relative to the median in the data.
   # doing this because some estimated effects of distance from water and
   # elevation are extreme
   group_by(species, variable) %>%
   mutate(lambda = lambda / median(lambda)) %>%
+  ungroup() %>%
   # correcting some very low lambdas
   mutate(lambda = case_when(
     variable == 'bold(Elevation~(km))' & species == 'Canis lupus' ~ lambda * 2,
     variable == 'bold(Elevation~(km))' & species == 'Oreamnos americanus' ~ lambda * 3,
     variable == 'bold(Elevation~(km))' & species == 'Rangifer tarandus (boreal)' ~ lambda * 5,
     TRUE ~ lambda)) %>%
-  ungroup() %>%
-  # fix species and variable labs rather than having to re-run all predictions
-  mutate(lab = gsub('\\(boreal\\)', '"\\(boreal\\)"', lab),
-         lab = gsub('\\(s.~mountain\\)', '"\\(s. mountain\\)"', lab),
-         variable = gsub('\\(km\\)', '"(km)"', variable),
-         variable = gsub('\\(\'%\'\\)', '"(%)"', variable),
-         # keep variable sorting consistent to other figures
-         variable = factor(variable,
-                           levels = c('bold(Forest~cover~"(%)")',
-                                      'bold(Elevation~"(km)")',
-                                      'bold(Distance~from~water~"(km)")')),
-         # cap at 2^(+/-LIM)
-         log2_lambda = log2(lambda),
+  # cap at 2^(+/-LIM)
+  mutate(log2_lambda = log2(lambda),
          log2_lambda = case_when(log2_lambda > LIM ~ LIM,
                                  log2_lambda < -LIM ~ -LIM,
                                  TRUE ~ log2_lambda)) %>%
@@ -193,3 +204,29 @@ p +
 
 ggsave('figures/2024-ubco-grad-symposium/hrsf-surface-plots.png',
        width = 17.5, height = 7, units = 'in', dpi = 300, bg = 'white')
+
+# figure of standard error on log link scale ----
+p_se <-
+  preds %>%
+  filter((! too_far_2)) %>%
+  select(species, lab, x, temperature_C, variable, se.fit, too_far_1) %>%
+  ggplot() +
+  facet_grid(variable ~ lab, scales = 'free', labeller = label_parsed,
+             switch = 'y') +
+  geom_raster(aes(temperature_C, x, fill = se.fit)) +
+  geom_contour(aes(temperature_C, x, z = as.numeric(too_far_1)),
+               color = 'grey50', linewidth = 0.25) +
+  geom_contour(aes(temperature_C, x, z = se.fit), color = 'black') +
+  scale_x_continuous(paste0('Temperature (\U00B0', 'C)'), expand = c(0, 0),
+                     breaks = c(-20, 0, 20)) +
+  scale_y_continuous(NULL, expand = c(0, 0)) +
+  scale_fill_iridescent(name = 'Standard error in log(RSS)',
+                        limits = c(0, NA)) +
+  theme(strip.placement = 'outside', strip.background.y = element_blank(),
+        strip.text.y = element_text(size = 11), legend.position = 'top',
+        panel.background = element_rect(fill = 'grey90'),
+        legend.key.width = rel(2))
+p_se
+
+ggsave('figures/hrsf-surface-plots-se.png', p_se, width = 17.5, height = 8,
+       units = 'in', dpi = 600, bg = 'white')
