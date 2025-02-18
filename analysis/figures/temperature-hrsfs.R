@@ -45,8 +45,7 @@ if(file.exists('models/temperature-hrsf-preds.rds')) {
   
   # surface plots of partial effects ----
   newd <-
-    tibble(animal = 'new animal',
-           temperature_C = seq(-40, 40, length.out = 400),
+    tibble(temperature_C = seq(-40, 40, length.out = 400),
            x = tibble(forest_perc = seq(0, 100, length.out = 500),
                       elevation_m = seq(0, 3000, length.out = 500),
                       dist_water_m = seq(0, 25e3, length.out = 500)) %>%
@@ -54,6 +53,10 @@ if(file.exists('models/temperature-hrsf-preds.rds')) {
     unnest(x)
   
   surface <- function(m, dist = 0.01) {
+    #' adding an animal from the dataset to use `discrete = TRUE` since i'm
+    #' dividing by the median later. reduces computation time by ~8 times
+    newd$animal <- m$model$animal[1]
+    
     bind_rows(
       transmute(
         newd,
@@ -67,7 +70,7 @@ if(file.exists('models/temperature-hrsf-preds.rds')) {
         too_far_2 = FALSE) %>%
         bind_cols(.,
                   predict(object = m, newdata = newd, type = 'link',
-                          se.fit = TRUE, discrete = FALSE,
+                          se.fit = TRUE, discrete = TRUE,
                           newdata.guaranteed = TRUE,
                           terms = c('s(forest_perc)',
                                     'ti(forest_perc,temperature_C)')) %>%
@@ -87,7 +90,7 @@ if(file.exists('models/temperature-hrsf-preds.rds')) {
         x = x / 1e3) %>%
         bind_cols(.,
                   predict(object = m, newdata = newd, type = 'link',
-                          se.fit = TRUE, discrete = FALSE,
+                          se.fit = TRUE, discrete = TRUE,
                           newdata.guaranteed = TRUE,
                           terms = c('s(elevation_m)',
                                     'ti(elevation_m,temperature_C)')) %>%
@@ -107,7 +110,7 @@ if(file.exists('models/temperature-hrsf-preds.rds')) {
         x = x / 1e3) %>%
         bind_cols(.,
                   predict(object = m, newdata = newd, type = 'link',
-                          se.fit = TRUE, discrete = FALSE,
+                          se.fit = TRUE, discrete = TRUE,
                           newdata.guaranteed = TRUE,
                           terms = c('s(dist_water_m)',
                                     'ti(dist_water_m,temperature_C)')) %>%
@@ -125,7 +128,6 @@ if(file.exists('models/temperature-hrsf-preds.rds')) {
     unnest(lambdas) %>%
     # fix species and variable labs
     mutate(
-      lab = gsub('\\(boreal\\)', '"\\(boreal\\)"', lab),
       lab = gsub('\\(s.~mountain\\)', '"\\(s. mountain\\)"', lab),
       variable = gsub('\\(km\\)', '"(km)"', variable),
       variable = gsub('\\(\'%\'\\)', '"(%)"', variable),
@@ -162,12 +164,6 @@ p <-
   group_by(species, variable) %>%
   mutate(lambda = lambda / median(lambda)) %>%
   ungroup() %>%
-  # correcting some very low lambdas
-  mutate(lambda = case_when(
-    variable == 'bold(Elevation~(km))' & species == 'Canis lupus' ~ lambda * 2,
-    variable == 'bold(Elevation~(km))' & species == 'Oreamnos americanus' ~ lambda * 3,
-    variable == 'bold(Elevation~(km))' & species == 'Rangifer tarandus (boreal)' ~ lambda * 5,
-    TRUE ~ lambda)) %>%
   # cap at 2^(+/-LIM)
   mutate(log2_lambda = log2(lambda),
          log2_lambda = case_when(log2_lambda > LIM ~ LIM,
@@ -193,17 +189,7 @@ p <-
         legend.key.width = rel(2))
 
 ggsave('figures/hrsf-surface-plots.png', p, width = 17.5, height = 8,
-       units = 'in', dpi = 600, bg = 'white')
-
-# for bio grad symposium poster
-p +
-  scale_fill_sunset(name = 'RSS', midpoint = 0,
-                    limits = c(-LIM, LIM), breaks = -LIM:LIM,
-                    labels = \(x) 2^x) +
-  theme(legend.position = 'right', legend.key.width = rel(1))
-
-ggsave('figures/2024-ubco-grad-symposium/hrsf-surface-plots.png',
-       width = 17.5, height = 7, units = 'in', dpi = 300, bg = 'white')
+       units = 'in', dpi = 600, bg = 'white'); beepr::beep()
 
 # figure of standard error on log link scale ----
 p_se <-
@@ -226,7 +212,6 @@ p_se <-
         strip.text.y = element_text(size = 11), legend.position = 'top',
         panel.background = element_rect(fill = 'grey90'),
         legend.key.width = rel(2))
-p_se
 
 ggsave('figures/hrsf-surface-plots-se.png', p_se, width = 17.5, height = 8,
        units = 'in', dpi = 600, bg = 'white')
