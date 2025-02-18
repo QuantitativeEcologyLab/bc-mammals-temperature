@@ -125,12 +125,12 @@ cc_proj %>%
   geom_line(aes(year, l_median / l_ref, color = scenario), lwd = 1) +
   scale_x_continuous(NULL, breaks = c(2025, 2050, 2075, 2100)) +
   scale_y_continuous('Relative change in RSS', limits = c(0, NA)) +
-  scale_color_brewer('Scenario', type = 'div', palette = 5, direction = -1,
+  scale_color_brewer('Climate change scenario', type = 'div', palette = 5, direction = -1,
                      aesthetics = c('color', 'fill')) +
-  theme(legend.position = 'inside', legend.position.inside = c(5/6, 1/6 - 0.03))
+  theme(legend.position = 'inside', legend.position.inside = c(5/6, 1/6))
 
 ggsave('figures/rss-local-cc-predictions.png',
-       width = 12, height = 8, dpi = 600, bg = 'white')
+       width = 10, height = 6.67, dpi = 600, bg = 'white')
 
 ggsave('figures/2024-ubco-grad-symposium/rss-local-cc-predictions.png',
        width = 17.5, height = 9.5, dpi = 300, bg = 'white', scale = 0.75)

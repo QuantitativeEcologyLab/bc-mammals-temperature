@@ -147,7 +147,7 @@ p_p_mov <-
   theme(legend.position = 'inside',
         legend.position.inside = c(5/6, 1/6)); p_p_mov
 ggsave('figures/odds-moving-local-cc-predictions.png', p_p_mov,
-       width = 12, height = 8, dpi = 600, bg = 'white')
+       width = 10, height = 6.67, dpi = 600, bg = 'white')
 
 p_s <-
   ggplot(cc_proj, aes(year, s_median / s_ref, group = scenario)) +
@@ -166,7 +166,7 @@ p_s <-
   theme(legend.position = 'inside',
         legend.position.inside = c(5/6, 1/6)); p_s
 ggsave('figures/speed-local-cc-predictions.png', p_s,
-       width = 12, height = 8, dpi = 600, bg = 'white')
+       width = 10, height = 6.67, dpi = 600, bg = 'white')
 
 p_d <-
   ggplot(cc_proj, aes(year, d_median / d_ref, group = scenario)) +
@@ -185,7 +185,7 @@ p_d <-
   theme(legend.position = 'inside',
         legend.position.inside = c(5/6, 1/6)); p_d
 ggsave('figures/distance-travelled-local-cc-predictions.png', p_d,
-       width = 12, height = 8, dpi = 600, bg = 'white')
+       width = 10, height = 6.67, dpi = 600, bg = 'white')
 
 # for poster
 ggsave('figures/2024-ubco-grad-symposium/distance-travelled-local-cc-predictions.png',
