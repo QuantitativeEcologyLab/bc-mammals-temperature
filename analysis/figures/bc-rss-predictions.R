@@ -166,17 +166,29 @@ if(file.exists('data/cc-rss-bc-projections-albers.rds')) {
 # check changes with density functions
 bc_preds %>%
   mutate(change = lambda,
-         change = case_when(change > 2 ~ 2,
+         change = case_when(change > 1.5 ~ 1.5,
                             TRUE ~ change)) %>%
   ggplot() +
-  facet_wrap(~ lab, scales = 'free_y', labeller = label_parsed) +
-  geom_vline(xintercept = 0, color = 'grey', linetype = 'dashed') +
+  facet_wrap(~ lab, scales = 'free', labeller = label_parsed) +
+  geom_vline(xintercept = 1, color = 'grey', linetype = 'dashed') +
   geom_density(aes(change, fill = scenario, color = scenario), alpha = 0.3) +
   scale_color_manual('Scenario', values = khroma::color('sunset')(4),
                      aesthetics = c('color', 'fill'), labels = scales::parse_format()) +
-  labs(x = 'Change in RSS',
-       y = 'Probability density') +
+  labs(x = 'Relative change in RSS', y = 'Probability density') +
   theme(legend.position = 'inside', legend.position.inside = c(0.85, 0.15))
+
+ggsave('figures/bc-rss-2100-density.png', width = 15, height = 8,
+       units = 'in', dpi = 600, bg = 'white')
+
+bc_preds %>%
+  group_by(lab, scenario) %>%
+  summarize(p_decrease = mean(lambda < 1)) %>%
+  filter(p_decrease < 0.5)
+
+bc_preds %>%
+  group_by(lab) %>%
+  summarise(q_0.05 = round(quantile(lambda, 0.05) * 100) - 100,
+            q_0.95 = round(quantile(lambda, 0.95) * 100) - 100)
 
 # check color scheme
 p_0 <- filter(bc_preds, lab == lab[1], scenario == scenario[1]) %>%
@@ -186,16 +198,14 @@ p_0 <- filter(bc_preds, lab == lab[1], scenario == scenario[1]) %>%
   geom_raster(aes(x, y, fill = log2_l)) +
   geom_sf(data = bc, fill = 'transparent') +
   scale_fill_distiller(name = 'Relative selection strength',
-                       type = 'div', palette = 2, direction = 1,
-                       labels = \(x) round(2^x, 2),
-                       limits = c(-2, 2)) +
+                       type = 'div', palette = 2, direction = 1) +
   labs(x = NULL, y = NULL) +
   theme(legend.position = 'top'); p_0
 
 colorblindr::cvd_grid(p_0)
 
 # figure of estimated speeds for each species ----
-z_breaks <- seq(-1, 1, length.out = 5)
+z_breaks <- seq(-log2(1.5), log2(1.5), length.out = 5)
 
 p <- bc_preds %>%
   # cap log2(values) for readability
@@ -206,7 +216,7 @@ p <- bc_preds %>%
   facet_grid(scenario ~ lab, labeller = label_parsed) +
   geom_raster(aes(x, y, fill = log2_l)) +
   geom_sf(data = bc, fill = 'transparent') +
-  scale_fill_distiller(name = 'Relative selection strength',
+  scale_fill_distiller(name = 'Relative change in selection strength',
                        type = 'div', palette = 2, direction = 1,
                        labels = \(x) round(2^x, 2),  limits = range(z_breaks),
                        breaks = z_breaks) +
