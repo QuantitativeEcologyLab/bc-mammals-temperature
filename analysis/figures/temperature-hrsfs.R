@@ -115,9 +115,7 @@ if(file.exists('models/temperature-hrsf-preds.rds')) {
                           terms = c('s(dist_water_m)',
                                     'ti(dist_water_m,temperature_C)')) %>%
                     as.data.frame())) %>%
-      mutate(lambda = exp(fit),
-             lwr_95 = exp(fit - 1.96 * se.fit),
-             upr_95 = exp(fit + 1.96 * se.fit))
+      mutate(lambda = exp(fit))
   }
   
   # predict partial effects
