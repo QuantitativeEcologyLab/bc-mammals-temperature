@@ -1,5 +1,5 @@
 ---
-title: "Predicting how climate change will affect terrestrial mammals' movement and habitat selection in British Columbia, Canada"
+title: "Predicting how climate change will affect how and where terrestrial mammals will move in British Columbia, Canada"
 author:
   - name: Stefano Mezzini
     email: stefano.mezzini@ubc.ca
@@ -11,8 +11,6 @@ author:
   - name: Adam T. Ford
     institute: [braes, biol]
   - name: Karen E. Hodges
-    institute: [braes, biol]
-  - name: Siobhan Darlington
     institute: [braes, biol]
   - name: Kirk Safford
     institute: bcp
@@ -42,6 +40,7 @@ header-includes:
     - \captionsetup[figure]{font=scriptsize, aboveskip=4pt, belowskip=-15pt}
     - \usepackage{hanging} # for hanging indents in references
     - \usepackage[left]{lineno} # for line numbers
+    - \usepackage{booktabs}
 subparagraph: true # needed for \usepackage[small]{titlesec}
 output:
   bookdown::pdf_document2:
@@ -79,7 +78,7 @@ six-sentence abstract:
 -->
 
 ```{r, echo=FALSE}
-abstract <- "Recent widespread warming has caused many terrestrial mammals to change when, how, and where they move, with cascading effects on individuals' fitness and habitat selection at the population, community, and ecosystem levels. Previous research has quantified the effects of temperature on mammalian movement behavior, but few have quantified the effects of future climate change on fine-scale movement and habitat selection. We address this gap by using Continuous-Time Movement Models and Hierarchical Generalized Additive Models to quantify the effects of temperature on mammal's probability of movement, speed, and habitat selection. We then leverage the estimated effects to predict when, how, and where mammals will move in BC throughout the 21^st^ century. We conclude with implications for energetics, encounter rates, habitat conservation, and human-wildlife conflicts. ***MISSING RESULTS AND CONCLUSIONS***"
+abstract <- "Recent widespread warming has caused many terrestrial mammals to change when, how, and where they move, with cascading effects on individuals' fitness and habitat selection at the population, community, and ecosystem levels. Previous research has quantified the effects of temperature on mammalian movement behavior, but few have quantified the effects of future climate change on fine-scale movement and habitat selection. We address this gap by using Continuous-Time Movement Models and Hierarchical Generalized Additive Models to quantify the effects of temperature on mammals' movement rates and habitat selection. We then leverage the estimated effects to predict how and where mammals will move in British Columbia (BC), Canada, throughout the 21^st^ century. We show that changes in temperature altered movement phenology, and that climate change will impact mammals' movement rates and habitat selection throughout the century, but that there are no common trends across all study species. Consequently, we suggest that species' responses be interpreted carefully and considered jointly when extrapolating the community-level consequences of climate change."
 ```
 
 \clearpage
@@ -98,7 +97,7 @@ abstract <- "Recent widespread warming has caused many terrestrial mammals to ch
 
 \noindent \textbf{Appendices}: 3
 
-\noindent \textbf{Key words:} climate change, temperature, mammals, animal movement, habitat selection
+\noindent \textbf{Key words:} climate change, temperature, mammals, animal movement, movement behavior, habitat selection
 
 \clearpage
 
@@ -133,6 +132,8 @@ other refs
 
 * A review of climate change effects on marine mammals in United States waters: Past predictions, observed impacts, current research and conservation imperatives https://doi.org/10.1016/j.ecochg.2022.100054
 * Global vulnerability of marine mammals to global warming: https://doi.org/10.1038/s41598-019-57280-3
+* boars' sleep quantity, efficiency and quality are reduced on warmer days (https://doi.org/10.1098/rspb.2023.2115)
+
 
 -->
 
@@ -140,27 +141,25 @@ other refs
 
 # Introduction
 
-<!-- movement is a convenient way to respond to change -->
+<!-- movement is a convenient way to respond to change, but movement depends on temperature -->
 
-\noindent For most animals, movement is a rapid, low-cost, and low-risk response to a variety of stimuli [@nathan_movement_2008], including escaping predation [@peterson_pursuit_2021; @bartashevich_collective_2024; @tan_antipredator_2024], searching for resources [@charnov_optimal_1976; @mezzini_how_2024], and habitat selection [@kacelnik_ideal_1992; @winter_forecasting_2024]. However, movement efficiency depends on ambient temperature, since it impacts the energetic cost of movement [@taylor_energetics_1982; @brown_toward_2004; @jahn_variations_2022], the ease of movement [e.g., snow depth and density, see @montgomery_movement_2019; @leclerc_determinants_2021; @melin_effect_2023], and the risk of overheating [@hetem_responses_2014; @dyer_travel_2023]. Additionally, temperature also affects movement indirectly by affecting other drivers of movement behavior, including physiology [@abram_behavioural_2017], fitness [@schmidt_interplay_2020; @berger_climate_2018], trophic interactions [@hegel_interacting_2010], and the availability and value of resources [e.g., water and heat, see: @elmore_implications_2017; @attias_effects_2018].
+\noindent For most animals, movement is a rapid, low-cost, and low-risk response to a variety of stimuli [@nathan_movement_2008]. Animals move to maximize resource availability [e.g., food, water, shelter, see: @charnov_optimal_1976; @kacelnik_ideal_1992], optimize habitat use [@winter_forecasting_2024], and escape predation [@peterson_pursuit_2021; @bartashevich_collective_2024; @tan_antipredator_2024]. However, ambient temperature affects mammals' movement rates by altering the energetic cost of movement [@taylor_energetics_1982; @brown_toward_2004; @fuller_towards_2016; @jahn_variations_2022], the ease of movement [e.g., snow depth and density, see @montgomery_movement_2019; @leclerc_determinants_2021; @melin_effect_2023], and the risk of overheating [@hetem_responses_2014; @dyer_travel_2023]. Additionally, temperature also affects movement indirectly by through other drivers of movement behavior, such as trophic interactions [@hegel_interacting_2010] and the value of resources [e.g., water, heat, shelter -- see: @elmore_implications_2017; @attias_effects_2018; @arechavala-lopez_common_2019]. Changes in temperature thus affects how animals move [e.g., movement frequency and speed -- their movement behavior: @nathan_movement_2008; @dyer_travel_2023] and where they move to [i.e., their habitat selection: @merkle_large_2016; @alston_temperature_2020; @giroux_activity_2023].
 
-<!-- changes in temperature cause changes in movement -->
-
-Changes in temperature affect not only whether and how fast animals move but also how they move [i.e., speed and tortuosity; their movement behavior: @nathan_movement_2008; @dyer_travel_2023] and where they move to [habitat selection: @merkle_large_2016; @alston_temperature_2020; @giroux_activity_2023]. Thus, temperature affects not only an animal's energetic expenditure but also many other consequences of movement, including encounter rates with resources [@mezzini_how_2024], other animals [@martinez-garcia_how_2020], and the occurrence of human-wildlife conflict [@weststrate_how_2024]. These changes are exacerbated at extreme temperatures, as animals often alter their movement behaviors substantially when temperatures are excessively cold or hot [@wilson_stenotherms_2001; @berger_climate_2018; @arechavala-lopez_common_2019; @giroux_activity_2023]. But what counts as "extreme" varies across species: thermal specialists are more sensitive to small changes above or below their ideal range [@giroux_activity_2023], while temperature generalists can adapt more easily to change [@dupont_beyond_2024]. However, this grater adaptability is tested when generalists are subject to changes that are more severe [@mccain_assessing_2019], affecting many factors [e.g., temperature, phenology, and resource availability: @polazzo_measuring_2024], or too rapid to adapt to within the span of a lifetime or a few generations [@levins_evolution_1974; @fuller_towards_2016; @xu_plasticity_2021]. Thus, it remains unclear how or whether species will be able to respond to climate change in the current century [@deb_modelling_2020; @woo-durand_increasing_2020; @verzuh_behavioural_2023], especially when populations do not react to changes in environmental conditions [@sawyer_migratory_2019] or are physiologically incapable [@sherwood_adaptability_2010; @williams_range_2018].
+Temperature also affects the consequences of animal movement, such as encounter rates with resources [@mezzini_how_2024], other animals [@martinez-garcia_how_2020], and humans [@weststrate_how_2024], and these changes are exacerbated at extreme temperatures [@wilson_stenotherms_2001; @berger_climate_2018; @giroux_activity_2023]. But what counts as "extreme" varies across species: thermal specialists are more sensitive to small changes outside their typical range [e.g., @giroux_activity_2023], while temperature generalists can adapt more easily to change [@dupont_beyond_2024]. However, generalists' grater adaptability is tested when they are subject to changes that are more severe [@mccain_assessing_2019], affect many factors [e.g., temperature, phenology, and resource availability: @polazzo_measuring_2024], or are too rapid to adapt within the span of a lifetime or a few generations [@levins_evolution_1974; @fuller_towards_2016; @xu_plasticity_2021]. Thus, it remains unclear how or whether species will be able to respond to climate change in the current century [@deb_modelling_2020; @woo-durand_increasing_2020; @verzuh_behavioural_2023], especially when populations fail to adapt to changes [@sawyer_migratory_2019; @botero_evolutionary_2015] or are physiologically incapable to do so [@sherwood_adaptability_2010; @williams_range_2018].
 
 <!-- we do not know how temperature will change -->
 
-This uncertainty in both future conditions and their consequences on ecosystems and populations presents a need for a comprehensive understanding of the effects of temperature on the movement of animal populations as well as the consequences this will have on landscapes, biodiversity, and their adaptability and resiliency. Recent work has documented climate-change-related changes mammals' ranges [@leclerc_determinants_2021], movement behavior [@melin_effect_2023]; thermoregulation [@mota-rojas_physiological_2021], and trait-based responses [@mccain_assessing_2019], but it is still unclear how mammals will adapt their small-scale movement and habitat selection to future changes in temperature [@intergovernmental_panel_on_climate_change_climate_2023; but see @hetem_responses_2014; @winter_forecasting_2024]. In the last 200 years, many ecosystems experienced widespread warming that resulted in milder and shorter winters, hotter and longer summers, and a greater risk of extremely high temperatures and severe forest fires [@intergovernmental_panel_on_climate_change_climate_2023; @zurowski_summer_2023]. Over the next 100 years, these changes will worsen and continue to impact mammals' fitness, movement behavior, and habitat selection as they cope with growing heat stress [@deb_modelling_2020; @woo-durand_increasing_2020] and frequency and intensity of extreme events [@bunnell_global_2011] along with growing anthopogenic pressure [@sih_evolution_2011; @sawyer_identifying_2009; @weststrate_how_2024].
+Uncertainty in future conditions and their consequences on ecosystems presents a need for a comprehensive understanding of (1) the direct effects of temperature on animal movement behavior and (2) the implications this will have on populations and species' adaptability and resiliency, community structure, and biodiversity at large. Recent work has documented the effects of climate change on mammals' ranges [@leclerc_determinants_2021], movement behavior [@melin_effect_2023], thermoregulation [@mota-rojas_physiological_2021], and trait-based responses [@mccain_assessing_2019], but it is still unclear how mammals will adapt their small-scale movement and habitat selection to changes in temperature during the 21^st^ century [@intergovernmental_panel_on_climate_change_climate_2023; but see @hetem_responses_2014; @winter_forecasting_2024]. In the last 200 years, many ecosystems experienced widespread warming that resulted in milder and shorter winters, hotter and longer summers, and a greater risk of extremely high temperatures and severe forest fires [@intergovernmental_panel_on_climate_change_climate_2023; @zurowski_summer_2023]. Over the next 100 years, these changes are expected to worsen and continue to impact mammals' fitness, movement behavior, and habitat selection as animals cope with growing heat stress [@deb_modelling_2020; @woo-durand_increasing_2020] and more frequent and intense extreme events [@bunnell_global_2011], along with increasing anthropogenic pressure [@sih_evolution_2011; @sawyer_identifying_2009; @weststrate_how_2024].
 
 <!-- why is understanding the present and predicting into the future necessary -->
 
-Understanding the direct and indirect impacts of temperature on mammalian movement is essential for decision makers to be able to prepare and respond to change in a proactive manner [e.g., @sawyer_identifying_2009; @mccain_assessing_2019]. The Canadian province of British Columbia is currently experiencing rapid widespread warming, phenological shifts, and more frequent and intense extreme events, including forest fires [@zurowski_summer_2023]. In light of the "30 by 30" conservation initiative, a global effort to conserve 30% of the world's lands and oceans by 2030 [Section H, Targets 2 and 3 of @convention_on_biological_diversity_154_2022], we stress that decision makers must understand which areas will be of greatest value for maximizing the project's effectiveness. Predicting how climate change will affect how, when, and where animals will move is necessary for identifying which landscapes are most valuable now as well as in the future. Failing to understand how changes in temperature will affect mammalian movement behavior and habitat selection will hinder our ability to respond to the current climate crisis and make decisions that are viable in the long term.
+Understanding the direct and indirect impacts of temperature on mammalian movement is essential for decision makers to be able to prepare for and respond to change in a proactive manner [e.g., @sawyer_identifying_2009; @mccain_assessing_2019]. The Canadian province of British Columbia is currently experiencing rapid widespread warming [@dierauer_climate_2021; @turner_its_2009], phenological shifts [e.g., @tysor_countergradient_2025; @basu_phenological_2024], and more frequent and intense extreme events [e.g., @zhang_increased_2023], including forest fires [@zurowski_summer_2023]. As we approach the deadline for the "30 by 30" conservation initiative, a global effort to conserve 30% of the world's lands and oceans by 2030 [Section H, Targets 2 and 3 of @convention_on_biological_diversity_154_2022], decision makers must understand which areas will be of greatest value for maximizing the project's effectiveness. Predicting how climate change will affect how, when, and where animals will move is necessary for identifying which landscapes are most valuable now as well as in the future. Failing to understand how changes in temperature will affect mammalian movement behavior and habitat selection will hinder our ability to respond to the current climate crisis and make decisions that are viable in the long term.
 
 <!-- introduce the study -->
 
-This paper provides an analysis of the effects of spatiotemporally proximal temperature on the movement of six terrestrial mammal species in British Columbia (BC), Canada (*Canis lupus*, *Cervus canadensis*, *Oreamnos americanus*, *Puma concolor*, boreal and southern mountain *Rangifer tarandus*, and *Ursus arctos horribilis*; Table \@ref(tab:data-table)). Using over two decades of telemetry data over a large spatial range of British Columbia (Fig. \@ref(fig:bc-map)) and hourly air temperature data, we estimate how mammals altered their movement frequency, movement speed, and habitat selection in response to temperature. We then pair the estimated responses with climate change projections to forecast changes in mammalian movement in the current century under different climate-change scenarios [Shared Socioeconomic Pathways, see @riahi_shared_2017]. We discuss the consequences of these changes in movement behavior with regards to energetics, encounter rates, habitat conservation, and human-wildlife conflicts while disentangling the direct and indirect effects of temperature on the movement behavior of terrestrial mammals.
+This paper provides an analysis of the effects of air temperature on the movement of six terrestrial mammal species in British Columbia (BC), Canada (*Canis lupus*, *Cervus canadensis*, *Oreamnos americanus*, *Puma concolor*, boreal and southern mountain *Rangifer tarandus*, and *Ursus arctos horribilis*; Table \@ref(tab:data-table)). Using over 25 years of telemetry data thoughout a large spatial range of British Columbia (Fig. \@ref(fig:bc-map)) and hourly air temperature data, we estimate how mammals altered their probability of movement, speed when moving, and habitat selection in response to temperature. We then pair the estimated responses with climate change projections to forecast the species' movement during the 21^st^ century under different climate-change scenarios [referred to as Shared Socioeconomic Pathways, SSPs -- see @riahi_shared_2017]. We disentangle the direct and indirect effects of temperature on the movement behavior of terrestrial mammals and discuss the consequences of these changes at the individual, population, and landscape levels.
 
-```{r bc-map, fig.cap="GPS telemetry data for the six species in this study."}
+```{r bc-map, fig.cap="GPS telemetry data for the six species in this study.", out.width='0.75\\linewidth'}
 knitr::include_graphics('../figures/tels-map.png')
 ```
 
@@ -214,14 +213,14 @@ dt_data <-
   rename('\U0394t (hours)' = dt,
          'NA speed' = n_missing)
 
-knitr::kable(dt_data, format = 'markdown', caption = 'Start and end of the GPS telemetries along with the median sampling interval ($\\Delta t$; stratified by individual), number of animals (Animals), and number of animals with unresolved speed (NA speed) for each of the species in this study.', escape = FALSE)
+knitr::kable(dt_data, format = 'markdown', caption = 'Start and end of the GPS telemetries along with the median sampling interval ($\\Delta t$; stratified by individual), number of animals (Animals), and number of animals with unresolved speed (NA speed) for each of the species in this study.', escape = FALSE, longtable = FALSE, booktabs = TRUE)
 ```
 
 \normalsize
 
 # Methods
 
-## Datasets
+## Datasets used
 
 This manuscript leverages four main datasets: (1) a collection of GPS telemetry data; (2) historical hourly reanalyzed air temperature from the ERA5 dataset from the European Center for Medium-range Weather Forecasting; (3) resource rasters of percent forest cover, elevation, and distance from water; and (4) climate change projections under four Shared Socioeconomic Pathways [SSPs, see @riahi_shared_2017]. We detail the data sources and analyses in the sections below, and more details are available in appendices A (estimating how temperature affects movement frequency and speed when moving), B (fitting Hierarchical Resource Selection Functions), and C (simulating hourly temperature data to 2100 using the four SSPs).
 
@@ -257,13 +256,13 @@ We simulated hourly variation in weather by assuming temperature followed a norm
 
 ### Resource rasters
 
-\noindent We estimated percent forest cover and distance from water using the rasters created by @tuanmu_global_2014. We calculated total forest cover by summing the temporally static rasters of evergreen/deciduous needleleaf trees, evergreen broadleaf trees, deciduous broadleaf trees, and mixed/other trees (raster classes 1-4, respectively). We converted the raster of percent cover of open water (class 12) to a binary raster of pixels with water (cover > 0%) or without water (cover = 0%) and then calculated each pixel's distance from the nearest pixel with water using the `distance()` function from the `terra` package. Finally, we obtaied two digital elevation models using the `get_elev_raster()` function from the `elevatr` package [version 0.99.0, @hollister_elevatr_2023]: We used a raster with a zoom of 6 (0.009$^\circ$) for model fitting and one with a zoom of 3 (0.08$^\circ$) for downloading climate change projections via `climatenaR`. All final rasters and code are available on GitHub at [https://github.com/QuantitativeEcologyLab/bc-mammals-temperature](https://github.com/QuantitativeEcologyLab/bc-mammals-temperature).
+\noindent We estimated percent forest cover and distance from water using the rasters created by @tuanmu_global_2014. We calculated total forest cover by summing the temporally static rasters of evergreen/deciduous needle-leaf trees, evergreen broadleaf trees, deciduous broadleaf trees, and mixed/other trees (raster classes 1-4, respectively). We converted the raster of percent cover of open water (class 12) to a binary raster of pixels with water (cover > 0%) or without water (cover = 0%) and then calculated each pixel's distance from the nearest pixel with water using the `distance()` function from the `terra` package. Finally, we obtained two digital elevation models using the `get_elev_raster()` function from the `elevatr` package [version 0.99.0, @hollister_elevatr_2023]: We used a raster with a zoom of 6 (0.009$^\circ$) for model fitting and one with a zoom of 3 (0.08$^\circ$) for downloading climate change projections via `climatenaR`. All final rasters and code are available on GitHub at [https://github.com/QuantitativeEcologyLab/bc-mammals-temperature](https://github.com/QuantitativeEcologyLab/bc-mammals-temperature).
 
 ## Estimating mammals' instantaneous speeds
 
 \noindent We modeled each animal's movement using continuous-time movement models [@fleming_fine-scale_2014] via the `ctmm` package [version 1.2.0, @fleming_ctmm_2023] for `R`. We then estimated mammals' instantaneous speeds by applying the `ctmm::speeds()` function on all models with finite speed estimates [415 of 433, see @fleming_fine-scale_2014; @noonan_scale-insensitive_2019]. The 18 telemetries with insufficiently fine sampling were for one mountain goat, 15 boreal caribou, and 2 southern mountain caribou (Table \@ref(tab:data-table)).
 
-Since `ctmm`'s movement models assume stochastic but non-zero speeds (i.e., a single, stochastic moving state), data-informed speeds needed to be corrected so that the minimum instantaneous speed could be 0. We performed this correction by subtracting each model's mean speed while assuming speeds were $\chi^2$-distributed.<!-- The degrees of freedom and Frequentist confidence intervals were adjusted accordingly.--> The function we used is available on GitHub at [https://github.com/QuantitativeEcologyLab/bc-mammals-temperature/blob/main/functions/detrend_speeds.R](https://github.com/QuantitativeEcologyLab/bc-mammals-temperature/blob/main/functions/detrend_speeds.R). To avoid artifacts due to excessively small, non-zero speeds, we determined whether an animal was moving or not using the inflection point of each species' histogram of detrended speed estimates (Appendix A).
+Since `ctmm`'s movement models assume stochastic but non-zero speeds (i.e., a single, stochastic moving state), data-informed speeds needed to be corrected so that the minimum instantaneous speed could be 0. We performed this correction by subtracting each model's mean speed while assuming speeds were $\chi^2$-distributed. The function we used is available on GitHub at [https://github.com/QuantitativeEcologyLab/bc-mammals-temperature/blob/main/functions/detrend_speeds.R](https://github.com/QuantitativeEcologyLab/bc-mammals-temperature/blob/main/functions/detrend_speeds.R). To avoid artifacts due to excessively small, non-zero speeds, we determined whether an animal was moving or not using the inflection point of each species' histogram of detrended speed estimates (Appendix A).
 
 ## Estimating the effects of temperature on mammals' movement
 
@@ -273,15 +272,15 @@ Since `ctmm`'s movement models assume stochastic but non-zero speeds (i.e., a si
 
 \noindent In this manuscript, we separate the effects of temperature on mammalian movement into indirect and direct effects. We call "indirect" all effects that can be intervened on by altering an animal's habitat [its geographic space *sensu* @matthiopoulos_defining_2022], and we refer to all other effects as "direct". For example, an increase in temperature may push an animal to prefer higher forest cover in search of shade, and conservationists can thus mitigate these indirect effects of temperature on movement behavior by increasing the availability of forested areas, since the effect of temperature on movement is conditional on forest cover availability. In contrast, the animal may avoid moving if temperatures are above 35$^\circ$C, irrespective of its geographic and environmental space [*sensu* @matthiopoulos_defining_2022], so it is not possible to mitigate the effects of temperature on movement behavior (other than changing temperature directly). We provide Directed Acyclical Graphs in Appendix A (modeling the effects of temperature on movement rates), and Appendix B (modeling the effects of temperature on habitat selection).
 
-### Movement frequency and speed
+### Effects of temperature on movement rates
 
 \noindent We estimated the effects of temperature on mammals' movement state (moving or not) and speed (when moving) using two Hierarchical Generalized Additive Models [HGAMs, see @pedersen_hierarchical_2019 and the code chunk below] with the `mgcv` package for `R` [version 1.9-1, @wood_generalized_2017]. The first HGAM estimated the probability that an animal was moving with a binomial family of distributions and logit link function. The second HGAM estimated an animal's speed (when moving) with a gamma family of distributions and log link function. The HGAMs included random intercepts for each animal (`s(..., bs = 're')`), fixed-effect intercepts for each species, and species-level `by` smooths for time of day, day of year, and temperature [`s(..., by = species)`, see model I in Figure 4 of @pedersen_hierarchical_2019]. Additionally, the models had three tensor product interaction terms (`ti()`) for each species: (1) day of year and time of day, (2) temperature and time of day, and (3) temperature and day of year. These three terms accounted for: (1) seasonal changes in day length, (2) hourly changes in the response to temperature (e.g., changes in nocturnality), and (3) seasonal changes in the response to temperature (e.g., changes in coats and migration timing). The HGAMs accounted for the cyclicity of time of day and day of year using cyclic cubic splines [`bs = 'cc'`, @wood_generalized_2017]. Together, the binomial HGAM and the gamma HGAM inform us on an animal's long-term average speed, since it is the product of the probability of moving and its average speed when moving. We fit the models with fast REML (`'fREML'`) and discretized covariates (`discrete = TRUE`) to optimize computational efficiency with no appreciable losses to model performance [@wood_generalized_2015; @wood_generalized_2017-1; @li_faster_2020]. Additional details are provided in Appendix A.
 
-<!-- \clearpage -->
+\clearpage
 
 \singlespacing
 
-\small
+\scriptsize
 
 ```{r hgams, eval=FALSE, echo=TRUE}
 m_moving <- bam(
@@ -320,19 +319,19 @@ m_speed <- bam(
   knots = list(tod_pdt = c(0, 1), doy = c(0.5, 366.5)))
 ```
 
-\clearpage
-
 \normalsize
 
 \doublespacing
 
-### Habitat selection
+<!-- \clearpage -->
+
+### Effects of temperature on habitat selection
 
 \noindent We estimated the effects of temperature on each species' selection for percent forest cover, elevation, and distance from water by fitting a Hierarchical Resource Selection Function for each species using an HGAM with a Poisson family of distributions and log link function [Appendix B, also see @aarts_estimating_2008]. We accounted for the spatiotemporal autocorrelation in the telemetry locations by weighting each point based on the telemetry's Autocorrelated Kernel Density Estimate [@fleming_new_2017; @noonan_comprehensive_2019] to produce estimates of second- and third-order habitat selection [*sensu* @johnson_comparison_1980]. While we recognize there are other important drivers of habitat selection (e.g., forest age, forest type, prey availability), we decided to only use these three proxies to produce results that are comparable between species and to make province-wide predictions simpler. Each species' model had the same structure:
 
 \singlespacing
 
-\small
+\scriptsize
 
 ```{r rsf, eval=FALSE, echo=TRUE}
 rsf <- bam(
@@ -376,20 +375,7 @@ map_int(x, \(f) readRDS(f)$iter)
 
 # Results
 
-\noindent Species differed in mean probabilities of movement (range: 0.05 -- 0.27), mean speed when moving (range: 0.42 -- 2.67 km/day), and mean distance travelled (range: 0.04 -- 0.62 km/day) even after post-stratifying to a sampling interval of one hour (Tab. \@ref(tab:gam-intercepts)). The inclusion of temperature in the model did not affect any of the three measures substantially when post-stratifying to $0^\circ$C. Grizzly bears tended to move least often ($P(M = 1) \approx 0.05$), while wolves and pumas moved most often ($P(M = 1) \ge 0.23$), and wolves had the highest mean speed when moving. Consequently, wolves traveled 3.0 to 15.6 times further per day than other mammals, on average.
-
-* CHANGED FOREST RASTER TO USE ALL TREE TYPES (2025-01-17)
-* NEED TO REMAKE HRSF FIGURES
-
-***THIS IS FALSE***We did not find any consistent selections for or against forest cover, but all species exhibited stronger selection preferences for elevation and distance from water than for forest cover, and there was no consistent preference for forest cover across temperatures. In contrast, all species showed a strong preference for specific altitudes: wolves, pumas, and boreal caribou generally preferred elevations < 1 km above sea level, while elk, mountain goats, southern mountain caribou, and grizzly bears generally preferred elevations between 1 and 2 km above sea level. All species except for elk and grizzly bears preferred being as close to water as possible, 
-
-Overall, we did not detect any strong selections for or against forest cover, and this lack of preference was generally true irrespective of temperature. In contrast, we selection strength for forest cover did not vary strongly with temperature, 
-
-preferred resources
-
-**CHECK TABLE 2: UPDATE AFTER REMOVING SCEK014 AND SCEK014b (2024-11-19 9:50)**
-
-***UPDATE TABLES BASED ON NEW HRSFS***
+\noindent Species differed in mean probabilities of movement (range: 0.05 -- 0.3), mean speed when moving (range: 0.42 -- 2.7 km/day), and mean distance traveled (range: 0.04 -- 0.6 km/day), even after predicting for one-hour time intervals for all species (Table \@ref(tab:gam-intercepts)). Grizzly bears tended to move least often (probability of moving $P(M) \approx 0.05$), while wolves and pumas moved most often ($P(M) \gtrapprox 0.23$). When moving, mountain goats and southern mountain caribou moved the slowest ($\mathbb E(S|M) \approx 0.4$ m/s), while wolves had the highest mean speed when moving ($\mathbb E(S|M) \approx 2.7$ m/s). Consequently, wolves traveled, on average, 50 km/day -- 2.5 to 16.7 times further than other mammals.
 
 \footnotesize
 
@@ -411,26 +397,29 @@ get_int <- function(.m) {
 intercepts <- tibble(Species = SPECIES,
                      'P(M)' = get_int(readRDS('models/binomial-gam-without-temperature.rds')),
                      'P(M|T)' = get_int(readRDS('models/binomial-gam.rds')),
-                     'E(S|M=1)' = 'km/h' %#% get_int(readRDS('models/gamma-gam-without-temperature.rds')),
-                     'E(S|M=1,T)' = 'km/h' %#% get_int(readRDS('models/gamma-gam.rds')),
-                     'E(D)' = `P(M)` * `E(S|M=1)`,
-                     'E(D|T)' = `P(M|T)` * `E(S|M=1,T)`) %>%
+                     'E(S)' = 'km/h' %#% get_int(readRDS('models/gamma-gam-without-temperature.rds')),
+                     'E(S|T)' = 'km/h' %#% get_int(readRDS('models/gamma-gam.rds')),
+                     'E(D)' = `P(M)` * `E(S)`,
+                     'E(D|T)' = `P(M|T)` * `E(S|T)`) %>%
   mutate(Species = paste0('\\emph{', Species, '}') %>%
            gsub(')}', ')', .) %>%
            gsub(' \\(', '} \\(', .))
 
 if(FALSE) {
   hist(intercepts$`P(M)`)
-  hist(intercepts$`E(S|M=1)`)
-  round(range(max(intercepts$`E(D)`) /
-                intercepts$`E(D)`[- which.max(intercepts$`E(D)`)]),
-        1)
+  hist(intercepts$`E(S)`)
+  round(range(max(intercepts$`E(D)`) / intercepts$`E(D)`[- which.max(intercepts$`E(D)`)]), 1)
   
   intercepts %>%
     transmute(Species,
               p = round(`P(M|T)` - `P(M)`, 2),
-              s = round(`E(S|M=1,T)` - `E(S|M=1)`, 2),
+              s = round(`E(S|T)` - `E(S)`, 2),
               d = round(`E(D|T)` - `E(D)`, 2))
+  
+  intercepts %>%
+    arrange(desc(`E(D)`)) %>%
+    mutate(displ_wolf = `E(D)`[grepl('Canis lupus', Species)] / `E(D)`,
+           displ_wolf_t = `E(D|T)`[grepl('Canis lupus', Species)] / `E(D|T)`)
 }
 
 intercepts %>%
@@ -439,173 +428,140 @@ intercepts %>%
   rename_with(\(.x) paste0('$', .x, '$'), ! Species) %>%
   rename_with(\(.x) gsub('\\|', '\\\\vert ', .x)) %>%
   rename_with(\(.x) gsub('E', '\\\\mathbb E', .x)) %>%
-  rename_with(\(.x) gsub('M=1', 'M\\\\!=\\\\!1', .x)) %>%
-  knitr::kable(format = 'markdown', digits = 2, caption = paste0("Mean probability of movement (P(M)), speed when moving ($\\mathbb E(S | M = 1)$), and distance travelled ($\\mathbb E(D)$) as estimated by models without and with temperature, after post-stratifting to a 1-hour sampling rate and a temperature of T = 0\U00B0", "C."))
+  knitr::kable(format = 'markdown', digits = 2, caption = paste0("Mean probability of movement (P(M)), speed when moving ($\\mathbb E(S)$), and distance travelled ($\\mathbb E(D)$) as estimated by models without and with temperature ($(... | T)$), after post-stratifting to a 1-hour sampling rate and a temperature of T = 0\U00B0", "C."))
 ```
 
 \normalsize
 
-For most models, including smooth terms of temperature did not always improve within-sample prediction substantially (change in deviance explained: +0.2% -- + 17.9%), and there was relatively strong agreement between models with and without temperature (Fig. ***SX pred vs pred***), but including temperature resulted in substantially better fits for all models (all $\Delta$AIC $\le$ -326; Table \@ref(tab:temp-comparison)).
+At average temperatures, wolves preferred dense forest cover ($\gtrapprox$ 50%) high elevations, and distances from water < 10 km; elk preferred intermediate forest cover, elevations between 1 and 2 km, and distances from water of 5-15 km; mountain goats preferred sparse (< 50%) forest cover, elevations between 1 and 2 km; pumas preferred high forest cover, an elevation of ~ 1 km, and distances from water < 10 km; boreal caribou selected for intermediate to high forest cover, elevations near 500 m, and distances from water < 10 km; southern mountain caribou selected for dense forest cover, elevations near 2 km, and distances from water < 5 km; and grizzly bears selected for sparse forest cover (25-50%), elevation near 1 km, and distances from water < 2 km.
+
+Including temperature in the models always increased within-sample prediction, but the change was not always substantial (deviance explained increased between 0.2% and 18.6%, with all HRSFs having an increase $\ge 4.6$), and there was relatively strong agreement between models with and without temperature (Fig. ***SX pred vs pred***), but including temperature resulted in substantially better fits for all models, especially HRSFs (all $\Delta$AIC $\le$ -342; Table \@ref(tab:temp-comparison)).
 
 ```{r temp-comparison}
 setwd('..')
 library('dplyr')
-source('analysis/figures/default-ggplot-theme.R') #' for `SPECIES`
+source('analysis/figures/default-ggplot-theme.R') #' for `SPECIES` object
 
 temp_comp <- tibble(
   Model = c('P(moving)', 'Speed', rep('HRSF', 7)),
   Species = c('All', 'All', sort(as.character(SPECIES))),
   DDE = 
-    c(10.7 - 10.2, 79.3 - 79.1, 10.0, 4.47, 17.6, 7.83, 5.89, 11.8, 17.9) %>%
+    c(10.72 - 10.23, 79.26 - 79.11, 9.16, 4.62, 18.6, 8.0, 5.30, 12.0, 17.7) %>%
     round(1) %>%
     paste0('%'),
-  DAIC = c(-5927, -1682, -7200, -4305, -769, -945, -6284, -326, -920) %>%
+  DAIC = c(-5927, -1682, -6566, -4448, -813, -966, -5637, -342, -914) %>%
     round())
+
+if(FALSE) {
+  range(as.numeric(gsub('%', '', temp_comp$DDE)))
+  range(as.numeric(gsub('%', '', temp_comp$DDE))[- c(1:2)])
+  max(temp_comp$DAIC)
+}
 
 colnames(temp_comp)[colnames(temp_comp) == 'DAIC'] <- paste0('\U0394', 'AIC')
 colnames(temp_comp)[colnames(temp_comp) == 'DDE'] <- paste0('\U0394', 'DE')
 
-knitr::kable(temp_comp, digits = 1, format = 'markdown', caption = "Changes in deviance expained ($\\Delta$DE) and Akaike Information Criterion ($\\Delta$AIC) from including temperature in the models estimating probability of movement (P(moving)) and speed when moving (Speed), as well as in species-level Hierarchical Resource Selection Functions (HRSF).")
+knitr::kable(temp_comp, digits = 1, format = 'markdown', caption = "Changes in deviance expained ($\\Delta$DE) and Akaike Information Criterion ($\\Delta$AIC) from including temperature in the models estimating probability of movement (P(moving)) and speed when moving (Speed) as well as in species-level Hierarchical Resource Selection Functions (HRSF).")
 ```
 
 ## Effects of temperature on movement rates
 
-\noindent The partial effects of temperature varied in both direction and magnitude across species (Fig. ***AX***), even after accounting for differences in daily and seasonal activity (e.g., sleeping, migration, hibernation; see Fig. ***AX***). Smooth interaction terms were well-behaved and indicated clear shifts in daily activity for all species (Fig. ***AX***). The models explained reasonably high proportions of the deviance (11% for the binomial model and 79% for the Gamma model) and had good in-sample prediction (Fig. ***AX***). Both movement frequency and speed when moving decreased with increasing sampling interval, with a strong common effect (Fig. ***AX***). Most species adapted their daily and seasonal movement behavior to changes in temperature (Fig. \@ref(fig:dist)), but the precision of the estimated change depends on the GPS sampling frequency. While `ctmm` models are scale independent [@noonan_scale-insensitive_2019], the accuracy, size, and stability of speed estimates still depends on the GPS sampling frequency. This is because coarser sampling contains information on large scale movements (e.g., range crossings, migrations) but not fine-scale movement (e.g., first-order habitat selection). Using the boreal caribou as an example, the 13-hour sampling interval allows us to reasonably estimate the caribou's movement path at a temporal scale of approximately 13 hours (or greater), but we cannot produce reasonable movement trajectories at a much finer (e.g., hourly) scale. Consequently, the estimated movement behaviors should be compared across species carefully.
-
-```{r dist, fig.cap="\\textbf{Temperature is a strong determinant of how far and when mammals travel.} The fill indicates the estimated effects of temperature on the relative change in distance travelled (probability of moving times mean speed when moving) over time of day (\\textbf{A}) and day of year (\\textbf{B}). Predictions in the surface plots extend to 10% of the range away from each datum. The color bar is on the $\\log_2$ scale to help visualize patterns in doubling, and values are capped to -75\\% and +300\\% for ease of readability."}
-knitr::include_graphics('../figures/distance.png')
-```
-
-### Predicted changes in movement during the current century
-
-The direction and degree of change in distance travelled varies greatly between species, but worse climate-change scenarios consistently corresponded to greater absolute changes in behavior as well as greater uncertainty in the estimated change (Fig. \@ref(fig:t-dist)). Under the best-case scenario, absolute projected changes by 2100 were small (0% to 2%, except for southern mountain caribou, which had a change of ~5%). Under the worst-case scenario, absolute projected changes were by 2100 ranged from ~1% (boreal caribou) to ~25% (southern moutain caribou) and had the greatest uncertainty in the estimates. Boreal caribou and elk showed relatively little projected changes, especially relative to the degree of inter-annual variability in distance travelled.
-
 ```{r, eval=FALSE}
-# max absolute change
-readRDS('H:/GitHub/bc-mammals-temperature/data/cc-hgam-projections.rds') %>%
-  group_by(scenario, species) %>%
-  summarize(max_rel = labeller_perc(max(abs(d))),
-            .groups = 'drop') %>%
-  arrange(species, scenario) %>%
-  print(., n = nrow(.))
-
-# range between values at 2100 does not depend strongly on dt
-# (without accounting for other variables and trends within species)
-readRDS('H:/GitHub/bc-mammals-temperature/data/cc-hgam-projections.rds') %>%
-  filter(year == 2100) %>%
-  group_by(species) %>%
-  summarize(range = labeller_perc(diff(range(d)) + 1)) %>%
-  left_join(dt_data %>%
-              mutate(species = case_when(
-                Dataset == '\\emph{Canis lupus}' ~ 6,
-                Dataset == '\\emph{Rangifer tarandus} (boreal)' ~ 5,
-                Dataset == '\\emph{Rangifer tarandus} (s. mountain)' ~ 1,
-                Dataset == '\\emph{Puma concolor}' ~ 3,
-                Dataset == '\\emph{Puma concolor}' ~ 3,
-                Dataset == '\\emph{Cervus canadensis}' ~ 4,
-                Dataset == '\\emph{Oreamnos americanus}' ~ 7,
-                Dataset == '\\emph{Ursus arctos horribilis}' ~ 2),
-                species = SPECIES_LABS[species]),
-            by = 'species') %>%
-  ggplot(aes(`Median Δt (hours)`, range, color = species)) +
-  geom_point() +
-  scale_color_manual(values = PAL)
+library(mgcv)
+# to  get deviance explained
+summary(readRDS('models/binomial-gam.rds'), re.test = FALSE)$dev.expl
+summary(readRDS('models/gamma-gam.rds'), re.test = FALSE)$dev.expl
 ```
 
-```{r t-dist, fig.cap="\\textbf{The intensity and direction of changes in movement rates due to climate change varies among species, but worse climate-change scenarios often result in the greatest change and greatest uncertainty.} Lines indicate the projected relative change in mean distance travelled (probability of moving times speed when moving) due to changes in temperature within the species' current extent. Shaded areas indicate the mean 95% Bayesian credible intervals. Changes are relative to the mean distances travelled in 2020 across the four Shared Socioeconomic Pathways (SSPs). The SSPs are listed in order of similarity to current conditions, from SSP 1-2.6 (sustainability, best-case scenario) to 5-8.5 (fossil-fueled development, worst-case scenario). The projections only account for changes movement behavior (i.e., movement frequency and speed) and ignore changes in physiology or movement costs."}
-knitr::include_graphics('../figures/distance-travelled-local-cc-predictions.png')
-```
+\noindent The marginal effects of temperature varied in both direction and magnitude across species (Fig. ***AX***), even after accounting for differences in daily and seasonal activity (e.g., sleeping, migration, hibernation; see Fig. ***AX***). The smooths' credible intervals were generally quite wide outside the typical temperature range of -20$^\circ$C to 20$^\circ$C, so the estimated trends were often not credible at the 95% level outside such range. Smooth interaction terms were well-behaved and indicated clear shifts in activity over time of day and day of year for all species. The models explained reasonably high proportions of the deviance (10.7% for the binomial model and 79.3% for the Gamma model) and had good in-sample prediction (Fig. ***AX***). All species' movement frequency and speed decreased with increasing sampling interval (Fig. ***AX***).
 
-***COMMENTS ABOUT SPATIAL VARIATION IN distance travelled***
+Most species adapted their daily and seasonal movement behavior to changes in temperature (Fig. \@ref(fig:dist)). Wolves, elk, pumas, and boreal caribou reduced their mid-day movement rates when temperatures were above 20$^\circ$C, and wolves, elk, and boreal caribou moved less on summer days above 20$^\circ$C. However, the precision of the estimated change depended on the GPS sampling frequency (Fig. ***AX***). While the `ctmm` models produced scale-independent estimates of speed [i.e., model interpretation is independent of sampling time: @noonan_scale-insensitive_2019], the accuracy, size, and stability of speed estimates still depended on the GPS sampling frequency. This is because coarsely-sampled movement data contains information on large-scale movements (e.g., range crossings, migrations) but not fine-scale movements [e.g., first-order habitat selection *sensu* @johnson_comparison_1980]. Using the boreal caribou as an example, the 13-hour sampling interval allows us to reasonably estimate the caribou's movement path at a temporal scale of approximately 13 hours (or greater), but we cannot produce reasonable movement trajectories at a much finer (e.g., hourly) scale. Consequently, we suggest being cautious when comparing estimated movement behaviors across species.
 
-```{r s-dist}
-plot(1, main = '4. spatial projections of distance in 2020 and 2100')
+```{r dist, fig.cap="\\textbf{Temperature is a strong determinant of how far and when mammals travel.} The fill indicates the estimated effects of temperature on the relative change in distance travelled (probability of moving times mean speed when moving) over time of day (\\textbf{A}) and day of year (\\textbf{B}). Predictions in the surface plots extend to 10% of the range away from each datum. The color bar is on the $\\log_2$ scale to help visualize patterns in doubling, and values are capped to -75\\% and +300\\% (i.e., $2^{\\pm 2}$) for ease of readability."}
+knitr::include_graphics('../figures/distance.png')
 ```
 
 ## Effects of temperature on habitat selection
 
-```{r hrsfs, fig.cap="\\textbf{Temeperature strongly affects mammals' habitat selection.} Estimated resourse selection strength for forest cover (\\%), elevation (km), and distance from water (km) as a function of temperature. The grey contours indicate the extent of each speices' observed locations."}
+Species' relative selection strength (RSS) for resources depended on temperature, and RSS was strongest for elevation and weakest for forest cover. Changes in RSS with temperature were strongest for elevation and generally weakest for distance from water, but there were no common trends across all species for any of the three resources. All species, with the exception of pumas, exhibited a temperature-dependent shift in their preference for forest cover. At higher temperatures, wolves, mountain goats, and grizzly bears became less selective for forest cover, while elk and caribou became more selective. All species shifted elevationally with temperature, although boreal caribou did not exhibit as strong of a change. As temperatures rose, elk, mountain goats, cougars, and boreal caribou increased in elevation, while boreal wolves, southern mountain caribou, and grizzly bears decreased in elevation. Most species generally remained within 5 km of water, and temperature did not affect their selection strength as much as for the other two resources. Estimated RSS values were generally most uncertain at extreme temperatures (Fig. ***BX***).
+
+```{r hrsfs, fig.cap="\\textbf{Temeperature strongly affects mammals' habitat selection.} Estimated relative selection strength (RSS) for forest cover (\\%), elevation (km), and distance from water (km) as a function of temperature. The grey contours indicate the extent of each speices' observed locations. RSS values were re-centered and capped to $2^{\\pm 2}$ to improve readability."}
 knitr::include_graphics('../figures/hrsf-surface-plots.png')
 ```
 
-### Predicted changes in movement during the current century
+## Predicted changes in movement during the 21^st^ century
 
-```{r t-hrsfs, fig.cap="\\textbf{The intensity and direction of changes in habitat selection due to climate change vary among species, but worse climate-change scenarios consistently result in the greatest change and greatest uncertainty.} Lines indicate the projected change in relative selection strength for forest cover (\\%), elevation (km), and distance from water (km) due to changes in temperature within the species' current extent. Shaded areas indicate the mean 95% Bayesian credible intervals. Changes are relative to the relative selection strength in 2020 across the four Shared Socioeconomic Pathways (SSPs). The SSPs are listed in order of similarity to current conditions, from SSP 1-2.6 (sustainability, best-case scenario) to 5-8.5 (fossil-fueled development, worst-case scenario)."}
-plot(1, main = '6. temporal projections of RSFs within current area')
+\noindent The direction and magnitude of change in distance traveled varied greatly between species, but worse climate-change scenarios generally corresponded to greater absolute changes in behavior (Fig. \@ref(fig:t-dist)). Under the best-case scenario, absolute projected changes by 2100 were small (approximately 0% to 2%), while absolute projected changes by 2100 ranged from ~1% (boreal caribou) to ~25% (southern mountain caribou) under the worst-case scenario. Boreal caribou and elk showed relatively little projected changes in yearly distance traveled. Throughout BC  (Fig. \@ref(fig:s-dist)), all species but elk and boreal caribou were expected to change their movement rates by 10 to 20% in 2100, relative to 2025, but the predicted changes varied spatially due to heterogeneity in climate change throughout the province. Across all species, absolute changes were smallest under the best-case scenario and greatest under the worst-case scenario.
+
+```{r t-dist, fig.cap="\\textbf{The direction and magnitude of changes in movement rates due to climate change varies among species, but worse climate-change scenarios often result in the greatest change and greatest uncertainty.} Lines indicate the projected relative change in mean distance travelled (probability of moving times speed when moving) due to changes in temperature within the species' current extent. Shaded areas indicate the average 95% Bayesian credible intervals for the area. Changes are relative to the predicted mean distances travelled in 2025 across the four Shared Socioeconomic Pathways (SSPs). The projections only account for changes movement behavior (i.e., movement frequency and speed) and ignore changes in physiology or movement costs."}
+knitr::include_graphics('../figures/distance-travelled-local-cc-predictions.png')
 ```
 
-```{r s-hrsfs}
-plot(1, main = '7. spatial projections of RSFs in 2020 and 2100')
+```{r s-dist, fig.cap="\\textbf{Climate change will impact each species' movement rates differently.} The color scale indicates the predicted changes in distance traveled in 2100, relative to each location's average distance in 2025 across all four scenarios, such that 1 indicates no change, values < 1 indicate a decrease, and values > 1 indicate an increase. For ease of readability, the color bar is on the $\\log_2$ scale to help visualize patterns in doubling, and values are capped to 0.8 and 1.25 ($\\approx 2^{\\pm 0.32}$; original data ranged 0.81 to 1.35). The predictions only account for the predicted temperature throughout the province and ignore environmental factors such as terrain slope, soil type, and forest cover."}
+knitr::include_graphics('../figures/bc-displ-2100.png')
+```
+
+All species were projected to reduce selection for their current range throughout the 21^st^ century, with the exception of grizzly bears, which showed little to no change under all four the climate change scenario (\@ref:fig(t-hrsfs)). The decreases in RSS were most evident in the habitats with the top 5% RSS in the current range. Projected changes in the median-RSS habitats were relatively small, but none increased throughout the century under any of the climate change scenarios. As with distance traveled, the change in RSS in 2100 varied throughout BC for all species (Fig. \@ref(fig:s-hrsfs)). All species were predicted to exhibit a decrease in RSS throughout most of BC, with the exception of boreal caribou, which had a predicted decrease in approximately 37% of the province, including their current range. While the boreal caribou were expected to increase selection for altitudes > 1 km above sea level, the estimated selection strength was highly uncertain and not credible at the 95% level (Fig. ***SX***).
+
+```{r, eval=FALSE}
+library('dplyr')
+readRDS('data/cc-rss-bc-projections-albers.rds') %>%
+  group_by(lab, scenario) %>%
+  summarize(p_decrease = mean(lambda < 1)) %>%
+  filter(p_decrease < 0.5)
+```
+
+```{r t-hrsfs, fig.cap="\\textbf{The intensity and direction of changes in habitat selection due to climate change vary among species, but no species are expected to exhibit an increase in relative selection strength (RSS).} Lines indicate the projected change in RSS based on the 5$^{th}$ percentile (the worst 5%; bottom line), the median (the middle; bold), and 95% percentile (the best 5%; top line) habitats within the species' current extent. Changes are relative to the median RSS in 2025 across the four Shared Socioeconomic Pathways (SSPs)."}
+knitr::include_graphics('../figures/rss-local-cc-predictions.png')
+```
+
+```{r s-hrsfs, fig.cap="\\textbf{Climate change will impact each species' habitat relative selection strength (RSS) differently.} The color scale indicates the predicted changes in RSS in 2100, relative to each location's average RSS in 2025 across all four scenarios, such that 1 indicates no change, values < 1 indicate a decrease, and values > 1 indicate an increase. For ease of readability, the color bar is on the $\\log_2$ scale to help visualize patterns in doubling, and values are capped to 0.67 and 1.5 ($\\approx 2^{\\pm 0.6}$; original data ranged 0.26 to 117)."}
+knitr::include_graphics('../figures/bc-rss-2100.png')
 ```
 
 # Discussion
 
-We demonstrated that temperature is an important determinant of how and where mammals move, even while accounting for other seasonal drivers of movement (e.g, changes in photoperiod, hormones, and resources). This is important because decoupling temperature from other drivers allows us to predict how changes in climate will affect mammalian movement even if all other drivers remain constant.
+\noindent We demonstrated that temperature is an important determinant of how and where mammals move, even while accounting for other seasonal drivers of movement (e.g, changes in photoperiod, hormones, and resources). Disentangling temperature from other drivers allows us to predict how changes in climate will affect mammalian movement even if all other drivers remain approximately constant or adapt at negligible rates. However, as habitats warm and animals are exposed to increasingly frequent extreme and novel conditions, our ability to confidently predict mammals' responses decreases. Predicting at the fringes of the surface plots we present comes with substantial uncertainty, particularly given that the responses are nonlinear. At unusually warm temperatures, mammals (and other homeotherms) overheat, so their movement behavior and that of their competitors, predators, and/or prey can often be substantially different from the behavior at typical temperatures. As extreme temperature events become more frequent and prolonged [@yao_emergence_2022; @intergovernmental_panel_on_climate_change_climate_2023], mammals will be increasingly forced to atypical behaviors, which will have the potential to substantially alter community structures and behaviors, both during such events and afterwards [@zhang_increased_2023; ]. For instance, changes in climate and phenology impact the life history and behavior of many hibernating mammals [@wells_life_2022], but hot weather also affects mammals' sleep quality [e.g., wild boars, *Sus scrofa*: @mortlock_sleep_2024] and likelihood to enter torpor [Australian eastern long-eared bat, *Nyctophilus bifax*: @fjelldal_nightly_2021]. These changes can alter the frequency and intensity of human-wildlife conflict, especially with the addition of growing pressures from human development and presence [@sih_evolution_2011; @johnson_human_2018; @weststrate_how_2024]. At the same time, warmer winters may reduce mammals' energetic expenditure [@berger_climate_2018; @schmidt_interplay_2020], increase their ability to find food or be predated upon [@hou_cold_2020; @gilbert_behavioral_2017; @pedersen_quantifying_2021; @slatyer_ecological_2022; @sullender_defining_2023], and affect the timing and duration of migrations [@sawyer_identifying_2009; @leclerc_determinants_2021; @xu_plasticity_2021] as well as the overall ease of movement as snow cover and depth decrease [@leclerc_determinants_2021; @melin_effect_2023]. However, these changes are likely to have complex consequences for population and ecosystem structures and dynamics as prey, predators, and prey experience altered and novel seasonal cycles. especially given the increasingly common climate "weirding" [@bunnell_global_2011], which includes not only warmer temperatures and more frequent and intense heat waves but also an increase in various other extreme events [@yao_emergence_2022; @intergovernmental_panel_on_climate_change_climate_2023], such as cold spells, floods and droughts, plant and animal die-offs and sudden growth surges, and other changes in population dynamics and behaviors [sometimes referred to as "black swan" events -- see: @logares_black_2012; @anderson_black-swan_2017].
 
+Our ability respond to current and future changes in climate is contingent on our ability to prepare for and predict change. However, predicting animal behavior becomes increasingly complicated as the conditions animals are exposed to deviate from current, typical conditions, especially when responses are nonlinear. Consequently, we do not present our results as a definitive guide to how mammals in BC will respond to climate change. Instead, we hope they serve as a starting point to (1) demonstrate that mammals' movement rates and habitat selection depend on temperature and (2) how one can estimate mammals' changes in movement behavior due to climate change. An important limitation of Figs. \@ref(fig:dist) and \@ref(fig:hrsfs) is that we do not include measures of uncertainty around the estimated responses, as they cannot be incorporated easily in surface plots, and the purpose of the figures was to illustrate the magnitude and direction of the responses rather than contrasting the surfaces against some hypotheses. Still, we stress that uncertainty is crucial in producing transparent and informed results, particularly when using such estimates for decision-making or predicting future changes, as we do in Figs. \@ref(fig:t-dist) and \@ref(fig:t-hrsfs). We present the spatial estimates of distance traveled and relative habitat selection strength in 2100 without measures of uncertainty for conciseness, but we suggest that future studies and reports include some form of compatibility intervals [@gelman_are_2019], whether these be Bayesian Credible intervals [@mcelreath_statistical_2020] or Frequentist Confidence Intervals, although the latter do not provide a measure of uncertainty in the common sense of the word [@morey_fallacy_2016; @amrhein_scientists_2019]. As alternatives to heat-map surface plots, one may include compatibility intervals using faceted or perspective plots of the surfaces along with the intervals [e.g., Fig. 5 in @akkaya_hocagil_benchmark_2024] or overlapping contour plots on the surfaces [e.g., Fig. 4.14 on page 187 of @wood_generalized_2017]. For a simpler figure, one could also include lines with compatibility intervals for the responses at different temperatures.
 
-* We discuss the consequences of these changes in movement behavior with regards to energetics, encounter rates, habitat conservation, and human-wildlife conflicts.
-* as temperatures get warmer, we will be pushing into the unknown portion of the surface plots
-* our models don’t include any physiological responses to temperature that may impact movement (e.g., hybernation)
-* our models also assume the behaviour we modeled now will persist into the future (e.g., hybernation, migration)
-* based on the model, temperature doesn't affect grizzlies' hibernation much, and their distance travelled in winter is very low due to P(moving) being so low:
-* if the RSS decreases a lot, individuals may disperse, populations may relocate, or stay where they are and suffer
+How to represent uncertainty may seem trivial to some, but communicating uncertainty is crucial in assessing risk probabilistically [@aven_implementing_2002; @ayre_bayesian_2012; @kluppelberg_bayesian_2014]. Recent events in global politics, including global conflicts [@mcnutt_scientists_2022; @tollefson_what_2022] and the rapid rise in generative machine learning [also referred to as artificial intelligence and GenAI, see @roumeliotis_chatgpt_2023; @van_noorden_chatgpt_2023; @deepseek-ai_deepseek-r1_2025] and its prohibitive energy and water demands [@li_making_2023] and carbon footprint [@luccioni_estimating_2024], have placed doubt on the likelihood and feasibility of reaching climate change goals that seemed achievable in the past decade [@united_nations_environment_programme_emissions_2024]. Maintaining global warming below 1.5 or even 2.0$^\circ$C has been questioned [@united_nations_environment_programme_emissions_2024], and mitigating climate change will require extensive and widespread collaborative effort [e.g., @huang_achieving_2021]. Similarly, protecting a third of the world's terrestrial and aquatic ecosystems [Section H, Targets 2 and 3 of @convention_on_biological_diversity_154_2022] appears less tangible as global political and environmental conditions change rapidly and unpredictably [@sih_evolution_2011; @simmons_tough_2021; @guenette_implications_2022; @sovacool_next_2023], and achieving such a goal will require active collaboration with local Peoples, especially Indigenous Peoples [@wong_towards_2020; @lamb_braiding_2023]. Understanding the consequences of climate change on mammals' movement behavior and spatial distribution [@williams_range_2018] is a first step towards anticipating and proactively responding to future changes in human-induced rapid environmental change [@sih_evolution_2011], including climate change. In the following sections, we discuss the implications of our results in more detail. We then expand on consequences for conservation during the 21^st^ century and considerations for future studies.
 
-* RSFs require good data coverage over the resource-temperature space
-* future work investigating effects on a single species or evaluating space more accurately should:
-+ use fully Bayesian models with appropriate regularizing priors and penalties to avoid excessive predicitons
-+ use B splines to specify better penalty spaces
-+ have more data with good coverage over the covariate space
+## Effects of temperature on movement rates
 
-* @pease_ecological_2024: the scale at which we measure variables affects their estumated effect
-* @hetem_responses_2014:
-* rate of climate change is too fast for genetic adaptation to occur in mammals with longevities of decades
-* example of suitable habitat prediction to 2050
-* proactive conservation: @sawyer_identifying_2009
+\noindent The lack of any common effects of temperature across all species' movement rates indicates that the effects of climate change will vary across species and that responding to current conditions and preparing for future changes will require a variety of adaptations as communities adapt and respond in complex and interconnected ways. Although our models do not account for any physiological or explicit phenological changes (e.g., in the timing of sleep and hibernation), the tensor product terms in Fig. \@ref(fig:dist) suggest that warmer temperatures cause many species to alter their daily and seasonal activity patterns. For example, at cold temperatures (-20$^\circ$C), elk moved most in the early morning (6:00 PDT) and evening (18:00 PDT), but they moved almost four times more at 6:00 PDT and half as much at 18:00 PDT when temperatures were above 20$^\circ$C. This suggests that while elk maintain a preference for crepuscular activity, they adapt their movement behavior to move more during warmer periods of the day (i.e., evening) on cold days and during cooler periods (i.e., early morning) on warmer days. The strong reduction in wolves', elk's, pumas', and boreal caribou's mid-day movement rates when temperatures are above 20$^\circ$C suggests that the increasingly common and intense heat waves across British Columbia will often have community-wide impacts on movement rates, encounter rates [@martinez-garcia_how_2020], and potentially community structure. More work is necessary on interspecific responses to temperature, including the effects of temperature on predation rates [but see: @cunningham_opportunity_2021; @glass_trade-off_2021; @brivio_seeking_2024]. The increase in intensity and frequency of extreme heat events [@bunnell_global_2011; @yao_emergence_2022] will likely also impact the occurrence and timing of hibernation [@wells_life_2022] and migration or seasonal range expansions [@carbeck_adaptation_2022; @morley_spatiotemporal_2021; @malpeli_ungulate_2022], not only as a direct effect of temperature, but also because of cascading changes in the availability and unpredictability of resources [@mezzini_how_2024].
 
-<!-- - how results answer central question -->
+The substantial increase in uncertainty around the estimated movement rates at temperatures below $-20^\circ C$ or above $20^\circ C$ (Fig. ***AX***) highlights the importance of including appropriate measures of uncertainty when evaluating the consequences of climate change on mammals' movement behavior. In this paper, we present our results cognizantly of the lack of uncertainty measures in many of our figures: We hoped to demonstrate how mammalian movement behavior depends on temperature while presenting the need for additional research. We expand on the importance of quantifying and communicating uncertainty in the last section of this discussion. Our relatively simple models indicate that changes in temperature will alter movement behavior even without accounting for large-scale physiological and behavioral adaptations, which may not be possible at the current rate of climate change [@williams_range_2018; @hetem_responses_2014]. Still, our models to indicate that some animals adapt their behavior phenology in response to temperature, as indicated by wolves', elk's, caribou's, and grizzly bears' increased movement rates during warmer winters and spring days.
 
-## Effects of temperature on mammals' movement
+## Effects of temperature on habitat selection
 
+As with the effects of temperature on movement rates, the lack of common effects of temperature across all species indicates that efficient and proactive habitat conservation will require taxonomic nuance. In particular, our HRSFs do not account for any explicit physiological responses to temperature that may impact movement such as changes in the phenology of plants, ice, or mammalian physiology or behavior (e.g., seasonal coats, seasonal migration) other than as direct responses to temperature. Consequently, the behavioral changes we present should be interpreted carefully. While some seasonal cycles do not depend directly on temperature and may thus not be impacted directly by climate change [such as those driven by photoperiod, see @liu_effects_2022], the predictions we present also rely on the assumption that mammals will not adapt these seasonal cycles based on temperature-dependent cues, such as weather [@xu_frost_2019] or forage availability [@middleton_green-wave_2018]. Additionally, it is important to stress the distinction between habitat selection and quality. While animals tend to select for high-quality habitats [e.g., @wright_survival_2024], high selection strength can also be a consequence of an ecological trap, an area animals are attracted to that provides a net loss of fitness rather than a gain [@zuniga-palacios_what_2021; @swearer_overview_2021].
 
+## Predicted changes in movement during the 21^st^ century
 
-## Effects of temperature on mammals' habitat selection
+Achieving the goals laid out by the "30 by 30" conservation initiative [Section H, Targets 2 and 3 of @convention_on_biological_diversity_154_2022] will require careful planning but often also rapid action. In the case of Canada, only 13.7% of its terrestrial areas and inland waters were protected at the end of 2023 [@environment_and_climate_change_canada_canadian_2024; @minister_of_environment_and_climate_change_act_2024]. Additionally, efficient and effective conservation will require collaboration with Indigenous and local communities to ensure Treaties are respected in the process [e.g., @falardeau_biophysical_2022; @lamb_braiding_2023; @wong_towards_2020; @turner_its_2009] while also actively preparing for future change [@desjardins_looking_2020; @hessami_indigenizing_2021]. The large range in predicted changes by 2100 (both across species and within species' current ranges) and high spatial heterogeneity in figure \@ref(fig:s-hrsfs) highlight the need for careful planning that incorporates not only accurate estimates of change but also pragmatic and communicable measures of uncertainty and variability around such estimates. The width of the averaged credible intervals in Figure \@ref(fig:t-dist) suggest that spatial and intra-individual variation should be accounted for when deciding the location and size of protected areas.
 
+The widespread decrease in RSS in for areas with ranges with the top 5% RSS underscores the importance of moving beyond only using central estimates of change. While changes in the median RSS over time are small to negligible (yet never positive), decreases in the top 5% are more accentuated. This perspective is particularly important in the case of habitat selection modeling, since animals will be selecting most for (and thus spending more time in) habitats with high RSS values, so changes in the upper extremes are more important than changes in the median or lower extreme values. Similar arguments can be made for incorporating variation in temperature (including extreme events) when predicting future changes. Estimating changes in future weather with monthly means alone is insufficient because a change of 1-3 in mean monthly temperature may result in negligible predicted changes while ignoring changes in the frequency and intensity of extreme temperatures [@bunnell_global_2011; @zhang_increased_2023; @yao_emergence_2022].
 
+Accurate estimates of the effects of changes in temperature on mammals' movement require a holistic view of the direct effects of temperature on mammals' movement directly as well as its effects on other drivers of movement, such as forage availability [@mezzini_how_2024], population dynamics [@needs_ref], competitive pressure [e.g., @torrez-herrera_monkeys_2020], and predation risk [@kohl_prey_2019]. This complexity results in the great variation among the responses of different species (and individuals). As selection strength for current ranges changes (and likely decreases), some animals may disperse, relocate to a new habitat, or remain within the current range suffer a decrease in fitness and an increase in extinction risk [@duncan_predicting_2012].
 
-<!-- - what it tells us about the broader field -->
+Together, the predicted changes in distance traveled and habitat selection indicate that climate change will have complex consequences for populations as well as cascade effects within ecosystems as species adapt to the changing environments [or fail to do so: @botero_evolutionary_2015; @polazzo_measuring_2024]. The resulting changes in mammalian movement behavior will have ramifications in individuals' encounter rates [@hou_cold_2020; @martinez-garcia_how_2020], population dynamics [@need_ref], and food webs [@need_ref] as landscapes change and animals face increasing pressures from human activity [@sih_evolution_2011], including habitat fragmentation [@needs_ref], habitat loss [@needs_ref], and greater human presence in wild spaces [@weststrate_how_2024; @rosenthal_impact_2022; @rice_conspicuous_2022].
 
 ## Considerations for future studies
 
-Our work highlights ***X*** central considerations for future research: (1) telemetry sampling rates should bedesigned primarily in relation to the movement timescales of the species of interest and ideally with multiple samples **path?**, (2) the number of individuals tracked and the length of each telemetry should depend on environmental stability, and (3) ***projecting into the fringes****
+Our work highlights three central considerations for future research: (1) telemetry sampling rates should be designed primarily in relation to the movement timescales of the species of interest [@noonan_scale-insensitive_2019; @nathan_big-data_2022; @pease_ecological_2024], (2) the number of individuals tracked and the length of each telemetry should depend not just on population size but also environmental stability, and (3) predicting changes in movement behavior becomes highly complex when responses are nonlinear, especially when changes depend on many interacting factors [@polazzo_measuring_2024] and one is interested in predicting responses in extreme conditions for which data are scarce [@steixner-kumar_strategies_2020]. We address each consideration in the following three paragraphs.
 
-Sampling schedules should be fine enough to reconstruct animals' movement at a sufficiently fine scale. Good estimates of an animal's speed and its movement path require telemetry locations to be taken more often than the animal's directional persistence [@noonan_scale-insensitive_2019], so that, on average, the dataset contains multiple locations in between changes in direction. What consitutes a change in direction depends on what movement scale one is investigating. Small-scale movements and first-order spatial selection will require more frequent sampling than migratory movement or secornd- and third-order spatial selection. While `ctmm` movement models are scale-invariant in that any model can be scaled to larger or smaller areas and timescales, the model estimates are not independent of the scale of the sampling frequency.
+Sampling schedules should be fine enough to reconstruct animals' movement at a sufficiently fine scale. Good estimates of an animal's speed and its movement path require telemetry locations to be taken more often than the animal's directional persistence [@noonan_scale-insensitive_2019], so that, on average, the dataset contains multiple locations in between changes in direction. What constitutes a change in direction depends on what movement scale one is investigating. Small-scale movements and first-order spatial selection will require more frequent sampling than migratory movement or second- and third-order spatial selection. While `ctmm` movement models are scale-invariant in that any model can be scaled to larger or smaller areas and timescales, the model estimates are not independent of the scale of the sampling frequency.
 
-When landscapes are relatively predictable across years, a larger number of sampled individuals is likely preferable over longer, multi-year telemetries. This allows one to quantify the variance across individuals, including the range of conditions and environments that individual animals are in. A good estimate of inter-individual variance provides better coefficient estimates along with more appropriate measures of uncertainty. However, when conditions across years are relatively stochastic, multi-year telemetries allow one to better estimate inter-annual and inter-individual variation. In either case, carefully-designed sampling schedules and (Bayesian) hierarchical models can provide good estimates of the effects of interested along with appropriate measures of uncertainty [@mcelreath_statistical_2016].
+When landscapes are relatively predictable across years, a larger number of sampled individuals is likely preferable over longer, multi-year telemetries. This allows one to quantify the variance across individuals, including the range of conditions and environments that individual animals are in. A good estimate of inter-individual variance provides better coefficient estimates along with more appropriate measures of uncertainty. However, when conditions across years are relatively stochastic, multi-year telemetries allow one to better estimate inter-annual variation without conflating it with inter-individual differences. In either case, carefully-designed sampling schedules and (Bayesian) hierarchical models can provide good estimates of the effects of interested along with appropriate measures of uncertainty [@mcelreath_statistical_2020].
 
-* improve projections at the edges of the HRSFs with local and Traditional Knowledge [@kutz_two-eyed_2019]
-* changes in temperatures are pushing to areas in the surface plots that have little data and may be poorly estimated. We will need to extrapolate to prepare for future changes, which implies some degree of inevitable risk. The best wat to avoid this is by designing models that are statistically sound and interpretable. The models we present provide an estimate of the changes in behavior, but they are not tailored specifically to any of the species in the dataset. Species-specific models should account for more particular variables (e.g., forest age for caribou) and use dynamic resource rasters (i.e., not use a static estimate of forest cover). Nonetheless, we present important results for understanding how mammals will respond to changes in climate and weather during the next ~75 years. 
+Quantifying and communicating uncertainty become particularly important as we predict for conditions for which we have little to no data, such as during extreme events. Additionally, estimating nonlinear trends is particularly difficult near the edges of the data (e.g., extremely high temperatures), especially when data is scarce. Consequently, the estimated responses at the fringes of the surfaces in figures \@ref(fig:dist) and \@ref(fig:hrsfs) are more likely likely to be poorly estimated, particularly in the case of HRSFs, but increasing data density throughout the resource-temperature surfaces can ameliorate the issue. Preparing for future changes requires some degree of inevitable risk, so it is imperative that models be statistically sound and interpretable, and that results are communicated transparently and clearly to decision makers and the public alike.
 
-## Consequences for conservation
-
-* energetics
-* encounter rates (lower encounter rates with food [@hou_cold_2020])
-* HWI [@weststrate_how_2024]
-z* Machine Learning (Genenative Aritificial Intelligence; GenAI) AI is fueling climate change. We need to proactively prepare to respond to climate change. Pollution is not under the control of the masses, so predicting change will be hard
-* high energy and water demands [@li_making_2023] GenAI consumption of water
-* high carbon footprint [@luccioni_estimating_2024]
-* Pollution is not under control of the masses, so predicting change will be hard
-
-<!-- - address any questions presented in the discussion -->
+<!-- - address any questions presented in the introduction -->
 
 \clearpage <!-- to prevent figures from floating to the references -->
 
 \newpage <!-- place references on a separate page -->
-
-<!-- additional references:
-
-- boars' sleep quantity, efficiency and quality are reduced on warmer days (https://doi.org/10.1098/rspb.2023.2115)
-
--->
 
 # References {-}
 
