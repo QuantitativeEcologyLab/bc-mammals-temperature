@@ -341,18 +341,13 @@ surface <- function(newd, term) {
   
   preds_1 <-
     predict(object = m_1, newdata = newd, type = 'link', se.fit = FALSE,
-            terms = c('(Intercept)', 's(species)',
-                      paste0('s(', term, '):species', SPECIES),
-                      paste0('ti(temp_c,', term, '):species', SPECIES)),
-            discrete = TRUE) %>%
+            exclude = 's(animal)', discrete = TRUE) %>%
     as.data.frame() %>%
     transmute(p_mu = m_1$family$linkinv(`.`))
   
   preds_2 <-
     predict(object = m_2, newdata = newd, type = 'link', se.fit = FALSE,
-            terms = c(paste0('s(', term, '):species', SPECIES),
-                      paste0('ti(temp_c,', term, '):species', SPECIES)),
-            discrete = TRUE) %>%
+            exclude = 's(animal)', discrete = TRUE) %>%
     as.data.frame() %>%
     rename(fit = '.') %>%
     transmute(s_mu = exp(fit))
@@ -391,9 +386,7 @@ newd_tod <- expand_grid(animal = m_2$model$animal[1],
 ti_tod <- surface(newd_tod, term = 'tod_pdt')
 
 p_mov_tod_int <-
-  mutate(ti_tod,
-         p_mu = if_else(p_mu > 0.4, 0.4, p_mu)) %>%
-  ggplot(aes(temp_c, tod_pdt, fill = p_mu)) +
+  ggplot(ti_tod, aes(temp_c, tod_pdt, fill = p_mu)) +
   facet_wrap(~ lab, labeller = label_parsed, nrow = 1) +
   geom_raster() +
   geom_contour(aes(temp_c, tod_pdt, z = log2(p_mu)), color = 'grey90',
@@ -402,9 +395,8 @@ p_mov_tod_int <-
                      breaks = c(-20, 0, 20)) +
   scale_y_continuous('Time of day (PDT)', expand = c(0, 0),
                      breaks = tod_breaks, labels = tod_labs) +
-  scale_fill_acton(name = 'P(moving)', limits = c(0, 0.3),
-                   breaks = seq(0, 0.3, by = 0.1)) +
-  theme(panel.background = element_rect(fill = 'grey90'),
+  scale_fill_acton(name = 'P(moving)', limits = c(0, 1)) +
+  theme(panel.background = element_rect(fill = 'grey50'),
         legend.position = 'none', legend.key.width = rel(1.5),
         legend.justification = 'center', legend.direction = 'horizontal')
 
@@ -469,9 +461,7 @@ newd_doy <- expand_grid(animal = m_2$model$animal[1],
 ti_doy <- surface(newd_doy, term = 'doy')
 
 p_mov_doy_int <-
-  mutate(ti_doy,
-         p_mu = if_else(p_mu > 0.4, 0.4, p_mu)) %>%
-  ggplot(aes(temp_c, doy, fill = p_mu)) +
+  ggplot(ti_doy, aes(temp_c, doy, fill = p_mu)) +
   facet_wrap(~ lab, labeller = label_parsed, nrow = 1) +
   geom_raster() +
   geom_contour(aes(temp_c, doy, z = log2(p_mu)), color = 'grey90',
@@ -480,8 +470,8 @@ p_mov_doy_int <-
                      breaks = c(-20, 0, 20)) +
   scale_y_continuous('Day of year', expand = c(0, 0),
                      breaks = doy_breaks, labels = doy_labs) +
-  scale_fill_acton(name = 'P(moving)', limits = c(0, NA)) +
-  theme(panel.background = element_rect(fill = 'grey90'),
+  scale_fill_acton(name = 'P(moving)', limits = c(0, 1)) +
+  theme(panel.background = element_rect(fill = 'grey50'),
         legend.position = 'none', legend.key.width = rel(1.5),
         legend.justification = 'center', legend.direction = 'horizontal')
 
