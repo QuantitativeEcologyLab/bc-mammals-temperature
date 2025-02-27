@@ -8,6 +8,7 @@ library('ggplot2')   # for fancy plots
 library('khroma')    # for colorblind-friendly color palettes
 library('cowplot')   # for fancy multi-panel plots
 source('analysis/figures/default-ggplot-theme.R') # bold text and no grids
+source('functions/get_legend.R') # to extract legends from ggplot plots
 plot_scheme(PAL, colours = TRUE)
 
 # import data
@@ -518,12 +519,6 @@ d_doy_int <-
         legend.justification = 'center', legend.direction = 'horizontal')
 
 # figures by response parameter ----
-#' `get_legend()` for `{cowplot}` version 1.1.3 returns an empty plot 
-get_legend <- function(.plot) {
-  get_plot_component(.plot + theme(legend.position = 'top'),
-                     pattern = 'guide-box-top', return_all = TRUE)
-}
-
 p_mov <- plot_grid(
   get_legend(p_mov_tod_int), p_mov_tod_int, p_mov_doy_int,
   labels = c('', 'A', 'B'), ncol = 1, rel_heights = c(0.2, 1, 1))
