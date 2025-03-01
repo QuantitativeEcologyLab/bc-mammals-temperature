@@ -157,6 +157,14 @@ knitr::include_graphics('../figures/dt-smooths.png')
 
 # Effects of temperature on habitat selection
 
+```{r avail-used, out.height='90%', fig.cap="Histograms of available (red) and used (blue) resources. All GPS fixes counts as one observation. The y axis is on the square-root scale to help visualize values with low counts."}
+knitr::include_graphics('../figures/available-vs-used.png')
+```
+
+```{r avail-used-w, out.height='90%', fig.cap="Histograms of available (red) and used (blue) resources. All GPS fixes are weighted according to their independence relative to the respective animals' range crossing time and Autocorrelated Kernel Density Estimate (i.e., the weights returned by AKDE weights multiplied by the number of home-range-crossing degrees of freedom). The y axis is on the square-root scale to help visualize values with low counts."}
+knitr::include_graphics('../figures/available-vs-used-weighted.png')
+```
+
 ```{r hrsf-se, fig.cap="Estimated standard error in the relative selection strength (RSS) for forest cover (\\%), elevation (km), and distance from water (km) as a function of temperature (see Fig. 3 in the main text). The grey contours indicate the extent of each speices' observed locations."}
 knitr::include_graphics('../figures/hrsf-surface-plots-se.png')
 ```
