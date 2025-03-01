@@ -23,10 +23,6 @@ if(file.exists('data/cc-hgam-bc-projections-albers.rds')) {
   m_1 <- readRDS('models/binomial-gam.rds')
   m_2 <- readRDS('models/gamma-gam.rds')
   
-  # terms to exclude from the prediction
-  SM <- unique(c(smooths(m_1), smooths(m_2)))
-  EXCLUDE <- SM[grepl('tod', SM) | grepl('animal', SM)]
-  
   # approximate Gaussian distributions of weather
   weather <- readRDS('data/weather-projections-2025-2100-only.rds') %>%
     filter(! is.na(temp_c)) %>% # there's some NA values even after masking
@@ -53,7 +49,7 @@ if(file.exists('data/cc-hgam-bc-projections-albers.rds')) {
               animal = m_1$model$animal[1],
               species = gsub('southern mountain', '(s. mountain)', x = species),
               lab,
-              tod_pdt = 0,
+              tod_pdt = 12,
               doy = yday(date_decimal(year + (month - 0.5) / 12)),
               temp_c,
               dt = 1,
@@ -62,9 +58,9 @@ if(file.exists('data/cc-hgam-bc-projections-albers.rds')) {
     mutate(
       .,
       p = predict(m_1, newdata = ., type = 'response',se.fit = FALSE,
-                  discrete = TRUE, exclude = EXCLUDE),
+                  discrete = TRUE, exclude = 's(animal)'),
       s = predict(m_2, newdata = ., type = 'response', se.fit = FALSE,
-                  discrete = TRUE, exclude = EXCLUDE),
+                  discrete = TRUE, exclude = 's(animal)'),
       d = p * s) %>%
     # take the weighted mean of the approximated gaussian distributions 
     # after grouping all the 2025 scenarios together
@@ -158,24 +154,26 @@ bc_preds %>%
   theme(legend.position = 'inside', legend.position.inside = c(0.85, 0.15))
 
 # figure of estimated speeds for each species ----
-z_breaks <- seq(-log2(1.25), log2(1.25), length.out = 5)
+z_breaks <- seq(-log2(1.5), log2(1.5), length.out = 5)
 
 # check color scheme
-p_0 <- filter(bc_preds, lab == lab[1], scenario == scenario[1]) %>%
-  # cap values for readability
-  mutate(d = case_when(d < 2^min(z_breaks) ~ 2^min(z_breaks),
-                       d > 2^max(z_breaks) ~ 2^max(z_breaks),
-                       TRUE ~ d)) %>%
-  ggplot() +
-  geom_raster(aes(x, y, fill = log2(d))) +
-  geom_sf(data = bc, fill = 'transparent') +
-  scale_fill_distiller(name = 'Relative change in distance travelled',
-                       palette = 'PuOr', direction = 1,
-                       labels = \(x) round(2^x, 2)) +
-  labs(x = NULL, y = NULL) +
-  theme(legend.position = 'top'); p_0
-
-colorblindr::cvd_grid(p_0)
+if(FALSE) {
+  p_0 <- filter(bc_preds, lab == lab[1], scenario == scenario[1]) %>%
+    # cap values for readability
+    mutate(d = case_when(d < 2^min(z_breaks) ~ 2^min(z_breaks),
+                         d > 2^max(z_breaks) ~ 2^max(z_breaks),
+                         TRUE ~ d)) %>%
+    ggplot() +
+    geom_raster(aes(x, y, fill = log2(d))) +
+    geom_sf(data = bc, fill = 'transparent') +
+    scale_fill_distiller(name = 'Relative change in distance travelled',
+                         palette = 'PuOr', direction = 1,
+                         labels = \(x) round(2^x, 2)) +
+    labs(x = NULL, y = NULL) +
+    theme(legend.position = 'top'); p_0
+  
+  colorblindr::cvd_grid(p_0)
+}
 
 # make figure
 p <- bc_preds %>%

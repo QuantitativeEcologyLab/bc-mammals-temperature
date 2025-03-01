@@ -17,17 +17,17 @@ if(file.exists('data/cc-hgam-projections.rds')) {
   m_1 <- readRDS('models/binomial-gam.rds')
   m_2 <- readRDS('models/gamma-gam.rds')
   
-  # terms to exclude from the prediction
-  SM <- smooths(m_1)
-  TERMS <- c('(Intercept)', 'species',
-             SM[!(grepl('tod', SM) | grepl('dt', SM) | grepl('animal', SM))])
+  # when predicting: only excluding animal-level random effect and choosing
+  # specific values for the rest
   
   # import prediction data for each species in the data's extent ----
   if(file.exists('data/hgam-cc_newd.rds')) {
     cc_newd <- readRDS('data/hgam-cc_newd.rds')
   } else {
     cc_newd <- tibble(
-      wp = list.files('data', 'weather-projections-', full.names = TRUE) %>%
+      # list species files (not starting with numbers)
+      wp = list.files('data', 'weather-projections-[^0123456789]',
+                      full.names = TRUE) %>%
         map(readRDS)) %>%
       unnest(wp) %>%
       filter(year >= 2025) %>%
@@ -38,7 +38,7 @@ if(file.exists('data/cc-hgam-projections.rds')) {
         animal = m_1$model$animal[1], #' to use `discrete = TRUE`
         species = gsub('boreal', '(boreal)', species) %>%
           gsub('southern mountain', '(s. mountain)', x = .),
-        tod_pdt = 0,
+        tod_pdt = 12,
         doy = yday(date_decimal(year + (month - 0.5) / 12)),
         temp_c,
         dt = 1,
@@ -50,9 +50,9 @@ if(file.exists('data/cc-hgam-projections.rds')) {
   cc_proj <- cc_newd %>%
     mutate(.,
            p = predict(m_1, newdata = ., type = 'response', se.fit = FALSE,
-                       discrete = TRUE, terms = TERMS),
+                       discrete = TRUE, exclude = 's(animal)'),
            s = predict(m_2, newdata = ., type = 'response', se.fit = FALSE,
-                       discrete = TRUE, terms = TERMS),
+                       discrete = TRUE, exclude = 's(animal)'),
            d = p * s) %>%
     # average across day of year
     group_by(scenario, year, species, long, lat) %>%
@@ -87,6 +87,8 @@ if(file.exists('data/cc-hgam-projections.rds')) {
            species = gsub(' ', '~', species) %>%
              gsub('~\\(', '\\)~bold\\((', .) %>%
              paste0('bolditalic(', ., ')') %>%
+             gsub('\\(boreal\\)', '"\\(boreal\\)"', .) %>%
+             gsub('\\(s.~mountain\\)', '"\\(s. mountain\\)"', .) %>%
              factor())
   cc_proj
   
@@ -124,11 +126,6 @@ if(file.exists('data/cc-hgam-projections.rds')) {
   beepr::beep(2)
 }
 
-# fix species labs rather than having to re-run all predictions
-cc_proj <- mutate(cc_proj,
-                  species = gsub('\\(boreal\\)', '"\\(boreal\\)"', species),
-                  species = gsub('\\(s.~mountain\\)', '"\\(s. mountain\\)"', species))
-
 # make figures ----
 p_p_mov <-
   ggplot(cc_proj, aes(year, p_median / p_ref, group = scenario)) +
@@ -146,7 +143,7 @@ p_p_mov <-
   scale_x_continuous(breaks = c(2025, 2050, 2075, 2100)) +
   theme(legend.position = 'inside',
         legend.position.inside = c(5/6, 1/6)); p_p_mov
-ggsave('figures/odds-moving-local-cc-predictions.png', p_p_mov,
+ggsave('figures/p-moving-local-cc-predictions.png', p_p_mov,
        width = 10, height = 6.67, dpi = 600, bg = 'white')
 
 p_s <-

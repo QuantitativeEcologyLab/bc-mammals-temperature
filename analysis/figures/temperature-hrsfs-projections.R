@@ -27,8 +27,9 @@ if(file.exists('data/cc-hrsf-projections.rds')) {
   cc_proj <- readRDS('data/cc-hrsf-projections.rds')
 } else {
   # terms to exclude from the predictions
-  EXCLUDE <- c('s(animal)', 's(forest_perc,animal)',
-               's(elevation_m,animal)', 's(dist_water_m,animal)')
+  SM <- gratia::smooths(readRDS('models/rsf-Oreamnos americanus-2025-01-20.rds'))
+  EXCLUDE <- SM[grepl('animal', SM)]
+  
   MODEL_FILES <- list.files('models', '^rsf-', full.names = TRUE)
   MODEL_FILES <- MODEL_FILES[! grepl('no-temp', MODEL_FILES)]
   
@@ -41,8 +42,6 @@ if(file.exists('data/cc-hrsf-projections.rds')) {
       gsub('\\(', '', .) %>%
       gsub('\\)', '', .) %>%
       gsub('\\.', '', .)
-    
-    rm(x) # remove previous object, if it exists
     
     x <<- # to keep in global environment in case saving fails
       tibble(
@@ -100,19 +99,20 @@ if(file.exists('data/cc-hrsf-projections.rds')) {
                                   grepl('245', scenario) ~ 'Good scenario (SSP 2-4.5)',
                                   grepl('370', scenario) ~ 'Bad scenario (SSP 3-7.0)',
                                   grepl('585', scenario) ~ 'Worst scenario (SSP 5-8.5)') %>%
-               factor(., levels = unique(.)))
+               factor(., levels = unique(.))) %>%
+      # fix species labs
+      mutate(lab = gsub('\\(s.~mountain\\)', '"\\(s. mountain\\)"', lab))
     saveRDS(x, paste0('data/cc-hrsf-projections-', sp, '.rds'))
     
     return(sp)
   })
   
-  cc_proj <- map_dfr(list.files('data', 'cc-hrsf-projections-', full.names = TRUE), readRDS)
+  cc_proj <-
+    list.files('data', 'cc-hrsf-projections-', full.names = TRUE) %>%
+    map(readRDS) %>%
+    bind_rows()
   saveRDS(cc_proj, 'data/cc-hrsf-projections.rds')
 }
-# fix species labs rather than having to re-run all predictions
-cc_proj <- cc_proj %>%
-  mutate(lab = gsub('\\(boreal\\)', '"\\(boreal\\)"', lab),
-         lab = gsub('\\(s.~mountain\\)', '"\\(s. mountain\\)"', lab))
 
 # figures of habitat quality ----
 cc_proj %>%
@@ -131,6 +131,3 @@ cc_proj %>%
 
 ggsave('figures/rss-local-cc-predictions.png',
        width = 10, height = 6.67, dpi = 600, bg = 'white')
-
-ggsave('figures/2024-ubco-grad-symposium/rss-local-cc-predictions.png',
-       width = 17.5, height = 9.5, dpi = 300, bg = 'white', scale = 0.75)
