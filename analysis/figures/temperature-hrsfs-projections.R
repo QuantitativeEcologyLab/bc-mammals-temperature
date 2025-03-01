@@ -117,13 +117,13 @@ if(file.exists('data/cc-hrsf-projections.rds')) {
 cc_proj %>%
   filter(year >= 2025) %>% # 2025 is the reference year
   ggplot() +
-  facet_wrap(~ lab, scales = 'free_y', labeller = label_parsed) +
-  geom_line(aes(year, l_upr_95 / l_ref, color = scenario), lwd = 0.5) +
-  geom_line(aes(year, l_lwr_05 / l_ref, color = scenario), lwd = 0.5) +
+  facet_wrap(~ lab, scales = 'fixed', labeller = label_parsed) +
+  # geom_line(aes(year, l_upr_95 / l_ref, color = scenario), lwd = 0.5) +
+  # geom_line(aes(year, l_lwr_05 / l_ref, color = scenario), lwd = 0.5) +
   geom_hline(yintercept = 1, color = 'black', lty = 'dashed') +
   geom_line(aes(year, l_median / l_ref, color = scenario), lwd = 1) +
   scale_x_continuous(NULL, breaks = c(2025, 2050, 2075, 2100)) +
-  scale_y_continuous('Relative change in RSS', limits = c(0, NA)) +
+  scale_y_continuous('Relative change in RSS') +
   scale_color_brewer('Climate change scenario', type = 'div', palette = 5, direction = -1,
                      aesthetics = c('color', 'fill')) +
   theme(legend.position = 'inside', legend.position.inside = c(5/6, 1/6))
