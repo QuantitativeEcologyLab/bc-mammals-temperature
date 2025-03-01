@@ -43,7 +43,6 @@ if(file.exists('data/cc-hrsf-projections.rds')) {
       gsub('\\)', '', .) %>%
       gsub('\\.', '', .)
     
-    x <<- # to keep in global environment in case saving fails
       tibble(
         species = fn %>%
           gsub(pattern = 'models/rsf-', replacement = '', x = .) %>%
@@ -101,8 +100,8 @@ if(file.exists('data/cc-hrsf-projections.rds')) {
                                   grepl('585', scenario) ~ 'Worst scenario (SSP 5-8.5)') %>%
                factor(., levels = unique(.))) %>%
       # fix species labs
-      mutate(lab = gsub('\\(s.~mountain\\)', '"\\(s. mountain\\)"', lab))
-    saveRDS(x, paste0('data/cc-hrsf-projections-', sp, '.rds'))
+      mutate(lab = gsub('\\(s.~mountain\\)', '"\\(s. mountain\\)"', lab)) %>%
+      saveRDS(paste0('data/cc-hrsf-projections-', sp, '.rds'))
     
     return(sp)
   })
