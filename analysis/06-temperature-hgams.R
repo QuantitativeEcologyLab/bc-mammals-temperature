@@ -8,6 +8,7 @@ library('ggplot2')   # for fancy plots
 library('khroma')    # for colorblind-friendly color palettes
 library('cowplot')   # for fancy multi-panel plots
 source('analysis/figures/default-ggplot-theme.R') # bold text and no grids
+source('functions/get_legend.R') # to extract legends from ggplot plots
 plot_scheme(PAL, colours = TRUE)
 
 # using Pacific Time for time of day
@@ -66,28 +67,55 @@ if(file.exists('data/hgam-speed-data.rds')) {
 }
 
 #' `kmeans()` splits data poorly
-manual_splits <- c(0.06, 0.05, 0.08, 0.07, 0.1, 0.2, 0.05)
-km_splits <- rep(NA, N_SPECIES)
+splits <-
+  tibble(species = SPECIES,
+         lab = SPECIES_LABS,
+         manual = c(0.06, 0.05, 0.08, 0.07, 0.10, 0.20, 0.05),
+         `k means` = map_dbl(species, \(sp) {
+           km <- kmeans(filter(d, species == sp)$speed_est, centers = 2)
+           max(min(filter(d, species == sp) %>%
+                     filter(km$cluster == 1) %>%
+                     pull(speed_est)),
+               min(filter(d, species == sp) %>%
+                     filter(km$cluster == 2) %>%
+                     pull(speed_est)))
+         }),
+  ) %>%
+  pivot_longer(c(Manual, `k means`), values_to = 'split',
+               names_to = 'method')
 
-layout(matrix(c(1:7, 0), ncol = 4, byrow = TRUE))
-for(i in 1:N_SPECIES) {
-  km <- kmeans(filter(d, species == SPECIES[i])$speed_est, centers = 2)
-  km_splits[i] <- max(min(filter(d, species == SPECIES[i]) %>%
-                            filter(km$cluster == 1) %>%
-                            pull(speed_est)),
-                      min(filter(d, species == SPECIES[i]) %>%
-                            filter(km$cluster == 2) %>%
-                            pull(speed_est)))
-  hist(filter(d, species == SPECIES[i])$speed_est, breaks = 100,
-       xlim = c(0,
-                max(filter(d, species == SPECIES[i])$speed_est)) * 0.3,
-       ylim = c(0, nrow(filter(d, species == SPECIES[i])) / 40),
-       main = SPECIES[i], xlab = 'Speed (m/s)')
-  abline(v = km_splits[i], col = 'red', lwd = 2)
-  abline(v = manual_splits[i], col = 'blue', lwd= 2)
+hists <- list()
+for(i in (1:N_SPECIES)[order(SPECIES)]) {
+  sp <- as.character(SPECIES[i])
+  XLIM <- c(0, quantile(filter(d, species == sp)$speed_est, 0.99))
+  YLIM <- c(0, nrow(filter(d, species == sp)) / 40)
+  
+  hists[[i]] <-
+    ggplot() +
+    geom_histogram(aes(speed_est), filter(d, species == sp),
+                   bins = 100, fill = 'grey', color = 'black') +
+    geom_vline(aes(xintercept = split, color = method,
+                   lty = method), filter(splits, species == sp), lwd = 0.75) +
+    coord_cartesian(xlim = XLIM, ylim = YLIM) +
+    labs(x = 'Speed (m/s)', y = 'Count',
+         title = scales::parse_format()(SPECIES_LABS[i])) +
+    scale_color_bright(name = 'Method') +
+    scale_linetype_manual(name = 'Method', values = c(2, 1)) +
+    theme(legend.position = 'none')
+  rm(sp, XLIM, YLIM)
 }
-layout(1)
 
+hists[1:7] <- hists[order(SPECIES)]
+hists[[8]] <- ggplot() + theme_void()
+hists[[9]] <- get_legend(
+  hists[[1]] +
+    theme(legend.direction = 'vertical', legend.key.height = rel(1.5))) %>%
+  ggdraw()
+plot_grid(plotlist = hists)
+ggsave(filename = 'figures/moving-0-1-split.png',
+       width = 12, height = 8, units = 'in', dpi = 600, bg = 'white')
+
+# assign moving/not moving status
 d <- mutate(d,
             moving =
               (species == 'Rangifer tarandus (s. mountain)' & speed_est > 0.06) |
