@@ -119,7 +119,7 @@ if(file.exists('data/cc-hrsf-projections.rds')) {
 cc_proj %>%
   filter(year >= 2025) %>% # 2025 is the reference year
   ggplot() +
-  facet_wrap(~ lab, scales = 'free', labeller = label_parsed) +
+  facet_wrap(~ lab, scales = 'fixed', labeller = label_parsed) +
   geom_hline(yintercept = 1, color = 'black', lty = 'dashed') +
   geom_line(aes(year, l_median / l_ref, color = scenario), lwd = 1) +
   scale_x_continuous(NULL, breaks = c(2025, 2050, 2075, 2100)) +
@@ -139,10 +139,9 @@ cc_proj %>%
   ungroup() %>%
   pivot_longer(l_05:l_95, values_to = 'l', names_to = 'percentile',
                names_prefix = 'l_') %>%
-  mutate(percentile = if_else(percentile == 'median', '50', percentile) %>%
-           as.numeric() %>%
-           paste0('"', ., '%"') %>%
-           factor(levels = c('"5%"', '"50%"', '"95%"'))) %>%
+  mutate(percentile = case_when(percentile == '05' ~ '"Bottom 5% RSS"',
+                                percentile == 'median' ~ '"Median RSS"',
+                                percentile == '95' ~ '"Top 5% RSS"')) %>%
   ggplot() +
   facet_grid(percentile ~ lab, scales = 'free', labeller = label_parsed) +
   geom_line(aes(year, l, color = scenario), lwd = 0.5) +
@@ -152,3 +151,6 @@ cc_proj %>%
   scale_color_brewer('Climate change scenario', type = 'div', palette = 5,
                      direction = -1, aesthetics = c('color', 'fill')) +
   theme(legend.position = 'top')
+
+ggsave('figures/rss-local-cc-predictions-quantiles.png',
+       width = 20, height = 8, dpi = 600, bg = 'white')
