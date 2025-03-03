@@ -88,9 +88,11 @@ if(file.exists('data/cc-hrsf-projections.rds')) {
       # find median and 90% percentile interval of the predicted means
       # not including CIs because averaging them is not straightforward
       group_by(lab, scenario, year) %>%
-      summarize(l_lwr_05 = quantile(l, 0.05),
+      summarize(l_05 = quantile(l, 0.05),
+                l_25 = quantile(l, 0.25),
                 l_median = quantile(l, 0.50),
-                l_upr_95 = quantile(l, 0.95),
+                l_75 = quantile(l, 0.75),
+                l_95 = quantile(l, 0.95),
                 .groups = 'drop') %>%
       # divide by mean of 2025 to find relative change since 2025
       mutate(l_ref = mean(l_median[year == 2025])) %>%
@@ -117,16 +119,36 @@ if(file.exists('data/cc-hrsf-projections.rds')) {
 cc_proj %>%
   filter(year >= 2025) %>% # 2025 is the reference year
   ggplot() +
-  facet_wrap(~ lab, scales = 'fixed', labeller = label_parsed) +
-  # geom_line(aes(year, l_upr_95 / l_ref, color = scenario), lwd = 0.5) +
-  # geom_line(aes(year, l_lwr_05 / l_ref, color = scenario), lwd = 0.5) +
+  facet_wrap(~ lab, scales = 'free', labeller = label_parsed) +
   geom_hline(yintercept = 1, color = 'black', lty = 'dashed') +
   geom_line(aes(year, l_median / l_ref, color = scenario), lwd = 1) +
   scale_x_continuous(NULL, breaks = c(2025, 2050, 2075, 2100)) +
   scale_y_continuous('Relative change in RSS') +
-  scale_color_brewer('Climate change scenario', type = 'div', palette = 5, direction = -1,
-                     aesthetics = c('color', 'fill')) +
+  scale_color_brewer('Climate change scenario', type = 'div', palette = 5,
+                     direction = -1, aesthetics = c('color', 'fill')) +
   theme(legend.position = 'inside', legend.position.inside = c(5/6, 1/6))
 
 ggsave('figures/rss-local-cc-predictions.png',
        width = 10, height = 6.67, dpi = 600, bg = 'white')
+
+cc_proj %>%
+  filter(year >= 2025) %>% # 2025 is the reference year
+  select(! c(l_25, l_75)) %>%
+  group_by(lab) %>%
+  mutate(across(l_05:l_95, \(.x) .x / mean(.x[year == 2025]))) %>%
+  ungroup() %>%
+  pivot_longer(l_05:l_95, values_to = 'l', names_to = 'percentile',
+               names_prefix = 'l_') %>%
+  mutate(percentile = if_else(percentile == 'median', '50', percentile) %>%
+           as.numeric() %>%
+           paste0('"', ., '%"') %>%
+           factor(levels = c('"5%"', '"50%"', '"95%"'))) %>%
+  ggplot() +
+  facet_grid(percentile ~ lab, scales = 'free', labeller = label_parsed) +
+  geom_line(aes(year, l, color = scenario), lwd = 0.5) +
+  geom_hline(yintercept = 1, color = 'black', lty = 'dashed') +
+  scale_x_continuous(NULL, breaks = c(2025, 2050, 2075, 2100)) +
+  scale_y_continuous('Relative change in RSS') +
+  scale_color_brewer('Climate change scenario', type = 'div', palette = 5,
+                     direction = -1, aesthetics = c('color', 'fill')) +
+  theme(legend.position = 'top')
