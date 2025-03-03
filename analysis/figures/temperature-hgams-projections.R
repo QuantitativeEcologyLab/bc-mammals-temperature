@@ -128,12 +128,12 @@ if(file.exists('data/cc-hgam-projections.rds')) {
 
 # make figures ----
 p_p_mov <-
-  ggplot(cc_proj, aes(year, p_median / p_ref, group = scenario)) +
+  ggplot(cc_proj, aes(year, p_median, group = scenario)) +
   facet_wrap(~ species, scales = 'free_y', drop = FALSE,
              labeller = label_parsed) +
-  geom_ribbon(aes(ymin = p_lwr_05 / p_ref, ymax = p_upr_95 / p_ref,
+  geom_ribbon(aes(ymin = p_lwr_05, ymax = p_upr_95,
                   fill = scenario), alpha = 0.2) +
-  geom_hline(aes(yintercept = 1), lty = 'dashed') +
+  geom_hline(aes(yintercept = p_ref), lty = 'dashed') +
   geom_line(color = 'black', lwd = 1.5) +
   geom_line(aes(color = scenario), lwd = 1) +
   scale_color_brewer('Climate change scenario', type = 'div',
