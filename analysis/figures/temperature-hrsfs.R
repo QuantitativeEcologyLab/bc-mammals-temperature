@@ -160,7 +160,10 @@ p <-
   # doing this because some estimated effects of distance from water and
   # elevation are extreme
   group_by(species, variable) %>%
-  mutate(lambda = lambda / median(lambda)) %>%
+  mutate(lambda = lambda / median(lambda),
+         lambda = if_else(species == 'Rangifer tarandus (boreal)' &
+                            variable == 'bold(Elevation~"(km)")',
+                          lambda / exp(4), lambda)) %>%
   ungroup() %>%
   # cap at 2^(+/-LIM)
   mutate(log2_lambda = log2(lambda),
