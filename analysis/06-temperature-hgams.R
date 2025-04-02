@@ -81,7 +81,7 @@ splits <-
                      pull(speed_est)))
          }),
   ) %>%
-  pivot_longer(c(Manual, `k means`), values_to = 'split',
+  pivot_longer(c(manual, `k means`), values_to = 'split',
                names_to = 'method')
 
 hists <- list()
@@ -131,21 +131,6 @@ d %>%
   group_by(species) %>%
   summarise(prop_moving = mean(moving),
             min_speed = min(speed_est[moving]))
-
-# some species have data with extreme temperatures but little data ----
-# but clipping temperature data to the 0.8 quantile doesn't change the high
-# P(moving) at cold temperatures for goats
-ggplot(d, aes(temp_c)) +
-  facet_wrap(~ species, scales = 'free') +
-  geom_histogram(color = 'black', binwidth = 1, fill = 'grey') +
-  geom_vline(aes(xintercept = value), color = 'red',
-             d %>%
-               group_by(species) %>%
-               summarize(lwr = quantile(temp_c, 0.025),
-                         upr = quantile(temp_c, 0.975)) %>%
-               pivot_longer(-species)) +
-  ylim(c(0, NA)) +
-  xlab(paste0('Temperature (\U00B0', 'C)'))
 
 # dataset of non-zero speeds only
 d_2 <- filter(d, moving)
@@ -395,17 +380,18 @@ if(file.exists('models/gamma-gam.rds')) {
 
 s_op <-
   mutate(d_2, mu = predict(m_2, type = 'response')) %>%
-  ggplot(aes(mu, speed_est, color = species)) +
+  ggplot(aes(mu, speed_est)) +
   facet_wrap(~ lab, scales = 'free', nrow = 2, labeller = label_parsed) +
-  geom_point(alpha = 0.1, size = 0.1) +
-  geom_abline(intercept = 0, slope = 1, color = 'grey') +
+  geom_hex(aes(fill = log10(after_stat(count)))) +
+  geom_abline(intercept = 0, slope = 1, color = 'black') +
   theme(legend.position = 'none') +
-  scale_color_manual('Species', values = PAL,
-                     aesthetics = c('color', 'fill')) +
+  scale_fill_iridescent(name = expression(bold(Count~(log['10']~scale))),
+                        range = c(0.3, 1), breaks = 0:3,
+                        labels = round(10^(c(0:3)))) +
   ylim(c(0, NA)) +
   labs(x = 'Predicted speed (m/s)', y = 'Observed speed (m/s)') +
   guides(color = guide_legend(override.aes = list(alpha = 1, size = 1))) +
-  theme(legend.position = 'none')
+  theme(legend.position = 'top')
 
 ggsave('figures/speed-observed-vs-predicted.png', s_op,
        width = 12, height = 6, dpi = 600, bg = 'white')
@@ -590,15 +576,25 @@ AIC(m_2, m_2_no_t) %>%
 # figure of comparison between predictions
 p_preds <-
   plot_grid(ggplot() +
-              geom_point(aes(fitted(m_1), fitted(m_1_no_t)), shape = '.') +
-              geom_abline(intercept = 0, slope = 1, color = 'red') +
+              geom_hex(aes(fitted(m_1), fitted(m_1_no_t),
+                           fill = log10(after_stat(count)))) +
+              geom_abline(intercept = 0, slope = 1, color = 'black') +
               labs(x = 'Predictions without temperature',
-                   y = 'Predictions with temperature'),
+                   y = 'Predictions with temperature') +
+              scale_fill_iridescent(name = expression(bold(Count~(log['10']~scale))),
+                                    range = c(0.3, 1), breaks = (0:3) * 2,
+                                    labels = round(10^(c(0:3) * 2))) +
+              theme(legend.position = 'top'),
             ggplot() +
-              geom_point(aes(fitted(m_2), fitted(m_2_no_t)), shape = '.') +
-              geom_abline(intercept = 0, slope = 1, color = 'red') +
+              geom_hex(aes(fitted(m_2), fitted(m_2_no_t),
+                             fill = log10(after_stat(count)))) +
+              geom_abline(intercept = 0, slope = 1, color = 'black') +
               labs(x = 'Predictions without temperature',
-                   y = 'Predictions with temperature'),
+                   y = 'Predictions with temperature') +
+              scale_fill_iridescent(name = expression(bold(Count~(log['10']~scale))),
+                                    range = c(0.3, 1), breaks = (0:3) * 2,
+                                    labels = round(10^(c(0:3) * 2))) +
+              theme(legend.position = 'top'),
             labels = 'AUTO')
 
 ggsave('figures/hgam-with-without-temp-prediction-agreement.png',

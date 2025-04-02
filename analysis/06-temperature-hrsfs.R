@@ -7,6 +7,7 @@ library('terra')   # for rasters
 library('purrr')   # for functional programming
 library('ggplot2') # for fancy plots
 library('gratia')  # for graceful GAM plots
+library('khroma')  # for colorblind-friendly figures
 source('analysis/figures/default-ggplot-theme.R')
 
 # import data ----
@@ -474,12 +475,16 @@ p_fits <-
   fits %>%
   ggplot(aes(fits_wo, fits_w)) +
   facet_wrap(~ lab, labeller = label_parsed, scales = 'free') +
-  geom_point(shape = '.') +
-  geom_abline(slope = 1, intercept = 0, color = 'red') +
+  geom_hex(aes(fill = log10(after_stat(count)))) +
+  geom_abline(slope = 1, intercept = 0, color = 'black') +
   labs(x = 'log(RSS) without temperature',
-       y = 'log(RSS) with temperature')
+       y = 'log(RSS) with temperature') +
+  scale_fill_iridescent(name = expression(bold(Count~(log['10']~scale))),
+                        range = c(0.3, 1), breaks = (0:3) * 2,
+                        labels = round(10^(c(0:3) * 2))) +
+  theme(legend.position = 'inside', legend.position.inside = c(5/6, 1/6))
 
 ggsave('figures/hrsf-with-without-temp-prediction-agreement.png',
-       plot = p_fits, width = 12, height = 12, units = 'in', dpi = 600,
+       plot = p_fits, width = 8, height = 8, units = 'in', dpi = 600,
        bg = 'white')
 beepr::beep()

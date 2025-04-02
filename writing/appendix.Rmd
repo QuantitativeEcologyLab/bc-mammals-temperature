@@ -129,7 +129,7 @@ knitr::include_graphics('../figures/moving-0-1-split.png')
 knitr::include_graphics('../figures/temperature-movement-rates-hist.png')
 ```
 
-```{r pred-vs-pred-hgams, fig.cap="Scatterplot of the fitted values from the HGAMs with and without including temperature for the probability of movement (\\textbf{A}) and speed when moving (\\textbf{B})."}
+```{r pred-vs-pred-hgams, fig.cap="Hexplot of the fitted values from the HGAMs with and without including temperature for the probability of movement (\\textbf{A}) and speed when moving (\\textbf{B})."}
 knitr::include_graphics('../figures/hgam-with-without-temp-prediction-agreement.png')
 ```
 
@@ -147,7 +147,7 @@ knitr::include_graphics('../figures/speed-full.png')
 knitr::include_graphics('../figures/distance-travelled-full.png')
 ```
 
-```{r op, fig.cap="Relationsips between the observed and predicted values for probability of movement (\\textbf{A}) and speed given that an animal was moving (\\textbf{B}). The color in panel \\textbf{A} indicates the number of points used to calculate the estimate (on the $\\log-{2}$ scale), while the grey lines in both panels indicate perfect prediction (i.e., the 1:1 line)."}
+```{r op, fig.cap="Relationsips between the observed and predicted values for probability of movement (\\textbf{A}) and speed given that an animal was moving (\\textbf{B}). The color in panel \\textbf{A} indicates the number of points used to calculate the estimate (on the $\\log_{2}$ scale), while the grey lines in both panels indicate perfect prediction (i.e., the 1:1 line)."}
 knitr::include_graphics('../figures/p-and-speed-observed-vs-predicted.png')
 ```
 
@@ -175,7 +175,7 @@ knitr::include_graphics('../figures/available-vs-used.png')
 knitr::include_graphics('../figures/available-vs-used-weighted.png')
 ```
 
-```{r pred-vs-pred-hrsfs, fig.cap="Scatterplot of the fitted values from the HRSFs with and without including temperature."}
+```{r pred-vs-pred-hrsfs, fig.cap="Hexplot of the fitted values from the HRSFs with and without including temperature."}
 knitr::include_graphics('../figures/hrsf-with-without-temp-prediction-agreement.png')
 ```
 
