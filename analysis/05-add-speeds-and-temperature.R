@@ -78,7 +78,8 @@ d2 <-
       nest(hourly_data = ! c(nearest_hour)) %>%
       mutate(
         layer = map_int(nearest_hour, \(nh)
-                        which2(as.POSIXct(r@cpp$time, tz = 'UTC') == nh)),
+                        #' use `r@cpp` with earlier versions of `terra`
+                        which2(as.POSIXct(r@ptr$time, tz = 'UTC') == nh)),
         hourly_data = map2(
           layer, hourly_data,
           \(.l, hourly_d) {
