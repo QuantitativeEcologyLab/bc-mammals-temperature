@@ -207,9 +207,6 @@ ggsave('figures/temperature-movement-rates-hist.png',
        width = 16, height = 17, units = 'in', dpi = 600, bg = 'white')
 
 # model P(movement) ----
-#' using `bs = 'fs'` rather than `by` smooths because to keep the models
-#' reasonably constrained. Using `by` gives extremely high `P(moving)`
-#' in spring for grizzly bears
 #' fits in 3-4 minutes
 if(file.exists('models/binomial-gam.rds')) {
   m_1 <- readRDS('models/binomial-gam.rds')
