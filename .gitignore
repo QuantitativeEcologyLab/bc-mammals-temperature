@@ -62,6 +62,7 @@ ClimateNA_v742
 # manuscript files from Rmd file other than the PDF
 writing/manuscript_files
 writing/manuscript.log
+writing/*_files
 
 # do not ignore sharable data files
 !data/climate-anomalies/*
@@ -95,4 +96,6 @@ data/ecmwf-era5-2m-temperature/*
 !data/cc-hgam-bc-projections-albers.rds
 !data/cc-hrsf-projections.rds
 !data/cc-rss-bc-projections-albers.rds
-/writing/appendix_files
+
+# files > 100 MB
+writing/appendix-a-cleaning-telemetry-data.pdf
