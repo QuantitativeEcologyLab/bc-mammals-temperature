@@ -29,12 +29,13 @@ institute:
   - biodiv: Wildlife Science Centre, Biodiversity Pathways, University of British Columbia Okanagan, Revelstoke, British Columbia, Canada.
   - cmps: Department of Computer Science, Math, Physics, and Statistics, The University of British Columbia Okanagan, Kelowna, British Columbia, Canada.
 bibliography: 'bc-mammals-temperature.bib'
-csl: 'freshwater-biology.csl'
+csl: 'movement-ecology.csl'
 # csl: 'nature.csl'
 fontsize: 12pt
 indent: true
 header-includes:
-    - \renewcommand{\figurename}{Figure S\!\!} # for "Figure Ax.
+    - \renewcommand{\figurename}{Figure B\!\!} # for "Fig. Bx.
+    - \renewcommand{\tablename}{Table B\!\!} # for "Table. Bx.
     - \usepackage{setspace}\doublespacing # for double-spaced text
     - \usepackage{indentfirst} # for indenting first line of each paragraph
     - \usepackage[small]{titlesec} # for smaller font for headings
@@ -182,3 +183,126 @@ knitr::include_graphics('../figures/hrsf-with-without-temp-prediction-agreement.
 ```{r hrsf-se, fig.cap="Estimated standard error in the relative selection strength (RSS) for forest cover (\\%), elevation (km), and distance from water (km) as a function of temperature (see Fig. 3 in the main text). The grey contours indicate the extent of each speices' observed locations."}
 knitr::include_graphics('../figures/hrsf-surface-plots-se.png')
 ```
+
+\clearpage
+
+# Model selection
+
+```{r temp-comparison}
+setwd('..')
+library('dplyr')
+source('analysis/figures/default-ggplot-theme.R') #' for `SPECIES` object
+
+temp_comp <- tibble(
+  Model = c('$P(M)$', 'Speed', rep('HRSF', 7)),
+  Species = c('All', 'All', sort(as.character(SPECIES))),
+  DDE =
+    c(10.72 - 10.23, 79.26 - 79.11, 9.16, 4.62, 18.6, 8.0, 5.30, 12.0, 17.7) %>%
+    round(1) %>%
+    paste0('%'),
+  DAIC = c(5927, 1682, 6566, 4448, 813, 966, 5637, 342, 914) %>%
+    round())
+
+if(FALSE) {
+  range(as.numeric(gsub('%', '', temp_comp$DDE)))
+  range(as.numeric(gsub('%', '', temp_comp$DDE))[- c(1:2)])
+  max(temp_comp$DAIC)
+}
+
+colnames(temp_comp)[colnames(temp_comp) == 'DAIC'] <- paste0('\U0394', 'AIC')
+colnames(temp_comp)[colnames(temp_comp) == 'DDE'] <- paste0('\U0394', 'DE')
+
+knitr::kable(temp_comp, digits = 1, format = 'markdown', caption = "Changes in deviance expained ($\\Delta$DE) and Akaike Information Criterion ($\\Delta$AIC) from including temperature in the models estimating probability of movement ($P(M)$) and speed when moving (Speed) as well as in species-level Hierarchical Resource Selection Functions (HRSF). Unlike conventional marginal AIC [@akaike_new_1974], The AIC values provided by the `mgcv` package for `R` are calculated using the models' estimated effective degrees of freedom and the Bayesian variance-covariance matrices, which avoids issues related to random effects or Restricted Maximum Likelihood (REML).")
+```
+
+\clearpage
+
+## Analyses of Deviance
+
+\noindent Here we produce approximate p-values for analyses of deviance (a form of generalized likelihood ratio tests) following the methods of Section 3.3 in @wood_generalized_2017. We use an $F$ test rather than a $\chi^2$ test for the Gamma models because the scale parameter for the Gamma distribution is estimated rather than known or fixed [as in the case of binomial or Poisson distributions -- see table 3.1 on page 104 of @wood_generalized_2017].
+
+\singlespacing
+
+\footnotesize
+
+```{r, echo=TRUE}
+# P(moving)
+anova(readRDS('../models/binomial-gam-without-temperature.rds'),
+      readRDS('../models/binomial-gam.rds'),
+      test = 'Chisq')
+```
+
+\clearpage
+
+```{r, echo=TRUE}
+# speed when moving
+anova(readRDS('../models/gamma-gam-without-temperature.rds'),
+      readRDS('../models/gamma-gam.rds'),
+      test = 'F')
+```
+
+<!-- \clearpage -->
+
+```{r, echo=TRUE}
+# HRSFs
+anova(readRDS('../models/rsf-Canis lupus-2025-01-20.rds'),
+      readRDS('../models/rsf-Canis lupus-no-temperature-2025-01-20.rds'),
+      test = 'Chisq')
+```
+
+\clearpage
+
+```{r, echo=TRUE}
+anova(readRDS('../models/rsf-Cervus canadensis-2025-01-20.rds'),
+      readRDS('../models/rsf-Cervus canadensis-no-temperature-2025-01-20.rds'),
+      test = 'Chisq')
+```
+
+<!-- \clearpage -->
+
+```{r, echo=TRUE}
+anova(readRDS('../models/rsf-Oreamnos americanus-2025-01-20.rds'),
+      readRDS('../models/rsf-Oreamnos americanus-no-temperature-2025-01-20.rds'),
+      test = 'Chisq')
+```
+
+\clearpage
+
+```{r, echo=TRUE}
+anova(readRDS('../models/rsf-Puma concolor-2025-01-20.rds'),
+      readRDS('../models/rsf-Puma concolor-no-temperature-2025-01-20.rds'),
+      test = 'Chisq')
+```
+
+<!-- \clearpage -->
+
+```{r, echo=TRUE}
+anova(
+  readRDS('../models/rsf-Rangifer tarandus boreal-2025-01-21.rds'),
+  readRDS('../models/rsf-Rangifer tarandus boreal-no-temperature-2025-01-20.rds'),
+  test = 'Chisq')
+```
+
+\clearpage
+
+```{r, echo=TRUE}
+anova(readRDS('../models/rsf-Rangifer tarandus southern mountain-2025-01-20.rds'),
+      readRDS('../models/rsf-Rangifer tarandus southern mountain-no-temperature-2025-01-20.rds'),
+      test = 'Chisq')
+```
+
+<!-- \clearpage -->
+
+```{r, echo=TRUE}
+anova(readRDS('../models/rsf-Ursus arctos horribilis-2025-01-20.rds'),
+      readRDS('../models/rsf-Ursus arctos horribilis-no-temperature-2025-01-20.rds'),
+      test = 'Chisq')
+```
+
+\normalsize
+
+\doublespacing
+
+\clearpage
+
+# Refences
