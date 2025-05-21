@@ -5,6 +5,7 @@ library('purrr')   # for functional programming
 library('ctmm')    # for working with akdes
 library('ggplot2') # for fancy plots
 library('scales')  #' for `parse_format()`
+library('terra')   # for rasters
 source('analysis/figures/default-ggplot-theme.R')
 source('data/bc-shapefile.R')
 
@@ -36,7 +37,8 @@ tels <- transmute(d,
                       st_transform('EPSG:3005') %>%
                       as.data.frame()
                   })) %>%
-  unnest(tel)
+  unnest(tel) %>%
+  st_as_sf()
 
 uds <- d %>%
   transmute(
@@ -52,7 +54,21 @@ uds <- d %>%
       pull(geometry))
 
 # create the figures ----
-# tels only
+us <- tigris::states(cb = TRUE, resolution = '5m') %>%
+  st_geometry() %>%
+  st_transform(crs(bc)) %>%
+  st_as_sf()
+plot(us)
+
+na <- rbind(prov, us)
+
+dem <- rast('data/resource-rasters/fig-1-dem-z-6.tif') %>%
+  project(crs(bc)) %>%
+  mask(na) %>%
+  as.data.frame(dem, xy = TRUE) %>%
+  rename(elev_m = 3)
+
+# tels only with bc map
 p_tels <-
   ggplot() +
   geom_sf(data = bc) +
@@ -67,6 +83,26 @@ p_tels <-
   guides(color = guide_legend(override.aes = list(alpha = 1, size = 1)))
 
 ggsave('figures/tels-map.png', plot = p_tels,
+       width = 10, height = 8.5, units = 'in', dpi = 600, bg = 'white')
+
+# tels only with dem
+p_dem <-
+  ggplot() +
+  geom_raster(aes(x, y, fill = elev_m), dem) +
+  geom_sf(aes(geometry = geometry, color = dataset_name), tels,
+          # slice_sample(tels, n = 1e4), # for testing
+          size = 0.1) +
+  coord_sf(xlim = c(100e4, 110e4), clip = 'off',
+           ylim = c(33e4, 185e4), crs = 'EPSG:3005') +
+  scale_color_manual(name = ' ', values = PAL, labels = parse_format()) +
+  scale_fill_distiller(name = '\nElevation (m)', palette = 6) +
+  labs(x = NULL, y = NULL) +
+  theme_void() +
+  theme(legend.position = 'inside', legend.position.inside = c(-3, 0.05),
+        legend.justification = c(1, 0)) +
+  guides(color = guide_legend(override.aes = list(alpha = 1, size = 1)))
+
+ggsave('figures/tels-map-dem.png', plot = p_tels,
        width = 10, height = 8.5, units = 'in', dpi = 600, bg = 'white')
 
 # UDs only

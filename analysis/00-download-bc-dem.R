@@ -76,3 +76,13 @@ get_elev_raster(locations = bc_unproj_buff, z = ZOOM, clip = 'bbox') %>%
 
 terra::plot(rast('data/resource-rasters/bc-buffered-dem-z3.tif'))
 if(exists('akdes')) plot(akdes, add = TRUE, col = '#00000080')
+
+# elevation raster for figure 1 
+bc_unproj %>%
+  st_bbox() %>%
+  st_as_sfc() %>%
+  st_as_sf() %>%
+  st_buffer(1e6) %>%
+  get_elev_raster(locations = ., z = 6, clip = 'bbox') %>%
+  rast() %>% #' `elevatr` v 0.99.0 still returs a `RasterLayer` object
+  terra::writeRaster('data/resource-rasters/fig-1-dem-z-6.tif')
