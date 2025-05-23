@@ -68,7 +68,35 @@ dem <- rast('data/resource-rasters/fig-1-dem-z-6.tif') %>%
   as.data.frame(dem, xy = TRUE) %>%
   rename(elev_m = 3)
 
-# tels only with bc map
+# some values < 0, but not enough to be useful
+mean(dem$elev_m < 0)
+mean(dem$elev_m < -10)
+mean(dem$elev_m < -100)
+
+dem <- mutate(dem, elev_m = if_else(elev_m < 0, 0, elev_m))
+
+# tels with dem
+p_dem <-
+  ggplot() +
+  geom_raster(aes(x, y, fill = elev_m), dem) +
+  geom_sf(aes(geometry = geometry, color = dataset_name), tels,
+          size = 0.1) +
+  coord_sf(xlim = c(100e4, 110e4), clip = 'off',
+           ylim = c(33e4, 185e4), crs = 'EPSG:3005') +
+  scale_color_manual(name = ' ', values = PAL, labels = parse_format()) +
+  scale_fill_distiller(name = '\nElevation (m)', palette = 6) +
+  labs(x = NULL, y = NULL) +
+  theme_void() +
+  theme(legend.position = 'inside', legend.position.inside = c(-3, 0.05),
+        legend.justification = c(1, 0)) +
+  guides(color = guide_legend(override.aes = list(alpha = 1, size = 1,
+                                                  order = 2)),
+         fill = guide_colorbar(order = 1))
+
+ggsave('figures/tels-map-dem.png', plot = p_dem,
+       width = 10, height = 8.5, units = 'in', dpi = 600, bg = 'white')
+
+# tels with bc map
 p_tels <-
   ggplot() +
   geom_sf(data = bc) +
@@ -85,27 +113,7 @@ p_tels <-
 ggsave('figures/tels-map.png', plot = p_tels,
        width = 10, height = 8.5, units = 'in', dpi = 600, bg = 'white')
 
-# tels only with dem
-p_dem <-
-  ggplot() +
-  geom_raster(aes(x, y, fill = elev_m), dem) +
-  geom_sf(aes(geometry = geometry, color = dataset_name), tels,
-          # slice_sample(tels, n = 1e4), # for testing
-          size = 0.1) +
-  coord_sf(xlim = c(100e4, 110e4), clip = 'off',
-           ylim = c(33e4, 185e4), crs = 'EPSG:3005') +
-  scale_color_manual(name = ' ', values = PAL, labels = parse_format()) +
-  scale_fill_distiller(name = '\nElevation (m)', palette = 6) +
-  labs(x = NULL, y = NULL) +
-  theme_void() +
-  theme(legend.position = 'inside', legend.position.inside = c(-3, 0.05),
-        legend.justification = c(1, 0)) +
-  guides(color = guide_legend(override.aes = list(alpha = 1, size = 1)))
-
-ggsave('figures/tels-map-dem.png', plot = p_tels,
-       width = 10, height = 8.5, units = 'in', dpi = 600, bg = 'white')
-
-# UDs only
+# UDs with bc map
 p_uds <-
   ggplot() +
   geom_sf(data = bc) +
@@ -121,7 +129,7 @@ p_uds <-
 ggsave('figures/uds-map.png', plot = p_uds,
        width = 10, height = 10.5, units = 'in', dpi = 600, bg = 'white')
 
-# telemetries and UDs
+# telemetries and UDs with bc map
 p_tels <- p_uds +
   geom_sf(aes(geometry = geometry, color = dataset_name), tels, pch = '.')
 
