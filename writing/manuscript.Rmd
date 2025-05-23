@@ -1,5 +1,5 @@
 ---
-title: "Predicting how climate change will affect how and where terrestrial mammals will move in British Columbia, Canada"
+title: "\\Large Predicting how climate change will affect how and where terrestrial mammals will move"
 author:
   - name: Stefano Mezzini
     email: stefano.mezzini@ubc.ca
@@ -10,6 +10,8 @@ author:
     institute: [braes, biol]
   - name: Adam T. Ford
     institute: [braes, biol]
+  - name: TJ Gooliaff
+    institute: [forest]
   - name: Karen E. Hodges
     institute: [braes, biol]
   - name: Kirk Safford
@@ -24,12 +26,12 @@ institute:
   - biol: Department of Biology, The University of British Columbia Okanagan, Kelowna, British Columbia, Canada.
   - ucf: Department of Biology, University of Central Florida, Orlando, Florida 32816, United States.
   - smith: Smithsonian Conservation Biology Institute, National Zoological Park, 1500 Remount Rd., Front Royal, VA 22630, United States.
-  - bcp: BC Parks
+  - forest: British Columbia Ministry of Forests, Lands, Natural Resource Operations and Rural Development, Penticton, BC, Canada.
+  - bcp: British Columbia Ministry of Environment and Parks, Penticton, BC, Canada.
   - biodiv: Wildlife Science Centre, Biodiversity Pathways, University of British Columbia Okanagan, Revelstoke, British Columbia, Canada.
   - cmps: Department of Computer Science, Math, Physics, and Statistics, The University of British Columbia Okanagan, Kelowna, British Columbia, Canada.
 bibliography: 'bc-mammals-temperature.bib'
-csl: 'movement-ecology.csl'
-# csl: 'nature.csl'
+csl: 'global-change-biology.csl'
 fontsize: 12pt
 indent: true
 header-includes:
@@ -155,8 +157,8 @@ Understanding the direct and indirect impacts of temperature on mammalian moveme
 
 This paper provides an analysis of the effects of air temperature on the movement of six terrestrial mammal species in British Columbia (BC), Canada (wolves: *Canis lupus*, elk: *Cervus canadensis*, mountain goats: *Oreamnos americanus*, pumas: *Puma concolor*, boreal and southern mountain caribou: *Rangifer tarandus*, and grizly bears: *Ursus arctos horribilis*; Table \@ref(tab:data-table)). Using over 25 years of telemetry data thoughout a large spatial range of British Columbia and hourly air temperature data, we estimate how mammals altered their probability of movement, speed when moving, and habitat selection in response to temperature. We then pair the estimated responses with climate change projections to forecast the species' movement during the 21^st^ century under different climate-change scenarios [referred to as Shared Socioeconomic Pathways, SSPs -- see @riahi_shared_2017]. We disentangle the direct and indirect effects of temperature on the movement behaviour of terrestrial mammals and discuss the consequences of these changes at the individual, population, and landscape levels.
 
-```{r bc-map, fig.cap="GPS telemetry data for the six species in this study.", out.width='0.75\\linewidth'}
-knitr::include_graphics('../figures/tels-map.png')
+```{r bc-map, fig.cap="GPS telemetry data for the six species in this study (dots) over a digital elevation model for the study area.", out.width='0.75\\linewidth'}
+knitr::include_graphics('../figures/tels-map-dem.png')
 ```
 
 \footnotesize

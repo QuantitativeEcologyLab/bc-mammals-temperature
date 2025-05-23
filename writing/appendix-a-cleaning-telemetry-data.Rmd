@@ -1,6 +1,5 @@
 ---
-title: \Large Predicting how climate change will affect how and where terrestrial mammals will move in British Columbia, Canada
-subtitle: "Appendix A: Cleaning telemetry data"
+title: "\\Large Predicting how climate change will affect how and where terrestrial mammals will move"
 author:
   - name: Stefano Mezzini
     email: stefano.mezzini@ubc.ca
@@ -11,6 +10,8 @@ author:
     institute: [braes, biol]
   - name: Adam T. Ford
     institute: [braes, biol]
+  - name: TJ Gooliaff
+    institute: [forest]
   - name: Karen E. Hodges
     institute: [braes, biol]
   - name: Kirk Safford
@@ -25,12 +26,12 @@ institute:
   - biol: Department of Biology, The University of British Columbia Okanagan, Kelowna, British Columbia, Canada.
   - ucf: Department of Biology, University of Central Florida, Orlando, Florida 32816, United States.
   - smith: Smithsonian Conservation Biology Institute, National Zoological Park, 1500 Remount Rd., Front Royal, VA 22630, United States.
-  - bcp: BC Parks
+  - forest: British Columbia Ministry of Forests, Lands, Natural Resource Operations and Rural Development, Penticton, BC, Canada.
+  - bcp: British Columbia Ministry of Environment and Parks, Penticton, BC, Canada.
   - biodiv: Wildlife Science Centre, Biodiversity Pathways, University of British Columbia Okanagan, Revelstoke, British Columbia, Canada.
   - cmps: Department of Computer Science, Math, Physics, and Statistics, The University of British Columbia Okanagan, Kelowna, British Columbia, Canada.
 bibliography: 'bc-mammals-temperature.bib'
-csl: 'movement-ecology.csl'
-# csl: 'nature.csl'
+csl: 'global-change-biology.csl'
 fontsize: 12pt
 # indent: true
 header-includes:
