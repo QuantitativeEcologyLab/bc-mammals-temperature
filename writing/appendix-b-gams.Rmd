@@ -153,7 +153,7 @@ knitr::include_graphics('../figures/distance-travelled-full.png')
 knitr::include_graphics('../figures/p-and-speed-observed-vs-predicted.png')
 ```
 
-```{r dt-smooths, fig.cap="\\textbf{A.} Histograms of sampling intervals between GPS locations, with counts on a $\\log_{10}$ axis for ease of readability. \\textbf{B.} Species-level smooth effects of sampling interval on the estimated probability of the animal moving. \\textbf{C.} Species-level estimated smooth effects of sampling interval on an animal's speed when moving. All x axes are on the natural logarithm scale."}
+```{r dt-smooths, fig.cap="\\textbf{A.} Histograms of sampling intervals between GPS locations. \\textbf{B.} Species-level smooth effects of sampling interval on the estimated probability of the animal moving. \\textbf{C.} Species-level estimated smooth effects of sampling interval on an animal's speed when moving. All x axes are on the natural logarithm scale."}
 knitr::include_graphics('../figures/dt-smooths.png')
 ```
 
