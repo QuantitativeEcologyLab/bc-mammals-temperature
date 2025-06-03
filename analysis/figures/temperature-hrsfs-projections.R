@@ -143,7 +143,7 @@ cc_proj %>%
                                 percentile == 'median' ~ '"Median RSS"',
                                 percentile == '95' ~ '"Top 5% RSS"')) %>%
   ggplot() +
-  facet_grid(percentile ~ lab, scales = 'free', labeller = label_parsed) +
+  facet_grid(percentile ~ lab, scales = 'fixed', labeller = label_parsed) +
   geom_line(aes(year, l, color = scenario), lwd = 0.5) +
   geom_hline(yintercept = 1, color = 'black', lty = 'dashed') +
   scale_x_continuous(NULL, breaks = c(2025, 2050, 2075, 2100)) +
