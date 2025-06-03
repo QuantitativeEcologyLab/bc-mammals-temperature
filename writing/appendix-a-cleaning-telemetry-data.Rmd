@@ -73,7 +73,11 @@ knitr::include_graphics(path = 'H:/GitHub/bc-mammals-temperature/figures/BW008-m
                         rel_path = FALSE)
 ```
 
-We start by attaching the necessary packages and sourcing some custom functions. The custom functions are all available on GitHub in the `functions` folder of the repository located at [https://github.com/QuantitativeEcologyLab/bc-mammals-temperature](https://github.com/QuantitativeEcologyLab/bc-mammals-temperature).
+\doublespacing
+
+We start by attaching the necessary packages and sourcing some custom functions. The custom functions are all available on GitHub in the `functions` folder of the repository located at [https://github.com/QuantitativeEcologyLab/bc-mammals-temperature](https://github.com/QuantitativeEcologyLab/bc-mammals-temperature). While this appendix only shows the removal of a single outlier point, the appendix details the approach we used to clean the telemetry data. We removed outlier points using `flag_outlier(..., value = 1)`, which leverages `ctmm::as.telemetry()` to remove rows that have `TRUE` or a positive, non-zero number in the `outlier` column. See te comments in each code chunk for additional detail and considerations about individual data points.
+
+\singlespacing
 
 \clearpage
 
