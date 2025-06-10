@@ -376,7 +376,9 @@ newd_tod <- expand_grid(animal = m_2$model$animal[1],
                         dt = 1) %>%
   nest(dat = -species) %>%
   mutate(dat = map2(dat, species, \(.d, .s) {
-    ref <- filter(m_1$model, species == .s)
+    ref <- filter(m_1$model, species == .s) %>%
+      filter(doy >= yday('2025-06-01') - 366 * 0.1 &
+               doy <= yday('2025-06-01') + 366 * 0.1)
     
     filter(.d, ! too_far(x = tod_pdt, y = temp_c, ref_1 = ref$tod_pdt,
                          ref_2 = ref$temp_c, dist = DIST)) %>%
@@ -537,7 +539,7 @@ distance <- plot_grid(
 ggsave('figures/distance.png', distance,
        width = 16, height = 8, dpi = 600, bg = 'white')
 
-# for appendix A
+# for appendix B
 # full figures ----
 p_mov_full <- plot_grid(
   p_mov_temp, p_mov_tod, p_mov_doy,
@@ -562,32 +564,3 @@ distance_full <- plot_grid(
   ncol = 1, rel_heights = c(0.9, 0.9, 0.9, 0.2, 1, 1))
 ggsave('figures/distance-travelled-full.png', distance_full,
        width = 20, height = 20, dpi = 300, bg = 'white')
-
-# for posters
-plot_grid(
-  d_tod_int +
-    facet_wrap(~ species, labeller = label_parsed, nrow = 1) +
-    theme(legend.position = 'none', strip.text = element_text(size = 10)),
-  d_doy_int +
-    facet_wrap(~ species, labeller = label_parsed, nrow = 1) +
-    theme(legend.position = 'none', strip.text = element_text(size = 10)),
-  labels = c('A', 'B'), ncol = 1) %>%
-  plot_grid(
-    .,
-    get_legend(
-      d_tod_int +
-        scale_fill_gradientn(name = expression(atop(bold('Relative'),
-                                                    bold('change'))),
-                             colors = d_pal,
-                             limits = range(z_breaks) * 2,
-                             breaks = z_breaks * 2,
-                             labels = \(x) round(2^x, 2)) +
-        theme(panel.background = element_rect(fill = 'grey90'),
-              legend.position = 'right',
-              legend.key.width = rel(1),
-              legend.justification = 'center',
-              legend.direction = 'vertical')),
-    nrow = 1, rel_widths = c(1, 0.05))
-
-ggsave('figures/2024-ubco-grad-symposium/distance.png',
-       width = 12, height = 4.75, dpi = 600, bg = 'white', scale = 1.6)
