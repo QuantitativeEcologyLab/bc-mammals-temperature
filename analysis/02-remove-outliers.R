@@ -214,7 +214,7 @@ plot_adj('E006', max_speed = 0.4, max_angle = 170) # outlier
 plot_adj('E006', max_speed = 0.4, max_angle = 170, map = TRUE) # see river
 # dt is much larger: collar struggled to receive signal with tree cover
 'hours' %#% out[which(out$speed > 0.4 & out$angle > 170) + (-4:4), 'dt']
-'hours' %#% c(43282, 7254)
+'hours' %#% c(43282, 7254) # convert seconds to hours
 flag_outlier('E006', max_speed = 0.4, max_angle = 170, value = 1)
 out <- check_animal('E006')
 plot_adj('E006', max_speed = 0.2, max_angle = 170) # ok
