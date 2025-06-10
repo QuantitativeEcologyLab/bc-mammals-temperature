@@ -7,8 +7,8 @@ library('gratia')    # for ggplot-based figures for GAMs
 library('ggplot2')   # for fancy plots
 library('khroma')    # for colorblind-friendly color palettes
 library('cowplot')   # for fancy multi-panel plots
+library('ctmm')      #'for unit conversions with `%#%`
 source('analysis/figures/default-ggplot-theme.R') # bold text and no grids
-source('functions/get_legend.R') # to extract legends from ggplot plots
 plot_scheme(PAL, colours = TRUE)
 
 # using Pacific Time for time of day
@@ -81,23 +81,32 @@ splits <-
                      pull(speed_est)))
          }),
   ) %>%
-  pivot_longer(c(manual, `k means`), values_to = 'split',
-               names_to = 'method')
+  pivot_longer(c(manual, `k means`), values_to = 'split_m_s',
+               names_to = 'method') %>%
+  mutate(split_km_h = 'km/h' %#% split_m_s)
 
 hists <- list()
 for(i in (1:N_SPECIES)[order(SPECIES)]) {
   sp <- as.character(SPECIES[i])
   XLIM <- c(0, quantile(filter(d, species == sp)$speed_est, 0.99))
-  YLIM <- c(0, nrow(filter(d, species == sp)) / 40)
+  XLIM <- 'km/h' %#% XLIM # convert to km/h
+  YLIM <- c(0, case_when(
+    sp == 'Rangifer tarandus (s. mountain)' ~ 400,
+    sp == 'Ursus arctos horribilis' ~ 1e3,
+    sp == 'Puma concolor' ~ 1e3,
+    sp == 'Cervus canadensis' ~ 25e3,
+    sp == 'Rangifer tarandus (boreal)' ~ 5e3,
+    sp == 'Canis lupus' ~ 4e3,
+    sp == 'Oreamnos americanus' ~ 500))
   
   hists[[i]] <-
     ggplot() +
-    geom_histogram(aes(speed_est), filter(d, species == sp),
-                   bins = 100, fill = 'grey', color = 'black') +
-    geom_vline(aes(xintercept = split, color = method,
+    geom_histogram(aes('km/h' %#% speed_est), filter(d, species == sp),
+                   bins = 200, fill = 'grey', color = 'black') +
+    geom_vline(aes(xintercept = split_km_h, color = method,
                    lty = method), filter(splits, species == sp), lwd = 0.75) +
     coord_cartesian(xlim = XLIM, ylim = YLIM) +
-    labs(x = 'Speed (m/s)', y = 'Count',
+    labs(x = 'Speed (km/h)', y = 'Count',
          title = scales::parse_format()(SPECIES_LABS[i])) +
     scale_color_bright(name = 'Method') +
     scale_linetype_manual(name = 'Method', values = c(2, 1)) +
@@ -106,14 +115,17 @@ for(i in (1:N_SPECIES)[order(SPECIES)]) {
 }
 
 hists[1:7] <- hists[order(SPECIES)]
-hists[[8]] <- ggplot() + theme_void()
-hists[[9]] <- get_legend(
-  hists[[1]] +
-    theme(legend.direction = 'vertical', legend.key.height = rel(1.5))) %>%
-  ggdraw()
-plot_grid(plotlist = hists)
+hists[[8]] <-
+  get_legend(
+    ggplot() +
+      geom_vline(aes(xintercept = split_km_h, color = method,
+                     lty = method), splits, lwd = 0.75) +
+      scale_color_bright(name = 'Method') +
+      scale_linetype_manual(name = 'Method', values = c(2, 1)) +
+      theme(legend.position = 'right'))
+plot_grid(plotlist = hists, nrow = 2)
 ggsave(filename = 'figures/moving-0-1-split.png',
-       width = 12, height = 8, units = 'in', dpi = 600, bg = 'white')
+       width = 16, height = 5.5, units = 'in', dpi = 600, bg = 'white')
 
 # assign moving/not moving status
 d <- mutate(d,
@@ -584,7 +596,7 @@ p_preds <-
               theme(legend.position = 'top'),
             ggplot() +
               geom_hex(aes(fitted(m_2), fitted(m_2_no_t),
-                             fill = log10(after_stat(count)))) +
+                           fill = log10(after_stat(count)))) +
               geom_abline(intercept = 0, slope = 1, color = 'black') +
               labs(x = 'Predictions without temperature',
                    y = 'Predictions with temperature') +
