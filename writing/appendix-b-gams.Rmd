@@ -1,5 +1,5 @@
 ---
-title: "\\Large Predicting how climate change will affect how and where terrestrial mammals will move"
+title: "\\Large The heat is on: Rising temperatures alter when, how, and where large terrestrial mammals move"
 author:
   - name: Stefano Mezzini
     email: stefano.mezzini@ubc.ca
@@ -63,64 +63,6 @@ knitr::opts_chunk$set(echo = FALSE, out.width = '\\textwidth',
 
 \clearpage
 
-# Directed Acyclical Graphs
-
-```{r hgam-dag,  message=FALSE, warning=FALSE, fig.cap="Directed Acyclical Graph assumed for inferring the causal effects of temperature (Temp) on probability of moving, speed when moving, or distance traveled ($Y$) while accounting for the effects of time of day (TOD), day of year (DOY), and their interaction effects. Temperature directly affects $Y$, but the effects of temperature depend on the time of day and season. Time of day and day of year also affect $Y$ directly, but the effect of time of day changes throughout the year due to changes in day length and seasonality.", fig.height=4, fig.width=4, out.width='40%'}
-library('dplyr')   # for data wrangling
-library('ggplot2') # for fancy plots
-library('ggdag')   # for directed acyclical graphs
-
-dagify(Y ~ TOD + DOY + Temp,
-       Temp ~ TOD + DOY,
-       TOD ~ DOY,
-       outcome = 'Y',
-       coords = list(x = c(Y = 0, TOD = -1, DOY = 1, Temp = 0),
-                     y = c(Y = 1.2, TOD = 2, DOY = 2, Temp = 0))) %>%
-  tidy_dagitty() %>%
-  mutate(col = case_when(name == 'Y' ~ '1',
-                         name == 'TOD' ~ '0',
-                         name == 'DOY' ~ '0',
-                         name == 'Temp' ~ '2')) %>%
-  ggplot(aes(x = x, y = y, xend = xend, yend = yend)) +
-  geom_dag_point(aes(color = col), size = 20, alpha = 0.5) +
-  geom_dag_point(color = 'black', size = 20, shape = 1) +
-  geom_dag_edges() +
-  geom_dag_text(aes(label = name), color = 'black', size = 4.5) +
-  scale_color_manual(values = c('grey', 'darkorange', 'red')) +
-  theme_dag() +
-  theme(legend.position = 'none')
-```
-
-```{r hrsf-dag, message=FALSE, warning=FALSE, fig.cap="Directed Acyclical Graph assumed for inferring the causal effects of temperature (Temp) on Relative Selection Strength (RSS) for percent forest cover (F), elevation (E), and distance from water (W). The RSS for of a given habitat depends on all three resources, and the selection for each resource is independent of the other two resources and dependent on temperature.", fig.height=4, fig.width=4, out.width='40%'}
-library('dplyr')   # for data wrangling
-library('ggplot2') # for fancy plots
-library('ggdag')   # for directed acyclical graphs
-
-dagify(RSS ~ `F` + E + W,
-       `F` ~ Temp,
-       E ~ Temp,
-       W ~ Temp,
-       outcome = 'RSS',
-       coords = list(x = c(RSS = 0, `F` = -1, E = 0, W = 1, Temp = 0),
-                     y = c(RSS = 2, `F` = 1, E = 1, W = 1, Temp = 0))) %>%
-  tidy_dagitty() %>%
-  mutate(col = case_when(name == 'RSS' ~ '1',
-                         name == 'F' ~ '0',
-                         name == 'E' ~ '0',
-                         name == 'W' ~ '0',
-                         name == 'Temp' ~ '2')) %>%
-  ggplot(aes(x = x, y = y, xend = xend, yend = yend)) +
-  geom_dag_point(aes(color = col), size = 20, alpha = 0.5) +
-  geom_dag_point(color = 'black', size = 20, shape = 1) +
-  geom_dag_edges() +
-  geom_dag_text(aes(label = name), color = 'black', size = 4.5) +
-  scale_color_manual(values = c('grey', 'darkorange', 'red')) +
-  theme_dag() +
-  theme(legend.position = 'none')
-```
-
-\clearpage
-
 # Effects of temperature on movement rates
 
 ```{r splits, fig.cap="Histograms of each species' estimated speed. Continuous red lines indicate the values used to determine whether an animal was moving or not, which were determined visually using the inflection points of the histograms. Dashed blue lines indicate the minimum speed corresponding to a moving animal as determined by $k$-means algorithms with 2 clusters. For ease of readability, the x axes range from 0 the 0.99 quantile, while the y axes range from 0 to one fortieth of the total number of estimates."}
@@ -169,7 +111,7 @@ knitr::include_graphics('../figures/speed-local-cc-predictions.png')
 
 # Effects of temperature on habitat selection
 
-```{r avail-used, out.width='95%', fig.cap="Histograms of available (red) and used (blue) resources. All GPS fixes counts as one observation. The y axis is on the square-root scale to help visualize values with low counts."}
+```{r avail-used, out.width='95%', fig.cap="Histograms of available (red) and used (blue) resources. Each GPS fix counts as one observation. The y axis is on the square-root scale to help visualize values with low counts."}
 knitr::include_graphics('../figures/available-vs-used.png')
 ```
 
