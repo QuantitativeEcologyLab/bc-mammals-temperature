@@ -96,6 +96,3 @@ data/ecmwf-era5-2m-temperature/*
 !data/cc-hgam-bc-projections-albers.rds
 !data/cc-hrsf-projections.rds
 !data/cc-rss-bc-projections-albers.rds
-
-# files > 100 MB
-writing/appendix-a-cleaning-telemetry-data.pdf
