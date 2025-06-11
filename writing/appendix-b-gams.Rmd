@@ -123,7 +123,7 @@ knitr::include_graphics('../figures/available-vs-used-weighted.png')
 knitr::include_graphics('../figures/hrsf-with-without-temp-prediction-agreement.png')
 ```
 
-```{r hrsf-se, fig.cap="Estimated standard error in the relative selection strength (RSS) for forest cover (\\%), elevation (km), and distance from water (km) as a function of temperature (see Fig. 3 in the main text). The grey contours indicate the extent of each speices' observed locations."}
+```{r hrsf-se, fig.cap="Estimated standard error in the relative selection strength (RSS) for forest cover (\\%), elevation (km), and distance from water (km) as a function of temperature (see Fig. 3 in the main text). The grey contours indicate the extent of each speices' observed data. For ease of readability, the color bar values were capped to a maximum of 3 (original maximum was 7.00)."}
 knitr::include_graphics('../figures/hrsf-surface-plots-se.png')
 ```
 

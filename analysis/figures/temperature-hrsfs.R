@@ -197,6 +197,7 @@ p_se <-
   preds %>%
   filter((! too_far_2)) %>%
   select(species, lab, x, temperature_C, variable, se.fit, too_far_1) %>%
+  mutate(se.fit = if_else(se.fit > 3, 3, se.fit)) %>%
   ggplot() +
   facet_grid(variable ~ lab, scales = 'free', labeller = label_parsed,
              switch = 'y') +
