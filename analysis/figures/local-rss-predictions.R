@@ -257,5 +257,5 @@ plot_grid(
             rel_widths = c(1.32, 1.1, 1.67, 1.64, 1.57, 1.58, 1.64)),
   ncol = 1, rel_heights = rep(c(0.2, 1), 3))
 
-ggsave('figures/local-resources.png', width = 15, height = 7.25,
+ggsave('figures/local-resources.png', width = 15, height = 8.5,
        units = 'in', dpi = 600, bg = 'white', scale = 1.5)
