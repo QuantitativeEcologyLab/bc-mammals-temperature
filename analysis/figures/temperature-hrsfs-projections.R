@@ -89,13 +89,13 @@ if(file.exists('data/cc-hrsf-projections.rds')) {
       # not including CIs because averaging them is not straightforward
       group_by(lab, scenario, year) %>%
       summarize(l_05 = quantile(l, 0.05),
-                l_25 = quantile(l, 0.25),
                 l_median = quantile(l, 0.50),
-                l_75 = quantile(l, 0.75),
                 l_95 = quantile(l, 0.95),
                 .groups = 'drop') %>%
       # divide by mean of 2025 to find relative change since 2025
-      mutate(l_ref = mean(l_median[year == 2025])) %>%
+      mutate(l_05_ref = mean(l_05[year == 2025]),
+             l_median_ref = mean(l_median[year == 2025]),
+             l_95_ref = mean(l_95[year == 2025])) %>%
       mutate(scenario = case_when(grepl('126', scenario) ~ 'Best scenario (SSP 1-2.6)',
                                   grepl('245', scenario) ~ 'Good scenario (SSP 2-4.5)',
                                   grepl('370', scenario) ~ 'Bad scenario (SSP 3-7.0)',
@@ -110,6 +110,8 @@ if(file.exists('data/cc-hrsf-projections.rds')) {
   
   cc_proj <-
     list.files('data', 'cc-hrsf-projections-', full.names = TRUE) %>%
+    #' not including `data/cc-hrsf-projections-local-2100.rds`
+    grep(pattern='-local', invert = TRUE, value = TRUE) %>%
     map(readRDS) %>%
     bind_rows()
   saveRDS(cc_proj, 'data/cc-hrsf-projections.rds')
@@ -121,7 +123,7 @@ cc_proj %>%
   ggplot() +
   facet_wrap(~ lab, scales = 'fixed', labeller = label_parsed) +
   geom_hline(yintercept = 1, color = 'black', lty = 'dashed') +
-  geom_line(aes(year, l_median / l_ref, color = scenario), lwd = 1) +
+  geom_line(aes(year, l_median / l_median_ref, color = scenario), lwd = 1) +
   scale_x_continuous(NULL, breaks = c(2025, 2050, 2075, 2100)) +
   scale_y_continuous('Relative change in RSS') +
   scale_color_brewer('Climate change scenario', type = 'div', palette = 5,
@@ -133,15 +135,17 @@ ggsave('figures/rss-local-cc-predictions.png',
 
 cc_proj %>%
   filter(year >= 2025) %>% # 2025 is the reference year
-  select(! c(l_25, l_75)) %>%
   group_by(lab) %>%
-  mutate(across(l_05:l_95, \(.x) .x / mean(.x[year == 2025]))) %>%
+  mutate(l_05 = l_05 / l_05_ref,
+         l_median = l_median / l_median_ref,
+         l_95 = l_95 / l_95_ref) %>%
   ungroup() %>%
   pivot_longer(l_05:l_95, values_to = 'l', names_to = 'percentile',
                names_prefix = 'l_') %>%
   mutate(percentile = case_when(percentile == '05' ~ '"Bottom 5% RSS"',
                                 percentile == 'median' ~ '"Median RSS"',
-                                percentile == '95' ~ '"Top 5% RSS"')) %>%
+                                percentile == '95' ~ '"Top 5% RSS"') %>%
+           factor(., levels = rev(sort(unique(.))))) %>%
   ggplot() +
   facet_grid(percentile ~ lab, scales = 'fixed', labeller = label_parsed) +
   geom_line(aes(year, l, color = scenario), lwd = 0.5) +
