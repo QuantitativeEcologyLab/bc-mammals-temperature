@@ -609,7 +609,7 @@ knitr::include_graphics('../figures/distance-travelled-local-cc-predictions.png'
 ```
 
 ```{r s-dist, fig.cap="\\textbf{Climate change will impact each species' movement rates differently.} The color scale indicates the predicted changes in distance traveled in 2100, relative to each location's average distance in 2025 across all four scenarios, such that 1 indicates no change, values < 1 indicate a decrease, and values > 1 indicate an increase. For ease of readability, the color bar is on the $\\log_2$ scale to help visualize patterns in doubling, and values are capped to 0.67 and 1.5 ($\\approx 2^{\\pm 0.585}$; original data ranged 0.72 to 1.29). The predictions only account for the predicted temperature throughout the province and ignore environmental factors such as terrain slope, soil type, and forest cover."}
-knitr::include_graphics('../figures/bc-displ-2100.png')
+knitr::include_graphics('../figures/bc-distance-2100.png')
 ```
 
 We do not predict any of the species to exhibit stronger selection for their current range, irrespective of climate change scenario. Changes in RSS by 2100 were between 0% and -3% under the best-case scenario, but they ranged from -8% to -14% under the worst-case scenario (Fig. \@ref(fig:t-hrsfs)). As with distance traveled, the change in RSS in 2100 varied throughout BC for all species (Fig. \@ref(fig:s-hrsfs)). All species were predicted to exhibit a decrease in RSS throughout most of BC, with the exception of boreal caribou, which had a predicted increase in approximately 67% of the province, including their current range. The increase was in great part due to the estimated increase in selection for high-elevation areas that are well outside the population's current range.
