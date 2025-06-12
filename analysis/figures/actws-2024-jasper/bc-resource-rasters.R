@@ -14,11 +14,6 @@ theme_set(theme_void() +
                   legend.text = element_text(face = 'bold'),
                   legend.title = element_text(face = 'bold')))
 
-# create custom color palettes for each predictor
-forest_pal <- colorRampPalette(c('#C2B280', 'darkgreen'))(100)
-elevation_pal <- colorRampPalette(c('white', 'brown4'))(100)
-water_pal <- c('transparent', 'blue')
-
 f <- rast('data/resource-rasters/bc-forest.tif') %>%
   project(crs(bc)) %>%
   as.data.frame(xy = TRUE) %>%
