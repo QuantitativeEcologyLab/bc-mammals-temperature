@@ -58,9 +58,9 @@ if(file.exists('data/cc-hgam-bc-projections-albers.rds')) {
     mutate(
       .,
       p = predict(m_1, newdata = ., type = 'response',se.fit = FALSE,
-                  discrete = TRUE, exclude = 's(animal)'),
+                  discrete = FALSE, exclude = 's(animal)'),
       s = predict(m_2, newdata = ., type = 'response', se.fit = FALSE,
-                  discrete = TRUE, exclude = 's(animal)'),
+                  discrete = FALSE, exclude = 's(animal)'),
       d = p * s) %>%
     # take the weighted mean of the approximated gaussian distributions 
     # after grouping all the 2025 scenarios together
@@ -193,27 +193,4 @@ p <- bc_preds %>%
   theme(legend.position = 'top', legend.key.width = rel(3))
 
 ggsave('figures/bc-distance-2100.png', p, width = 15, height = 8,
-       units = 'in', dpi = 600, bg = 'white', scale = 1.2)
-
-# make zoomed in version
-tels <- readRDS()
-
-p <- bc_preds %>%
-  filter(case_when(species == '')) %>%
-  # cap values for readability
-  # mutate(d = case_when(d < 2^min(z_breaks) ~ 2^min(z_breaks),
-  #                      d > 2^max(z_breaks) ~ 2^max(z_breaks),
-  #                      TRUE ~ d)) %>%
-  ggplot() +
-  facet_grid(scenario ~ lab, labeller = label_parsed) +
-  geom_raster(aes(x, y, fill = log2(d))) +
-  geom_sf(data = bc, fill = 'transparent') +
-  scale_fill_distiller(name = 'Relative change in distance travelled',
-                       palette = 'PuOr', limits = range(z_breaks),
-                       breaks = z_breaks, labels = \(x) round(2^x, 2),
-                       direction = 1) +
-  labs(x = NULL, y = NULL) +
-  theme(legend.position = 'top', legend.key.width = rel(3))
-
-ggsave('figures/ranges-dist-2100.png', p, width = 15, height = 8,
        units = 'in', dpi = 600, bg = 'white', scale = 1.2)
