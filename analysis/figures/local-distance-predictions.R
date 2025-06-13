@@ -18,7 +18,7 @@ colorRampPalette(RColorBrewer::brewer.pal(11, 'PuOr'))(1e3) %>%
   plot_scheme_colorblind()
 
 if(file.exists('data/cc-hgam-projections-local-2100.rds')) {
-  local_2100_proj <- readRDS('data/cc-hgam-projections-local-2100.rds')
+  cc_proj <- readRDS('data/cc-hgam-projections-local-2100.rds')
 } else {
   # import models
   m_1 <- readRDS('models/binomial-gam.rds')
@@ -111,7 +111,7 @@ make_plot <- function(sp, y_facets = FALSE, get_legend = FALSE,
                          labels = \(x) round(2^x, 2),
                          direction = 1) +
     scale_x_continuous(NULL) +
-    scale_y_continuous(NULL) +
+    scale_y_continuous(NULL, expand = c(0.2, 0)) +
     ggspatial::annotation_scale(style = 'ticks', text_cex = 0.6,
                                 location = 'tr', text_face = 'bold') +
     theme(legend.position = 'none', axis.ticks = element_blank(),
@@ -150,5 +150,5 @@ plot_grid(
           rel_widths = c(1.32, 1.1, 1.67, 1.64, 1.57, 1.58, 1.64)),
   ncol = 1, rel_heights = c(0.05, 1))
 
-ggsave('figures/local-distance-2100.png', width = 15, height = 9.65,
-       units = 'in', dpi = 600, bg = 'white', scale = 1.2)
+ggsave('figures/local-distance-2100.png', width = 15, height = 10,
+       units = 'in', dpi = 600, bg = 'white', scale = 1.5)

@@ -18,7 +18,7 @@ colorRampPalette(RColorBrewer::brewer.pal(11, 'PiYG'))(1e3) %>%
   plot_scheme_colorblind()
 
 if(file.exists('data/cc-hrsf-projections-local-2100.rds')) {
-  local_2100_proj <- readRDS('data/cc-hrsf-projections-local-2100.rds')
+  cc_proj <- readRDS('data/cc-hrsf-projections-local-2100.rds')
 } else {
   # import resource rasters
   f <- rast('data/resource-rasters/forest.tif')
@@ -216,7 +216,7 @@ plot_resources <- function(sp, resource = 'forest_perc') {
     facet_grid(. ~ lab, labeller = label_parsed) +
     geom_raster(aes(x, y, fill = z)) +
     scale_x_continuous(NULL) +
-    scale_y_continuous(NULL) +
+    scale_y_continuous(NULL, expand = c(0.2, 0)) +
     ggspatial::annotation_scale(style = 'ticks', text_cex = 0.6,
                                 location = 'tr', text_face = 'bold') +
     theme(legend.position = 'none', axis.ticks = element_blank(),
@@ -257,5 +257,5 @@ plot_grid(
             rel_widths = c(1.32, 1.1, 1.67, 1.64, 1.57, 1.58, 1.64)),
   ncol = 1, rel_heights = rep(c(0.2, 1), 3))
 
-ggsave('figures/local-resources.png', width = 15, height = 8.5,
+ggsave('figures/local-resources.png', width = 15, height = 10,
        units = 'in', dpi = 600, bg = 'white', scale = 1.5)
