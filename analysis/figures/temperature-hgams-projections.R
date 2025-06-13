@@ -60,25 +60,25 @@ if(file.exists('data/cc-hgam-projections.rds')) {
               s = weighted.mean(s, w = weight),
               d = weighted.mean(d, w = weight),
               .groups = 'drop') %>%
+    # divide by mean of 2025 to find pixel-level relative change since 2025
+    group_by(species, long, lat) %>%
+    mutate(p = p / mean(p[year == 2025]),
+           s = s / mean(s[year == 2025]),
+           d = d / mean(d[year == 2025])) %>%
+    ungroup() %>%
     # find median and 90% percentile interval of the predicted means
     # not including CIs because averaging them is not straightforward
     group_by(scenario, year, species) %>%
-    summarize(p_lwr_05 = quantile(p, 0.05),
+    summarize(p_lwr_05 = quantile(p, 0.05), # bottom 5%
               s_lwr_05 = quantile(s, 0.05),
               d_lwr_05 = quantile(d, 0.05),
-              p_median = quantile(p, 0.50),
+              p_median = quantile(p, 0.50), # median
               s_median = quantile(s, 0.50),
               d_median = quantile(d, 0.50),
-              p_upr_95 = quantile(p, 0.95),
+              p_upr_95 = quantile(p, 0.95), # top 5%
               s_upr_95 = quantile(s, 0.95),
               d_upr_95 = quantile(d, 0.95),
               .groups = 'drop') %>%
-    # divide by mean of 2025 to find relative change since 2025
-    group_by(species) %>%
-    mutate(p_ref = mean(p_median[year == 2025]),
-           s_ref = mean(s_median[year == 2025]),
-           d_ref = mean(d_median[year == 2025])) %>%
-    ungroup() %>%
     mutate(scenario = case_when(grepl('126', scenario) ~ 'Best scenario (SSP 1-2.6)',
                                 grepl('245', scenario) ~ 'Good scenario (SSP 2-4.5)',
                                 grepl('370', scenario) ~ 'Bad scenario (SSP 3-7.0)',
@@ -129,11 +129,13 @@ if(file.exists('data/cc-hgam-projections.rds')) {
 # make figures ----
 p_p_mov <-
   ggplot(cc_proj, aes(year, p_median, group = scenario)) +
-  facet_wrap(~ species, scales = 'free_y', drop = FALSE,
+  coord_cartesian(ylim = c(0.75, 1.25)) +
+  facet_wrap(~ species, scales = 'fixed', drop = FALSE,
              labeller = label_parsed) +
+  geom_hline(aes(yintercept = 1), lty = 'dashed') +
   geom_ribbon(aes(ymin = p_lwr_05, ymax = p_upr_95,
-                  fill = scenario), alpha = 0.2) +
-  geom_hline(aes(yintercept = p_ref), lty = 'dashed') +
+                  fill = factor(scenario, levels = rev(levels(scenario))),
+                  color = scenario), linewidth = 0.2, alpha = 0.25) +
   geom_line(color = 'black', lwd = 1.5) +
   geom_line(aes(color = scenario), lwd = 1) +
   scale_color_brewer('Climate change scenario', type = 'div',
@@ -147,11 +149,13 @@ ggsave('figures/p-moving-local-cc-predictions.png', p_p_mov,
        width = 10, height = 6.67, dpi = 600, bg = 'white')
 
 p_s <-
-  ggplot(cc_proj, aes(year, s_median / s_ref, group = scenario)) +
-  facet_wrap(~ species, scales = 'free_y', drop = FALSE,
+  ggplot(cc_proj, aes(year, s_median, group = scenario)) +
+  coord_cartesian(ylim = c(NA, 1.021)) +
+  facet_wrap(~ species, scales = 'fixed', drop = FALSE,
              labeller = label_parsed) +
-  geom_ribbon(aes(ymin = s_lwr_05 / s_ref, ymax = s_upr_95 / s_ref,
-                  fill = scenario), alpha = 0.2) +
+  geom_ribbon(aes(ymin = s_lwr_05, ymax = s_upr_95,
+                  fill = factor(scenario, levels = rev(levels(scenario))),
+                  color = scenario), linewidth = 0.2, alpha = 0.25) +
   geom_hline(aes(yintercept = 1), lty = 'dashed') +
   geom_line(color = 'black', lwd = 1.5) +
   geom_line(aes(color = scenario), lwd = 1) +
@@ -166,11 +170,13 @@ ggsave('figures/speed-local-cc-predictions.png', p_s,
        width = 10, height = 6.67, dpi = 600, bg = 'white')
 
 p_d <-
-  ggplot(cc_proj, aes(year, d_median / d_ref, group = scenario)) +
-  facet_wrap(~ species, scales = 'free_y', drop = FALSE,
+  ggplot(cc_proj, aes(year, d_median, group = scenario)) +
+  coord_cartesian(ylim = c(0.75, 1.255)) +
+  facet_wrap(~ species, scales = 'fixed', drop = FALSE,
              labeller = label_parsed) +
-  geom_ribbon(aes(ymin = d_lwr_05 / d_ref, ymax = d_upr_95 / d_ref,
-                  fill = scenario), alpha = 0.2) +
+  geom_ribbon(aes(ymin = d_lwr_05, ymax = d_upr_95,
+                  fill = factor(scenario, levels = rev(levels(scenario))),
+                  color = scenario), linewidth = 0.2, alpha = 0.25) +
   geom_hline(aes(yintercept = 1), lty = 'dashed') +
   geom_line(color = 'black', lwd = 1.5) +
   geom_line(aes(color = scenario), lwd = 1) +
@@ -183,7 +189,3 @@ p_d <-
         legend.position.inside = c(5/6, 1/6)); p_d
 ggsave('figures/distance-travelled-local-cc-predictions.png', p_d,
        width = 10, height = 6.67, dpi = 600, bg = 'white')
-
-# for poster
-ggsave('figures/2024-ubco-grad-symposium/distance-travelled-local-cc-predictions.png',
-       p_d, width = 17.5, height = 9.5, dpi = 300, bg = 'white', scale = 0.75)
