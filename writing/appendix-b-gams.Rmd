@@ -1,5 +1,6 @@
 ---
 title: "\\Large The heat is on: Rising temperatures alter when, how, and where large terrestrial mammals move"
+subtitle: "\\Large Appendix B: Modeling"
 author:
   - name: Stefano Mezzini
     email: stefano.mezzini@ubc.ca
@@ -99,17 +100,46 @@ knitr::include_graphics('../figures/p-and-speed-observed-vs-predicted.png')
 knitr::include_graphics('../figures/dt-smooths.png')
 ```
 
-```{r t-p-mov, fig.cap="\\textbf{The direction and magnitude of changes in probability of moving due to climate change varies among species, but worse climate-change scenarios result in the greatest change.} Lines indicate the median projected change in probability of moving due to changes in temperature within the species' current extent. Shaded areas indicate the 90% prediction interval within the range. The dashed black lines indicate the mean probability of movement in 2025 across the four scenarios. The projections only account for changes movement behavior (i.e., movement frequency and speed) and ignore changes in physiology or movement costs."}
+```{r t-p-mov, fig.cap="\\textbf{The direction and magnitude of changes in probability of moving due to climate change varies among species, but worse climate-change scenarios result in the greatest change.} Lines indicate the median projected change in probability of moving due to changes in temperature changes in temperature within the area delimitated by the 99.9% Autocorrelated Densitity Kernel Estimates of space use. Shaded areas indicate the range of predicted values between the $95^\\text{th}$ and $5^\\text{th}$ percentiles. Changes are relative to the predicted mean probabilies of moving in 2025 across the four Shared Socioeconomic Pathways (SSPs). If the intervals are fully above the dashed line, at least 90% of the estimated means increased, relative to the each pixel's average of the four climate scenarios in 2025. Similar conclusions can be drawn regarding a decrease if the ribbons are below the dashed line. The projections only account for changes in movement behaviour and ignore changes in physiology or movement costs."}
 knitr::include_graphics('../figures/p-moving-local-cc-predictions.png')
 ```
 
-```{r t-speed, fig.cap="\\textbf{The direction and magnitude of changes in speed due to climate change varies among species, but worse climate-change scenarios result in the greatest change.} Lines indicate the median projected change in speed due to changes in temperature within the species' current extent. Shaded areas indicate the 90% prediction interval within the range. The dashed black lines indicate the mean speed in 2025 across the four scenarios. The projections only account for changes movement behavior (i.e., movement frequency and speed) and ignore changes in physiology or movement costs."}
+```{r t-speed, fig.cap="\\textbf{The direction and magnitude of changes in speed due to climate change varies among species, but worse climate-change scenarios result in the greatest change.} Lines indicate the median projected change in speed due to changes in temperature within the area delimitated by the 99.9% Autocorrelated Densitity Kernel Estimates of space use. Shaded areas indicate the range of predicted values between the $95^\\text{th}$ and $5^\\text{th}$ percentiles. Changes are relative to the predicted mean speeds in 2025 across the four Shared Socioeconomic Pathways (SSPs). If the intervals are fully above the dashed line, at least 90% of the estimated means increased, relative to the each pixel's average of the four climate scenarios in 2025. Similar conclusions can be drawn regarding a decrease if the ribbons are below the dashed line. The projections only account for changes in movement behaviour and ignore changes in physiology or movement costs."}
 knitr::include_graphics('../figures/speed-local-cc-predictions.png')
 ```
 
 \clearpage
 
 # Effects of temperature on habitat selection
+
+```{r kept-hrsf}
+readr::read_csv('../data/tracking-data/telemetry-metadata.csv',
+                show_col_types = FALSE) %>%
+  mutate(keep_for_RSF = if_else(keep_for_RSF == 'yes', 'yes', 'no')) %>%
+  group_by(species, keep_for_RSF) %>%
+  summarize(n = n()) %>%
+  mutate(prop = n / sum(n)) %>%
+  # fix species names
+  mutate(species = case_when(
+    species == 'Rangifer tarandus (s. mountain)' ~ 'R. tarandus (sm)',
+    species == 'Rangifer tarandus (boreal)' ~ 'R. tarandus (b)',
+    .default = species)) %>%
+  mutate(species = paste0('\\emph{', species, '}') %>%
+           gsub(')}', ')', .) %>%
+           gsub(' \\(', '} \\(', .)) %>%
+  bind_rows(.,
+            group_by(., keep_for_RSF) %>%
+              summarize(species = 'Total',
+                        n = sum(n)) %>%
+              mutate(prop = n / sum(n))) %>%
+  rename(Species = species, `Kept` = keep_for_RSF, Proportion = prop) %>%
+  knitr::kable(format = 'markdown', caption = "Number of animals (n) and proportion of animals (Proportion) used or excluded (Kept) when fitting the hierarchical resource selection function. The models only used animals that showed stationary range residency or two clear seasonal ranges within the tracking period. We excluded animals with insufficient data to estimate a range size and animals that migrated but did not establish clear ranges within the tracking period.")
+```
+
+
+```{r resources, fig.cap="Resource rasters used for each species' hierarchical resource selection function."}
+knitr::include_graphics('../figures/local-resources.png')
+```
 
 ```{r avail-used, out.width='95%', fig.cap="Histograms of available (red) and used (blue) resources. Each GPS fix counts as one observation. The y axis is on the square-root scale to help visualize values with low counts."}
 knitr::include_graphics('../figures/available-vs-used.png')

@@ -1,5 +1,6 @@
 ---
 title: "\\Large The heat is on: Rising temperatures alter when, how, and where large terrestrial mammals move"
+subtitle: "\\Large Appendix A: Cleaning Telemetry Data"
 author:
   - name: Stefano Mezzini
     email: stefano.mezzini@ubc.ca
