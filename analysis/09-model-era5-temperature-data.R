@@ -11,8 +11,6 @@ source('analysis/figures/default-ggplot-theme.R') # bold text and no grids
 source('data/bc-shapefile.R')
 
 # import temperature data ----
-SAMPLE <- seq(1, 365 * 24 * 2, by = 50) # sample of rasters for test
-
 if(! file.exists('data/ecmwf-era5-2m-temperature/aggregated-data.rds')) {
   NCHAR <- nchar('data/ecmwf-era5-2m-temperature/epsg-4326/ecmwf-era5-2m-temp-X')
   
@@ -23,7 +21,6 @@ if(! file.exists('data/ecmwf-era5-2m-temperature/aggregated-data.rds')) {
     crop(bc_unproj) %>%
     mask(bc_unproj) %>%
     as.data.frame(xy = TRUE) %>%
-    # mutate(elev_m = terra::extract(dem, tibble(x, y))[, 2]) %>%
     pivot_longer(- c(x, y), names_to = 'name', values_to = 'temp_k') %>%
     mutate(year = as.numeric(substr(name, nchar('ecmwf-era5-2m-temp-X'),
                                     nchar('ecmwf-era5-2m-temp-XXXX'))),
@@ -202,7 +199,9 @@ AIC(m_gamma, m_gammals) %>%
   mutate(delta_AIC = AIC - min(AIC))
 
 # get SD(temperature) based on SSP monthly averages ----
-preds <- readRDS('data/climate-yearly-projections-2024-06-11.rds') %>%
+preds <-
+  # import monthly averagaes based on climate change projections
+  readRDS('data/climate-yearly-projections-2024-06-11.rds') %>%
   rename(elev_m = elevation,
          monthly_mean = mean_temperature,
          lat = latitude,
@@ -217,18 +216,25 @@ hist(rnorm(nrow(preds), mean = preds$monthly_mean, sd = preds$sd),
      main = expression('Gaussian temperatures (n = 1 for each {'~
                          hat(mu)~','~hat(sigma)~'})'))
 
+# save the file with added mean and standard deviation
 saveRDS(preds,
-        paste0('data/climate-yearly-projections-mean-variance-',
-               Sys.Date(), '.rds'))
+        paste0('data/climate-yearly-projections-mean-sd-', Sys.Date(),
+               '.rds'))
 
 # simulate weather for each month ----
+if(! exists('preds')) {
+  preds <- readRDS('data/climate-yearly-projections-mean-sd-2024-06-26.rds')
+}
+
 weather_proj <-
-  readRDS('data/climate-yearly-projections-mean-variance-2024-06-26.rds') %>%
+  preds %>%
   transmute(scenario, year, month, monthly_mean, long, lat,
             monthly_sd = sd) %>%
-  mutate(., qs = list(tibble(q = seq(0.1, 0.9, by = 0.1)))) %>%
+  # add quantiles for standard normal distribution
+  mutate(., qs = list(tibble(q = qnorm(seq(0.1, 0.9, by = 0.1))))) %>%
   unnest(qs) %>%
   mutate(
+    # convert Z quantiles to the monthly quantiles
     temp_c = monthly_mean + monthly_sd * q,
     # weigh each quantile by the probability density
     weight = dnorm(x = temp_c, mean = monthly_mean, sd = monthly_sd)) %>%
@@ -237,11 +243,21 @@ weather_proj <-
   mutate(weight = weight / sum(weight)) %>%
   ungroup()
 
+# check weights for a few temperatures
+weather_proj %>%
+  slice(1:(9 * 3)) %>%
+  ggplot(aes(temp_c, weight)) +
+  facet_wrap(~ monthly_mean, ncol = 1) +
+  geom_smooth() +
+  geom_point()
+
 saveRDS(weather_proj, 'data/weather-projections.rds')
 
 # simulated weather for only 2025 and 2100 ----
 # get SD(temperature) based on SSP monthly averages
-preds <- readRDS('data/climate-yearly-projections-2025-2100-only-2025-01-21.rds') %>%
+preds_2025_2100 <-
+  # import monthly averages based on CC projections for 2025 and 2100
+  readRDS('data/climate-yearly-projections-2025-2100-only-2025-08-13.rds') %>%
   filter(mean_temperature != -9999) %>%
   rename(elev_m = elevation,
          monthly_mean = mean_temperature,
@@ -250,25 +266,31 @@ preds <- readRDS('data/climate-yearly-projections-2025-2100-only-2025-01-21.rds'
   select(! c(min_temperature, max_temperature)) %>%
   mutate(sd = sqrt(predict(m_gammals, newdata = ., type = 'response')[, 1]))
 
-range(preds$monthly_mean, na.rm = TRUE)
-range(preds$sd, na.rm = TRUE)
-hist(rnorm(nrow(preds), mean = preds$monthly_mean, sd = preds$sd),
+range(preds_2025_2100$monthly_mean, na.rm = TRUE)
+range(preds_2025_2100$sd, na.rm = TRUE)
+hist(rnorm(nrow(preds_2025_2100),
+           mean = preds_2025_2100$monthly_mean, sd = preds_2025_2100$sd),
      main = expression('Gaussian temperatures (n = 1 for each {'~
                          hat(mu)~','~hat(sigma)~'})'))
 
-saveRDS(preds,
-        paste0('data/climate-yearly-projections-mean-variance-2025-2100-only-',
+saveRDS(preds_2025_2100,
+        paste0('data/climate-yearly-projections-mean-sd-2025-2100-only-',
                Sys.Date(), '.rds'))
 
 # simulate weather for each month ----
-weather_proj <-
-  readRDS('data/climate-yearly-projections-mean-variance-2025-2100-only-2025-01-21.rds') %>%
-  filter(year %in% c(2025, 2100)) %>%
+if(! exists('preds_2025_2100')) {
+  preds_2025_2100 <- readRDS('data/climate-yearly-projections-mean-sd-2025-2100-only-2025-01-21.rds')
+}
+
+weather_proj_2025_2100 <-
+  preds_2025_2100 %>%
   transmute(scenario, year, month, dec_date, long, lat, monthly_mean,
             monthly_sd = sd) %>%
-  mutate(., qs = list(tibble(q = seq(0.1, 0.9, by = 0.1)))) %>%
+    # add quantiles for standard normal distribution
+  mutate(., qs = list(tibble(q = qnorm(seq(0.1, 0.9, by = 0.1))))) %>%
   unnest(qs) %>%
   mutate(
+    # convert Z quantiles to the monthly quantiles
     temp_c = monthly_mean + monthly_sd * q,
     # weigh each quantile by the probability density
     weight = dnorm(x = temp_c, mean = monthly_mean, sd = monthly_sd)) %>%
@@ -277,6 +299,13 @@ weather_proj <-
   mutate(weight = weight / sum(weight)) %>%
   ungroup()
 
-range(weather_proj$temp_c, na.rm = TRUE) # ensure range is reasonable
+# check weights for a few temperatures
+weather_proj_2025_2100 %>%
+  slice(1:(9 * 3)) %>%
+  ggplot(aes(temp_c, weight)) +
+  facet_wrap(~ monthly_mean, ncol = 1) +
+  geom_smooth() +
+  geom_point()
 
-saveRDS(weather_proj, 'data/weather-projections-2025-2100-only.rds')
+saveRDS(weather_proj_2025_2100,
+        'data/weather-projections-2025-2100-only.rds')

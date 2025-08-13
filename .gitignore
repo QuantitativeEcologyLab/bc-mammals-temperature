@@ -89,9 +89,9 @@ data/ecmwf-era5-2m-temperature/*
 *.log
 *.db
 
-# do not ignore predictions without sensitive data
+# do not ignore predictions without sensitive data below 100 MB
 !temperature-hrsf-preds.rds
-!climate-yearly-projections-mean-variance-2025-2100-only-2025-01-21.rds
+!climate-yearly-projections-mean-sd-2025-2100-only-2025-01-21.rds
 !data/cc-hgam-projections.rds
 !data/cc-hgam-bc-projections-albers.rds
 !data/cc-hrsf-projections.rds
