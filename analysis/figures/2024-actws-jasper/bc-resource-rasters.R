@@ -2,7 +2,7 @@ library('sf')      # for working with spatial data
 library('terra')  # for working with raster data (tifs)
 library('dplyr')   # for data wrangling (e.g., mutate, %>%, ...)
 library('ggplot2') # for fancy plots
-source('analysis/figures/actws-2024-jasper/actws-2024-jasper-theme.R')
+source('analysis/figures/2024-actws-jasper/2024-actws-jasper-theme.R')
 source('data/bc-shapefile.R')
 
 theme_set(theme_void() +
@@ -52,7 +52,7 @@ p_f <-
   scale_fill_gradient('Tree cover (%)', low = 'white', na.value = NA,
                       high = 'darkgreen', limits = c(0, 100),
                       breaks = c(0, 100))
-ggsave('figures/actws-2024-jasper/bc-forest.png', plot = p_f,
+ggsave('figures/2024-actws-jasper/bc-forest.png', plot = p_f,
        width = 6, height = 6, dpi = 600, bg = 'transparent')
 
 p_e <-
@@ -65,7 +65,7 @@ p_e <-
                        breaks = round(range(e$layer, na.rm = TRUE)),
                        labels = round(range(e$layer, na.rm = TRUE), -2),
                        limits = round(range(e$layer, na.rm = TRUE)))
-ggsave('figures/actws-2024-jasper/bc-elevation.png', plot = p_e,
+ggsave('figures/2024-actws-jasper/bc-elevation.png', plot = p_e,
        width = 6, height = 6, dpi = 600, bg = 'transparent')
 
 p_w <-
@@ -79,5 +79,5 @@ p_w <-
                        na.value = NA, values = c(0, 0.05, 1),
                        breaks = range(w$layer) / 1e3,
                        labels = round(range(w$layer) / 1e3))
-ggsave('figures/actws-2024-jasper/bc-water.png', plot = p_w,
+ggsave('figures/2024-actws-jasper/bc-water.png', plot = p_w,
        width = 6, height = 6, dpi = 600, bg = 'transparent')

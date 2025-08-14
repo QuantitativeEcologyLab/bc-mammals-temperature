@@ -30,6 +30,6 @@ ggplot() +
   coord_sf(xlim = c(25e4, 26e5), ylim = c(37e4, 175e4)) +
   theme(legend.position = 'none')
 
-ggsave('figures/actws-2024-jasper/kelowna-jasper-map.png',
+ggsave('figures/2024-actws-jasper/kelowna-jasper-map.png',
        width = 33.87, height = 19.05, units = 'cm', dpi = 600,
        bg = 'transparent')

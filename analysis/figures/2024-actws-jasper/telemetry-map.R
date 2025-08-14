@@ -3,7 +3,7 @@ library('tidyr')        # for data wrangling
 library('ggplot2')      # for fancy plots
 library('khroma')       # for color blind-friendly palettes
 source('data/bc-shapefile.R')
-source('analysis/figures/actws-2024-jasper/actws-2024-jasper-theme.R')
+source('analysis/figures/2024-actws-jasper/2024-actws-jasper-theme.R')
 
 locs <- tibble(city = c('Kelowna', 'Jasper'),
                long = c(-119.4966, -118.0814),
@@ -44,7 +44,7 @@ p_caribou <-
   scale_color_bright(name = 'Species') +
   labs(x = NULL, y = NULL)
 
-ggsave('figures/actws-2024-jasper/caribou-map.png', p_caribou,
+ggsave('figures/2024-actws-jasper/caribou-map.png', p_caribou,
        width = 33.87, height = 19.05, units = 'cm', dpi = 600,
        bg = 'transparent')
 
@@ -83,6 +83,6 @@ p_all <-
   scale_color_manual('Species', values = pal) +
   labs(x = NULL, y = NULL)
 
-ggsave('figures/actws-2024-jasper/telemetries-all-map.png', plot = p_all,
+ggsave('figures/2024-actws-jasper/telemetries-all-map.png', plot = p_all,
        width = 33.87, height = 19.05, units = 'cm', dpi = 600,
        bg = 'transparent')

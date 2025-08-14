@@ -33,7 +33,7 @@ tibble(temperature = 15,
                      breaks = c(0.25, 0.5, 1, 2, 4)) +
   xlab('Forest (%)')
 
-ggsave('figures/actws-2024-jasper/rsf-forest-empty.png',
+ggsave('figures/2024-actws-jasper/rsf-forest-empty.png',
        width = 10, height = 6, dpi = 600)
 
 # real figure
@@ -58,7 +58,7 @@ tibble(temperature = 15,
                      breaks = c(0.25, 0.5, 1, 2, 4)) +
   xlab('Forest (%)')
 
-ggsave('figures/actws-2024-jasper/rsf-forest.png',
+ggsave('figures/2024-actws-jasper/rsf-forest.png',
        width = 10, height = 6, dpi = 600)
 
 # marginal effect of elevation ----
@@ -85,7 +85,7 @@ tibble(temperature = 15,
                      breaks = c(0.25, 0.5, 1, 2, 4, 8)) +
   xlab('Elevation (m)')
 
-ggsave('figures/actws-2024-jasper/rsf-elevation.png',
+ggsave('figures/2024-actws-jasper/rsf-elevation.png',
        width = 10, height = 6, dpi = 600)
 
 # marginal effect of distance from water ----
@@ -113,7 +113,7 @@ tibble(temperature = 15,
                      breaks = c(0.25, 0.5, 1, 2, 4)) +
   scale_x_continuous('Distance from water (km)', limits = c(0, 12.5))
 
-ggsave('figures/actws-2024-jasper/rsf-water.png',
+ggsave('figures/2024-actws-jasper/rsf-water.png',
        width = 10, height = 6, dpi = 600)
 
 # effect of forest at different temperatures ----
@@ -139,7 +139,7 @@ expand.grid(temperature = c(-15, 0, 15),
                      breaks = c(0.25, 0.5, 1, 2, 4)) +
   xlab('Forest (%)')
 
-ggsave('figures/actws-2024-jasper/rsf-forest-temperature.png',
+ggsave('figures/2024-actws-jasper/rsf-forest-temperature.png',
        width = 15, height = 6, dpi = 600)
 
 # effect of elevation at different temperatures ----
@@ -169,7 +169,7 @@ expand.grid(temperature = c(-15, 0, 15),
                      breaks = c(0.125, 0.25, 0.5, 1, 2, 4, 8)) +
   xlab('Elevation (m)')
 
-ggsave('figures/actws-2024-jasper/rsf-elevation-temperature.png',
+ggsave('figures/2024-actws-jasper/rsf-elevation-temperature.png',
        width = 15, height = 6, dpi = 600)
 
 # effect of distance from water at different temperatures ----
@@ -196,7 +196,7 @@ expand.grid(temperature = c(-15, 0, 15),
                      breaks = c(0.25, 0.5, 1, 2, 4)) +
   scale_x_continuous('Distance from water (km)', limits = c(0, 12.5))
 
-ggsave('figures/actws-2024-jasper/rsf-water-temperature.png',
+ggsave('figures/2024-actws-jasper/rsf-water-temperature.png',
        width = 15, height = 6, dpi = 600)
 
 # habitat quality for the current habitat ----
@@ -291,7 +291,7 @@ p_resources <-
       theme(legend.position = 'top'),
     nrow = 1); p_resources
 
-ggsave('figures/actws-2024-jasper/rsf-caribou-resources.png', p_resources,
+ggsave('figures/2024-actws-jasper/rsf-caribou-resources.png', p_resources,
        width = 12, height = 6, dpi = 600)
 
 # figure of habitat quality for different temperatures
@@ -314,7 +314,7 @@ p_habitat <-
                          as.character()) +
   theme(legend.position = 'top', legend.key.width = unit(0.7, 'in'))
 
-ggsave('figures/actws-2024-jasper/rsf-caribou-range.png', p_habitat,
+ggsave('figures/2024-actws-jasper/rsf-caribou-range.png', p_habitat,
        width = 10, height = 6, dpi = 600)
 
 # habitat preference relative to 0 degrees C
@@ -346,7 +346,7 @@ p_habitat_rel <-
                          as.character()) +
   theme(legend.position = 'top', legend.key.width = unit(0.7, 'in'))
 
-ggsave('figures/actws-2024-jasper/rsf-caribou-range-0C.png', p_habitat_rel,
+ggsave('figures/2024-actws-jasper/rsf-caribou-range-0C.png', p_habitat_rel,
        width = 10, height = 6, dpi = 600)
 
 # predict using climate change predictions ----
@@ -405,5 +405,5 @@ p_preds_cc <-
   scale_y_continuous(limits = c(0.5, 2), trans = 'log2') +
   theme(legend.position = 'top'); p_preds_cc
 
-ggsave('figures/actws-2024-jasper/rsf-caribou-cc-preds.png', p_preds_cc,
+ggsave('figures/2024-actws-jasper/rsf-caribou-cc-preds.png', p_preds_cc,
        width = 10, height = 6, dpi = 600)

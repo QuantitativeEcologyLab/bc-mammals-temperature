@@ -17,7 +17,7 @@ set.seed(2)
 ggdag_status(dag_car_mov, node_size = 20, text_size = 3) +
   scale_color_manual(values = c('black', 'darkorange'))
 
-ggsave('figures/actws-2024-jasper/dag-caribou-moving.png',
+ggsave('figures/2024-actws-jasper/dag-caribou-moving.png',
        width = 6, height = 4, dpi = 600, bg = 'transparent')
 
 # speed | moving
@@ -30,7 +30,7 @@ set.seed(7)
 ggdag_status(dag_car_sp, node_size = 20, text_size = 3) +
   scale_color_manual(values = c('black', 'darkorange'))
 
-ggsave('figures/actws-2024-jasper/dag-caribou-speed.png',
+ggsave('figures/2024-actws-jasper/dag-caribou-speed.png',
        width = 6, height = 4, dpi = 600, bg = 'transparent')
 
 # habitat selection
@@ -48,5 +48,5 @@ dag_car_hs <- dagify(selected ~ forest + water + elevation,
 ggdag_status(dag_car_hs, node_size = 20, text_size = 3) +
   scale_color_manual(values = c('black', 'darkorange'))
 
-ggsave('figures/actws-2024-jasper/dag-caribou-rsf.png',
+ggsave('figures/2024-actws-jasper/dag-caribou-rsf.png',
        width = 6, height = 4, dpi = 600, bg = 'transparent')

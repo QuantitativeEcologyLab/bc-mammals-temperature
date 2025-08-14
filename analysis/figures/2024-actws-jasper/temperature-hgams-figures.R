@@ -54,7 +54,7 @@ tibble(temperature = seq(-30, 40, by = 0.1),
   scale_x_continuous(paste0('Temperature (', '\U00B0', 'C)')) +
   scale_y_continuous('Change in P(moving) (%)', limits = c(-5, 5))
 
-ggsave('figures/actws-2024-jasper/p-moving-temperature-caribou.png',
+ggsave('figures/2024-actws-jasper/p-moving-temperature-caribou.png',
        width = 10, height = 6, dpi = 600)
 
 #' effect of `time_of_day`
@@ -78,7 +78,7 @@ tibble(time_of_day = seq(0, 24, by = 0.001),
                      labels = paste0(c(6, 12, 18), ':00')) +
   scale_y_continuous('Change in P(moving) (%)', limits = c(-5, 5))
 
-ggsave('figures/actws-2024-jasper/p-moving-tod-caribou.png',
+ggsave('figures/2024-actws-jasper/p-moving-tod-caribou.png',
        width = 10, height = 6, dpi = 600)
 
 #' effect of `doy`
@@ -102,7 +102,7 @@ tibble(time_of_day = 12,
   scale_y_continuous() +
   labs(x = 'Day of year', y = 'Change in P(moving) (%)')
 
-ggsave('figures/actws-2024-jasper/p-moving-doy-caribou.png',
+ggsave('figures/2024-actws-jasper/p-moving-doy-caribou.png',
        width = 10, height = 6, dpi = 600)
 
 #' effects of `temperature` on different `doy`s
@@ -132,7 +132,7 @@ expand.grid(temperature = seq(-30, 40, by = 0.1),
   scale_x_continuous(paste0('Temperature (', '\U00B0', 'C)')) +
   scale_y_continuous('Change in P(moving) (%)')
 
-ggsave('figures/actws-2024-jasper/p-moving-temperature-doy-caribou.png',
+ggsave('figures/2024-actws-jasper/p-moving-temperature-doy-caribou.png',
        width = 10, height = 6, dpi = 600)
 
 #' effect of `time_of_day` on different `doy`s
@@ -158,7 +158,7 @@ expand.grid(temperature = 0,
   labs(x = 'Time of day', y = 'Change in P(moving) (%)') +
   scale_x_continuous(expand = c(0, 0))
 
-ggsave('figures/actws-2024-jasper/p-moving-tod-doy-caribou.png',
+ggsave('figures/2024-actws-jasper/p-moving-tod-doy-caribou.png',
        width = 10, height = 6, dpi = 600)
 
 # speed given animal is moving ----
@@ -215,7 +215,7 @@ tibble(temperature = seq(-30, 40, by = 0.1),
   scale_x_continuous(paste0('Temperature (', '\U00B0', 'C)'))+
   ylab('Change in speed (%)')
 
-ggsave('figures/actws-2024-jasper/speed-temperature-caribou.png',
+ggsave('figures/2024-actws-jasper/speed-temperature-caribou.png',
        width = 10, height = 6, dpi = 600)
 
 #' effect of `time_of_day`
@@ -238,7 +238,7 @@ tibble(time_of_day = seq(0, 24, by = 0.001),
                      labels = paste0(c(0, 6, 12, 18), ':00')) +
   ylab('Change in speed (%)')
 
-ggsave('figures/actws-2024-jasper/speed-tod-caribou.png',
+ggsave('figures/2024-actws-jasper/speed-tod-caribou.png',
        width = 10, height = 6, dpi = 600)
 
 #' effect of `doy`
@@ -261,7 +261,7 @@ tibble(time_of_day = 12,
   scale_x_date(expand = c(0, 0)) +
   labs(x = 'Day of year', y = 'Change in speed (%)')
 
-ggsave('figures/actws-2024-jasper/speed-doy-caribou.png',
+ggsave('figures/2024-actws-jasper/speed-doy-caribou.png',
        width = 10, height = 6, dpi = 600)
 
 #' effects of `time_of_day` on different `doy`s
@@ -287,7 +287,7 @@ expand.grid(temperature = 0,
   geom_line(aes(time_of_day, mu), color = '#EE6677', linewidth =  1) +
   labs(x = 'Time of day', y = 'Change in speed (%)')
 
-ggsave('figures/actws-2024-jasper/speed-tod-doy-caribou.png',
+ggsave('figures/2024-actws-jasper/speed-tod-doy-caribou.png',
        width = 10, height = 6, dpi = 600)
 
 #' effects of `temperature` on different DOYs
@@ -317,7 +317,7 @@ expand.grid(temperature = seq(-30, 40, by = 0.1),
   labs(x = paste0('Temperature (', '\U00B0', 'C)'),
        y = 'Change in speed (%)')
 
-ggsave('figures/actws-2024-jasper/speed-temperature-doy-caribou.png',
+ggsave('figures/2024-actws-jasper/speed-temperature-doy-caribou.png',
        width = 10, height = 6, dpi = 600)
 
 # future predictions ----
@@ -423,7 +423,7 @@ p_cc_mov <-
   scale_x_continuous(NULL, breaks = c(2024, 2040, 2060, 2080, 2100)) +
   theme(legend.position = 'top'); p_cc_mov
 
-ggsave('figures/actws-2024-jasper/p-moving-caribou-cc-preds.png', p_cc_mov,
+ggsave('figures/2024-actws-jasper/p-moving-caribou-cc-preds.png', p_cc_mov,
        width = 10, height = 6, dpi = 600)
 
 # average speed trends by year
@@ -441,7 +441,7 @@ p_cc_speed <-
   ylim(c(-5, NA)) +
   theme(legend.position = 'top'); p_cc_speed
 
-ggsave('figures/actws-2024-jasper/speed-caribou-cc-preds.png',
+ggsave('figures/2024-actws-jasper/speed-caribou-cc-preds.png',
        p_cc_speed, width = 10, height = 6, dpi = 600)
 
 # average speed trends by month for four years
@@ -465,7 +465,7 @@ preds_cc_month %>%
   labs(x = NULL, y = 'Change in speed (%)') +
   theme(legend.position = 'top')
 
-ggsave('figures/actws-2024-jasper/speed-caribou-cc-preds-doy.png',
+ggsave('figures/2024-actws-jasper/speed-caribou-cc-preds-doy.png',
        p_cc_speed, width = 10, height = 6, dpi = 600)
 
 # total movement
@@ -483,5 +483,5 @@ p_cc_distance <-
   ylim(c(-5, NA)) +
   theme(legend.position = 'top'); p_cc_distance
 
-ggsave('figures/actws-2024-jasper/distance-caribou-cc-preds.png',
+ggsave('figures/2024-actws-jasper/distance-caribou-cc-preds.png',
        p_cc_distance, width = 10, height = 6, dpi = 600)
