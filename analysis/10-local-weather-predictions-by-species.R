@@ -8,7 +8,6 @@ library('ggplot2')   # for fancy plots
 library('khroma')    # for colorblind-friendly color palettes
 library('cowplot')   # for fancy multi-panel plots
 library('sf')        # for spatial data
-library('ctmm')      # for movement models and utilization distributions
 library('terra')     # for rasters
 source('analysis/figures/default-ggplot-theme.R') # bold text and no grids
 plot_scheme(PAL, colours = TRUE)
@@ -25,6 +24,7 @@ ANIMALS <- readr::read_csv('data/tracking-data/telemetry-metadata.csv',
 if(file.exists('data/species-uds-99.9-percent.rds')) {
   uds <- readRDS('data/species-uds-99.9-percent.rds')
 } else {
+  library('ctmm') # for movement models and utilization distributions
   uds <-
     readRDS('models/movement-models-akdes-2024-06-06.rds') %>%
     group_by(species) %>%
@@ -57,10 +57,18 @@ if(file.exists('data/species-uds-99.9-percent.rds')) {
   saveRDS(uds, 'data/species-uds-99.9-percent.rds')
 }
 
+ud_bbox <- unnest(uds, akdes) %>% st_as_sf() %>% st_bbox()
+
+# extract temperatures for each species
+temps <- readRDS('data/weather-projections.rds') %>%
+  # filtering to the extent of the observed ranges in BC
+  filter(long >= ud_bbox['xmin'], long <= ud_bbox['xmax'],
+         lat >= ud_bbox['ymin'], lat <= ud_bbox['ymax'])
+
 # find unique locations in BC
 unique_locs <-
-  readRDS('data/climate-yearly-projections-2025-2100-only-2025-01-21.rds') %>%
-  transmute(long = longitude, lat = latitude) %>%
+  temps %>%
+  select(long, lat) %>%
   slice(1, .by = c(long, lat))
 plot(unique_locs)
 
@@ -88,34 +96,25 @@ unique_locs_spp <- mutate(
 plot_grid(plotlist = map(uds$species, function(.sp) {
   ggplot() +
     geom_sf(aes(geometry = x), unnest(filter(uds, species == .sp), akdes))+
+    geom_point(aes(long, lat), filter(unique_locs_spp, species == .sp),
+               size = 0.1) +
     geom_point(aes(long, lat), filter(unique_locs_spp, species == .sp)) +
     labs(x = NULL, y = NULL, title = .sp)
 }))
 
-gc() # clean up
-
-# extract temperatures for each species
-temps <- readRDS('data/weather-projections.rds') %>%
-  # cut the dataset size in half by filtering to the observed ranges in BC
-  filter(long >= min(unique_locs_spp$long),
-         long <= max(unique_locs_spp$long),
-         lat >= min(unique_locs_spp$lat),
-         lat <= max(unique_locs_spp$lat))
-
-map(unique(unique_locs_spp$species), \(.s) {
+map(unique(unique_locs_spp$species)[5], \(.s) {
   # find the locations for the species of interest
   .u <- filter(unique_locs_spp, species == .s)
   
+  # only keep the locations within each species' set of 99.9% UDs
   # filter to the extent of the species for faster wrangling
-  .t <- filter(temps,
-               long >= min(.u$long),
-               long <= max(.u$long),
-               lat >= min(.u$lat),
-               lat <= max(.u$lat))
-  
-  # only keep the locations within each species set of 99.9% UDs
-  left_join(.u, .t, by = c('long', 'lat')) %>%
+  filter(temps,
+         long >= min(.u$long) - 1, # widen the bounds by 2 degrees
+         long <= max(.u$long) + 1,
+         lat >= min(.u$lat) - 1,
+         lat <= max(.u$lat) + 1) %>%
+    right_join(.u, by = c('long', 'lat')) %>%
     saveRDS(paste0('data/weather-projections-', .s, '.rds'))
   
   return(as.character(.s))
-})
+}, .progress = TRUE)
