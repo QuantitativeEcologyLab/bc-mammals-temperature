@@ -199,7 +199,7 @@ expand.grid(temperature = c(-15, 0, 15),
 ggsave('figures/2024-actws-jasper/rsf-water-temperature.png',
        width = 15, height = 6, dpi = 600)
 
-# habitat quality for the current habitat ----
+# habitat selection strength for the current habitat ----
 # create custom color palettes for each resource
 bounds <- readRDS('data/tracking-data/all-tracking-data-cleaned-2024-02-22-13-49.rds') %>%
   filter(dataset_name == 'Rangifer_tarandus_boreal') %>%
@@ -247,7 +247,7 @@ resources %>%
   facet_wrap(~ name, scales = 'free') +
   geom_histogram(aes(value), bins = 10)
 
-# predict habitat quality at 15 degrees C ----
+# predict habitat selection strength at 15 degrees C ----
 preds_habitat <-
   expand_grid(res = list(resources),
               temperature = c(-15, 0, 15)) %>%
@@ -294,7 +294,7 @@ p_resources <-
 ggsave('figures/2024-actws-jasper/rsf-caribou-resources.png', p_resources,
        width = 12, height = 6, dpi = 600)
 
-# figure of habitat quality for different temperatures
+# figure of habitat selection strength for different temperatures
 p_habitat <-
   preds_habitat %>%
   mutate(lambda = lambda / 4, # to make differences more visible
@@ -401,7 +401,7 @@ p_preds_cc <-
   scale_fill_brewer('Climate change scenario',
                     type = 'div', palette = 5, direction = -1,
                     aesthetics = c('color', 'fill')) +
-  labs(x = NULL, y = 'Relative habitat quality') +
+  labs(x = NULL, y = 'Relative habitat selection strength') +
   scale_y_continuous(limits = c(0.5, 2), trans = 'log2') +
   theme(legend.position = 'top'); p_preds_cc
 
