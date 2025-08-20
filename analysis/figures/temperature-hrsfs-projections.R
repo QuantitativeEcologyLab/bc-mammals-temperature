@@ -61,8 +61,8 @@ if(file.exists('data/cc-hrsf-projections.rds')) {
           function(p_fn) {
             .nd <-
               readRDS(p_fn) %>%
-              filter(year >= 2020) %>%
-              # make sure only the necessary column are kept
+              filter(year >= 2025) %>%
+              # make sure only the necessary columns are kept
               transmute(
                 scenario,
                 year,
@@ -74,8 +74,7 @@ if(file.exists('data/cc-hrsf-projections.rds')) {
                 forest_perc = terra::extract(f, tibble(long, lat))[, 2],
                 elevation_m = terra::extract(e, tibble(long, lat))[, 2],
                 dist_water_m = terra::extract(w, tibble(long, lat))[, 2]) %>%
-              ungroup() %>%
-              select(! species)
+              ungroup()
             
             #' use an `animal` from the model to use `discrete = TRUE`
             #' even though discretization results in some approximation,
@@ -113,7 +112,7 @@ if(file.exists('data/cc-hrsf-projections.rds')) {
       saveRDS(paste0('data/cc-hrsf-projections-', sp, '.rds'))
     
     return(sp)
-  })
+  }, .progress = TRUE)
   
   cc_proj <-
     list.files('data', 'cc-hrsf-projections-', full.names = TRUE) %>%
@@ -124,7 +123,7 @@ if(file.exists('data/cc-hrsf-projections.rds')) {
   saveRDS(cc_proj, 'data/cc-hrsf-projections.rds')
 }
 
-# figures of habitat quality ----
+# figures of habitat selection strength ----
 cc_proj %>%
   filter(year >= 2025) %>% # 2025 is the reference year
   ggplot(aes(x = year, group = scenario)) +
@@ -137,7 +136,7 @@ cc_proj %>%
   geom_line(aes(y = l_median), lwd = 1.5) +
   geom_line(aes(y = l_median, color = scenario), lwd = 1) +
   scale_x_continuous(NULL, breaks = c(2025, 2050, 2075, 2100)) +
-  scale_y_continuous('Relative change in RSS') +
+  scale_y_continuous('Pixel-level relative change in RSS') +
   scale_color_brewer('Climate change scenario', type = 'div', palette = 5,
                      direction = -1, aesthetics = c('color', 'fill')) +
   theme(legend.position = 'inside', legend.position.inside = c(5/6, 1/6))
