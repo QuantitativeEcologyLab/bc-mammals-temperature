@@ -11,7 +11,7 @@ library('khroma')    # for colorblind-friendly palettes
 library('stringr')   # for working with strings
 library('cowplot')   # for plots in grids (for free scales)
 source('analysis/figures/default-ggplot-theme.R') # for consistent theme
-source('functions/get_legend.R') # 
+source('functions/get_legend.R') # to extract legens from ggplots
 source('data/bc-shapefile.R') # import shapefile of bc
 
 colorRampPalette(RColorBrewer::brewer.pal(11, 'PiYG'))(1e3) %>%
@@ -27,7 +27,7 @@ if(file.exists('data/cc-hrsf-projections-local-2100.rds')) {
   
   # terms to exclude from the predictions
   SM <- gratia::smooths(readRDS('models/rsf-Oreamnos americanus-2025-01-20.rds'))
-  EXCLUDE <- SM[grepl('animal', SM)]
+  EXCLUDE <- SM[grepl('animal', SM)] # drop all individual-specific smooths
   
   # find model files and drop those with no temperature smooths
   MODEL_FILES <- list.files('models', '^rsf-', full.names = TRUE)
@@ -51,6 +51,7 @@ if(file.exists('data/cc-hrsf-projections-local-2100.rds')) {
         lab = gsub('southern mountain', '(s. mountain)', x = species) %>%
           gsub('boreal', '(boreal)', x = .)) %>%
         mutate(
+          # add bold and italic to labels
           lab = SPECIES_LABS[map_int(lab, \(x) which(SPECIES == x))],
           # get predictions based on the file name of the cc projections
           preds = map(
@@ -65,16 +66,15 @@ if(file.exists('data/cc-hrsf-projections-local-2100.rds')) {
                   year,
                   long,
                   lat,
+                  #' use an `animal` from the model to use `discrete = TRUE`
                   animal = rsf$model$animal[1],
                   temperature_C = temp_c,
                   weight, # for weather quantiles
                   forest_perc = terra::extract(f, tibble(long, lat))[, 2],
                   elevation_m = terra::extract(e, tibble(long, lat))[, 2],
                   dist_water_m = terra::extract(w, tibble(long, lat))[, 2]) %>%
-                ungroup() %>%
-                select(! species)
+                ungroup()
               
-              #' use an `animal` from the model to use `discrete = TRUE`
               .nd %>%
                 mutate(l = predict.bam(rsf, newdata = .nd, type = 'response',
                                        se.fit = FALSE, exclude = EXCLUDE,
@@ -110,7 +110,7 @@ if(file.exists('data/cc-hrsf-projections-local-2100.rds')) {
 }
 
 # figure of estimated speeds for each species ----
-z_breaks <- seq(-log2(1.5), log2(1.5), length.out = 5)
+z_breaks <- seq(-log2(1.25), log2(1.25), length.out = 5)
 
 make_plot <- function(sp, y_facets = FALSE, get_legend = FALSE,
                       reproject = TRUE) {
@@ -141,15 +141,14 @@ make_plot <- function(sp, y_facets = FALSE, get_legend = FALSE,
     coord_sf(crs = 'EPSG:3005') +
     facet_grid(scenario ~ lab, labeller = label_parsed) +
     geom_raster(aes(long, lat, fill = log2(l))) +
-    scale_fill_distiller(name = 'Relative change in selection strength',
+    scale_fill_distiller(name = 'Pixel-level relative change in selection strength',
                          palette = 'PiYG', limits = range(z_breaks),
                          breaks = z_breaks,
                          labels = \(x) round(2^x, 2),
                          direction = 1) +
-    scale_x_continuous(NULL) +
-    scale_y_continuous(NULL) +
+    labs(x = NULL, y = NULL) +
     ggspatial::annotation_scale(style = 'ticks', text_cex = 0.6,
-                                location = 'tr', text_face = 'bold') +
+                                location = 'bl', text_face = 'bold') +
     theme(legend.position = 'none', axis.ticks = element_blank(),
           axis.text = element_blank(),
           panel.background = element_rect(fill = 'grey'))
@@ -169,34 +168,19 @@ make_plot <- function(sp, y_facets = FALSE, get_legend = FALSE,
 
 plot_list <- map(sort(as.character(SPECIES_LABS)), make_plot)
 plot_list[[7]] <- make_plot('bolditalic(Ursus~arctos~horribilis)',
-                            y_facets = TRUE)
+                            y_facets = TRUE) # add vertical facet labels
 
-# get approximate relative widths
-cc_proj %>%
-  arrange(lab) %>%
-  summarize(ratio = diff(range(long)) / diff(range(lat)),
-            .by = lab) %>%
-  pull(ratio) %>%
-  round(2) %>%
-  cat(sep = ', ')
+rel_w <- c(1, 0.95, 1.42, 1.36, 1.015, 1.23, 1.49)
 
-plot_grid(
-  make_plot(SPECIES_LABS[2], get_legend = TRUE), 
-  plot_grid(plotlist = plot_list, nrow = 1,
-            rel_widths = c(1.32, 1.1, 1.67, 1.64, 1.57, 1.58, 1.64)),
-  ncol = 1, rel_heights = c(0.05, 1))
+plot_grid(make_plot(SPECIES_LABS[1], get_legend = TRUE), 
+          plot_grid(plotlist = plot_list, nrow = 1, rel_widths = rel_w),
+          ncol = 1, rel_heights = c(0.05, 1))
 
-ggsave('figures/local-rss-2100.png', width = 15, height = 9.65,
-       units = 'in', dpi = 600, bg = 'white', scale = 1.2)
-
-cc_proj %>%
-  summarize(mean = quantile(l, 0.95) > 1,
-            .by = c(lab, scenario)) %>%
-  filter(mean) %>%
-  arrange(lab)
+ggsave('figures/local-rss-2100.png',
+       width = 17.8, height = 12.4, units = 'in', dpi = 600, bg = 'white')
 
 # maps of resources ----
-plot_resources <- function(sp, resource = 'forest_perc') {
+plot_resources <- function(sp, resource) {
   .d <-
     cc_proj %>%
     filter(scenario == scenario[1], lab == sp)
@@ -215,10 +199,9 @@ plot_resources <- function(sp, resource = 'forest_perc') {
     coord_sf(crs = 'EPSG:3005') +
     facet_grid(. ~ lab, labeller = label_parsed) +
     geom_raster(aes(x, y, fill = z)) +
-    scale_x_continuous(NULL) +
-    scale_y_continuous(NULL, expand = c(0.2, 0)) +
+    labs(x = NULL, y = NULL) +
     ggspatial::annotation_scale(style = 'ticks', text_cex = 0.6,
-                                location = 'tr', text_face = 'bold') +
+                                location = 'bl', text_face = 'bold') +
     theme(legend.position = 'none', axis.ticks = element_blank(),
           axis.text = element_blank(),
           panel.background = element_rect(fill = 'grey'))
@@ -239,23 +222,25 @@ plot_resources <- function(sp, resource = 'forest_perc') {
   return(p)
 }
 
-trees <- map(sort(as.character(SPECIES_LABS)), plot_resources)
-elevs <- map(sort(as.character(SPECIES_LABS)),
-             \(.z) plot_resources(.z, resource = 'elevation_m'))
-water <- map(sort(as.character(SPECIES_LABS)),
-             \(.z) plot_resources(.z, resource = 'dist_water_m'))
+make_row <- function(resource) {
+  plot_list <- map(sort(as.character(SPECIES_LABS)),
+                   \(.z) plot_resources(.z, resource = resource))
+  
+  return(plot_list)
+}
+
+trees <- make_row('forest_perc')
+elevs <- make_row('elevation_m')
+water <- make_row('dist_water_m')
 
 plot_grid(
   get_legend(trees[[7]]),
-  plot_grid(plotlist = trees, nrow = 1,
-            rel_widths = c(1.32, 1.1, 1.67, 1.64, 1.57, 1.58, 1.64)),
+  plot_grid(plotlist = trees, nrow = 1, rel_widths = rel_w),
   get_legend(elevs[[7]]),
-  plot_grid(plotlist = elevs, nrow = 1,
-            rel_widths = c(1.32, 1.1, 1.67, 1.64, 1.57, 1.58, 1.64)),
+  plot_grid(plotlist = elevs, nrow = 1, rel_widths = rel_w),
   get_legend(water[[7]]),
-  plot_grid(plotlist = water, nrow = 1,
-            rel_widths = c(1.32, 1.1, 1.67, 1.64, 1.57, 1.58, 1.64)),
+  plot_grid(plotlist = water, nrow = 1, rel_widths = rel_w),
   ncol = 1, rel_heights = rep(c(0.2, 1), 3))
 
-ggsave('figures/local-resources.png', width = 15, height = 10,
-       units = 'in', dpi = 600, bg = 'white', scale = 1.5)
+ggsave('figures/local-resources.png',
+       width = 20, height = 12, units = 'in', dpi = 600, bg = 'white')
