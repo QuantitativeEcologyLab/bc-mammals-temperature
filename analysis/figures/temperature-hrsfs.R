@@ -203,13 +203,12 @@ p_se <-
              switch = 'y') +
   geom_raster(aes(temperature_C, x, fill = se.fit)) +
   geom_contour(aes(temperature_C, x, z = as.numeric(too_far_1)),
-               color = 'grey50', linewidth = 0.25) +
-  geom_contour(aes(temperature_C, x, z = se.fit), color = 'black') +
+               color = 'black', linewidth = 0.25) +
+  geom_contour(aes(temperature_C, x, z = se.fit), color = 'grey50') +
   scale_x_continuous(paste0('Temperature (\U00B0', 'C)'), expand = c(0, 0),
                      breaks = c(-20, 0, 20)) +
   scale_y_continuous(NULL, expand = c(0, 0)) +
-  scale_fill_iridescent(name = 'Standard error in log(RSS)',
-                        limits = c(0, NA)) +
+  scale_fill_lajolla(name = 'Standard error in log(RSS)') +
   theme(strip.placement = 'outside', strip.background.y = element_blank(),
         strip.text.y = element_text(size = 11), legend.position = 'top',
         panel.background = element_rect(fill = 'grey90'),

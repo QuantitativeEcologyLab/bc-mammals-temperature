@@ -309,11 +309,10 @@ distance_temp <-
 
 # interaction term plots ----
 # color palettes
-s_pal <- colorRampPalette(c('#BD4301', '#EBE8DB', '#560A63'))(1e3)
-plot_scheme_colorblind(s_pal)
 d_pal <- colorRampPalette(c('#9A2600', '#EBE8DB', '#00605C'))(1e3)
 plot_scheme_colorblind(d_pal)
-plot_scheme_colorblind(c(color('acton')(1e3), s_pal, d_pal))
+c(color('acton')(1e3), color('broc', reverse = TRUE)(1e3), d_pal) %>%
+  plot_scheme_colorblind()
 
 #' exclude values further from an observation than `DIST * 100%` of the
 #' range of the observed data
@@ -414,9 +413,9 @@ s_tod_int <-
                      breaks = c(-20, 0, 20)) +
   scale_y_continuous('Time of day (PDT)', expand = c(0, 0),
                      breaks = tod_breaks, labels = tod_labs) +
-  scale_fill_gradientn(name = 'Relative change in speed', colors = s_pal,
-                       limits = range(z_breaks), breaks = z_breaks,
-                       labels = \(x) round(2^x, 2)) +
+  scale_fill_broc(name = 'Relative change in speed', 
+                  limits = range(z_breaks), breaks = z_breaks,
+                  labels = \(x) round(2^x, 2)) +
   theme(panel.background = element_rect(fill = 'grey90'),
         legend.position = 'none', legend.key.width = rel(1.5),
         legend.justification = 'center', legend.direction = 'horizontal')
@@ -489,10 +488,9 @@ s_doy_int <-
                      breaks = c(-20, 0, 20)) +
   scale_y_continuous('Day of year', expand = c(0, 0),
                      breaks = doy_breaks, labels = doy_labs) +
-  scale_fill_gradientn(name = 'Relative change in speed', colors = s_pal,
-                       limits = range(z_breaks),
-                       breaks = z_breaks,
-                       labels = \(x) round(2^x, 2)) +
+  scale_fill_broc(name = 'Relative change in speed', 
+                  limits = range(z_breaks), breaks = z_breaks,
+                  labels = \(x) round(2^x, 2)) +
   theme(panel.background = element_rect(fill = 'grey90'),
         legend.position = 'none', legend.key.width = rel(1.5),
         legend.justification = 'center', legend.direction = 'horizontal')
