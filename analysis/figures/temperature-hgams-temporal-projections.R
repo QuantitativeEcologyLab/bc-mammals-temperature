@@ -100,7 +100,7 @@ if(file.exists('data/cc-hgam-projections.rds')) {
 p_p_mov <-
   ggplot(cc_proj, aes(year, p_median, group = scenario)) +
   facet_wrap(~ species, scales = 'fixed', drop = FALSE,
-             labeller = label_parsed) +
+             labeller = label_parsed, nrow = 2) +
   geom_hline(aes(yintercept = 1), lty = 'dashed') +
   geom_ribbon(aes(ymin = p_lwr_05, ymax = p_upr_95,
                   fill = factor(scenario, levels = rev(levels(scenario))),
@@ -113,14 +113,14 @@ p_p_mov <-
   labs(x = NULL, y = 'Relative change in annual P(moving)') +
   scale_x_continuous(breaks = c(2025, 2050, 2075, 2100)) +
   theme(legend.position = 'inside',
-        legend.position.inside = c(5/6, 1/6))
+        legend.position.inside = c(7/8, 1/4))
 ggsave('figures/p-moving-local-cc-predictions.png', p_p_mov,
-       width = 10, height = 6.67, dpi = 600, bg = 'white')
+       width = 12, height = 6.67, dpi = 600, bg = 'white')
 
 p_s <-
   ggplot(cc_proj, aes(year, s_median, group = scenario)) +
   facet_wrap(~ species, scales = 'fixed', drop = FALSE,
-             labeller = label_parsed) +
+             labeller = label_parsed, nrow = 2) +
   geom_ribbon(aes(ymin = s_lwr_05, ymax = s_upr_95,
                   fill = factor(scenario, levels = rev(levels(scenario))),
                   color = scenario), linewidth = 0.2, alpha = 0.25) +
@@ -133,14 +133,14 @@ p_s <-
   labs(x = NULL, y = 'Relative change in annual speed when moving') +
   scale_x_continuous(breaks = c(2025, 2050, 2075, 2100)) +
   theme(legend.position = 'inside',
-        legend.position.inside = c(5/6, 1/6))
+        legend.position.inside = c(7/8, 1/4))
 ggsave('figures/speed-local-cc-predictions.png', p_s,
-       width = 10, height = 6.67, dpi = 600, bg = 'white')
+       width = 12, height = 6.67, dpi = 600, bg = 'white')
 
 p_d <-
   ggplot(cc_proj, aes(year, d_median, group = scenario)) +
   facet_wrap(~ species, scales = 'fixed', drop = FALSE,
-             labeller = label_parsed) +
+             labeller = label_parsed, nrow = 2) +
   geom_ribbon(aes(ymin = d_lwr_05, ymax = d_upr_95,
                   fill = factor(scenario, levels = rev(levels(scenario))),
                   color = scenario), linewidth = 0.2, alpha = 0.25) +
@@ -153,6 +153,6 @@ p_d <-
   labs(x = NULL, y = 'Relative change in annual distance travelled') +
   scale_x_continuous(breaks = c(2025, 2050, 2075, 2100)) +
   theme(legend.position = 'inside',
-        legend.position.inside = c(5/6, 1/6)); p_d
+        legend.position.inside = c(7/8, 1/4)); p_d
 ggsave('figures/distance-travelled-local-cc-predictions.png', p_d,
-       width = 10, height = 6.67, dpi = 600, bg = 'white')
+       width = 12, height = 6.67, dpi = 600, bg = 'white')

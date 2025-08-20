@@ -127,7 +127,7 @@ if(file.exists('data/cc-hrsf-projections.rds')) {
 cc_proj %>%
   filter(year >= 2025) %>% # 2025 is the reference year
   ggplot(aes(x = year, group = scenario)) +
-  facet_wrap(~ lab, scales = 'fixed', labeller = label_parsed) +
+  facet_wrap(~ lab, scales = 'fixed', labeller = label_parsed, nrow = 2) +
   geom_hline(yintercept = 1, color = 'black', lty = 'dashed') +
   geom_line(aes(y = l_median, color = scenario), lwd = 0) +
   geom_ribbon(aes(ymin = l_05, ymax = l_95,
@@ -139,10 +139,10 @@ cc_proj %>%
   scale_y_continuous('Pixel-level relative change in RSS') +
   scale_color_brewer('Climate change scenario', type = 'div', palette = 5,
                      direction = -1, aesthetics = c('color', 'fill')) +
-  theme(legend.position = 'inside', legend.position.inside = c(5/6, 1/6))
+  theme(legend.position = 'inside', legend.position.inside = c(7/8, 1/4))
 
 ggsave('figures/rss-local-cc-predictions.png',
-       width = 10, height = 6.67, dpi = 600, bg = 'white')
+       width = 12, height = 6.67, dpi = 600, bg = 'white')
 
 cc_proj %>%
   filter(year >= 2025) %>% # 2025 is the reference year

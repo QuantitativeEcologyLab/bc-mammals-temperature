@@ -473,8 +473,10 @@ fits <- tibble(
 
 p_fits <-
   fits %>%
+  mutate(fits_wo = if_else(fits_wo < -15, -15, fits_wo),
+         fits_w = if_else(fits_w < -15, -15, fits_w)) %>%
   ggplot(aes(fits_wo, fits_w)) +
-  facet_wrap(~ lab, labeller = label_parsed, scales = 'free') +
+  facet_wrap(~ lab, labeller = label_parsed, scales = 'free', nrow = 2) +
   geom_hex(aes(fill = log10(after_stat(count)))) +
   geom_abline(slope = 1, intercept = 0, color = 'black') +
   labs(x = 'log(RSS) without temperature',
@@ -482,9 +484,11 @@ p_fits <-
   scale_fill_iridescent(name = expression(bold(Count~(log['10']~scale))),
                         range = c(0.3, 1), breaks = (0:3) * 2,
                         labels = round(10^(c(0:3) * 2))) +
-  theme(legend.position = 'inside', legend.position.inside = c(5/6, 1/6))
+  theme(legend.position = 'inside', legend.position.inside = c(7/8, 1/4))
 
 ggsave('figures/hrsf-with-without-temp-prediction-agreement.png',
-       plot = p_fits, width = 8, height = 8, units = 'in', dpi = 600,
+       plot = p_fits, width = 10, height = 5, units = 'in', dpi = 600,
        bg = 'white')
-beepr::beep()
+
+round(mean(c(fits$fits_w < -20, fits$fits_wo < -20)) * 100, 2) %>%
+  paste0('%') # 0.41%

@@ -262,12 +262,11 @@ if(file.exists('models/binomial-gam.rds')) {
 }
 
 # check predictions ----
-p_op <- 
+p_op <-
   transmute(d,
             lab,
             moving,
-            est = predict(m_1, type = 'response') %>%
-              round(2)) %>%
+            est = round(predict(m_1, type = 'response'), 2)) %>%
   group_by(lab, est) %>%
   summarise(empirical_mean = mean(moving),
             n = n(),
@@ -275,14 +274,14 @@ p_op <-
             lwr = empirical_mean - se,
             upr = empirical_mean + se,
             .groups = 'drop') %>%
-  ggplot(aes(est, empirical_mean, color = log2(n))) +
+  ggplot(aes(est, empirical_mean, color = log10(n))) +
   facet_wrap(~ lab, nrow = 2, labeller = label_parsed) +
-  geom_abline(slope = 1, intercept = 0, color = 'grey') +
   geom_errorbar(aes(est, ymin = lwr, ymax = upr), width = 0, alpha = 0.3) +
   geom_point() +
+  geom_abline(slope = 1, intercept = 0, color = 'black') +
   lims(x = c(0, 1), y = c(0, 1)) +
-  scale_color_viridis_c(breaks = 4 * (0:5), labels = 2^(2 * 0:5),
-                        limits = c(0, 16)) +
+  scale_color_iridescent(name = expression(bold(Count~(log['10']~scale))),
+                         range = c(0.3, 1), labels = \(x) round(10^(x))) +
   labs(x = 'Predicted P(moving)', y = 'Observed P(moving)') +
   theme(legend.position = 'inside', legend.position.inside = c(0.875, 0.25))
 
@@ -400,7 +399,7 @@ s_op <-
   ylim(c(0, NA)) +
   labs(x = 'Predicted speed (m/s)', y = 'Observed speed (m/s)') +
   guides(color = guide_legend(override.aes = list(alpha = 1, size = 1))) +
-  theme(legend.position = 'top')
+  theme(legend.position = 'inside', legend.position.inside = c(0.875, 0.25))
 
 ggsave('figures/speed-observed-vs-predicted.png', s_op,
        width = 12, height = 6, dpi = 600, bg = 'white')
