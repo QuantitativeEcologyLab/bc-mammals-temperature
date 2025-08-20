@@ -11,7 +11,7 @@ library('khroma')    # for colorblind-friendly palettes
 library('stringr')   # for working with strings
 library('cowplot')   # for plots in grids (for free scales)
 source('analysis/figures/default-ggplot-theme.R') # for consistent theme
-source('functions/get_legend.R') # 
+source('functions/get_legend.R') #' cowplot's `get_legend()` fails (v1.1.3)
 source('data/bc-shapefile.R') # import shapefile of bc
 
 colorRampPalette(RColorBrewer::brewer.pal(11, 'PuOr'))(1e3) %>%
@@ -45,8 +45,11 @@ if(file.exists('data/cc-hgam-projections-local-2100.rds')) {
               s = weighted.mean(s, w = weight),
               d = weighted.mean(d, w = weight),
               .groups = 'drop') %>%
-    # divide by mean of 2025 to find relative change since 2025
-    group_by(species) %>%
+    # divide by mean in 2025 at each pixel to find rel change since 2025
+    # grouping by pixel so that we look at the pixel-level change
+    # if we don't then values that are higher than the average will show as
+    # higher despite not being an increase
+    group_by(species, long, lat) %>%
     mutate(p_ref = mean(p[year == 2025]),
            s_ref = mean(s[year == 2025]),
            d_ref = mean(d[year == 2025])) %>%
@@ -74,13 +77,31 @@ if(file.exists('data/cc-hgam-projections-local-2100.rds')) {
 }
 
 # figure of estimated speeds for each species ----
-z_breaks <- seq(-log2(1.5), log2(1.5), length.out = 5)
+range(c(range(cc_proj$p), range(cc_proj$s), range(cc_proj$d)))
+
+z_breaks <- seq(log2(0.75), -log2(0.75), length.out = 5)
 
 make_plot <- function(sp, y_facets = FALSE, get_legend = FALSE,
-                      reproject = TRUE) {
-  sp_data <- cc_proj %>%
-    filter(species == sp) %>%
-    select(scenario, species, long, lat, d)
+                      reproject = TRUE, variable) {
+  if(variable == 'p') {
+    sp_data <- cc_proj %>%
+      filter(species == sp) %>%
+      select(scenario, species, long, lat, p)
+    z_lab <- 'probability of moving'
+  } else if(variable == 's') {
+    sp_data <- cc_proj %>%
+      filter(species == sp) %>%
+      select(scenario, species, long, lat, s)
+    z_lab <- 'speed when moving'
+  } else if(variable == 'd') {
+    sp_data <- cc_proj %>%
+      filter(species == sp) %>%
+      select(scenario, species, long, lat, d)
+    z_lab <- 'distance travelled'
+  } else stop('Please choose a variable among p, s, or d.')
+  
+  sp_data <- rename(sp_data, z = ncol(sp_data))
+  z_lab <- paste('Pixel-level relative change in', z_lab)
   
   if(reproject) {
     sp_data <- sp_data %>%
@@ -98,57 +119,56 @@ make_plot <- function(sp, y_facets = FALSE, get_legend = FALSE,
   
   p <- sp_data %>%
     # cap values for readability
-    mutate(d = case_when(d < 2^min(z_breaks) ~ 2^min(z_breaks) + 1e-10,
-                         d > 2^max(z_breaks) ~ 2^max(z_breaks) - 1e-10,
-                         TRUE ~ d)) %>%
+    mutate(z = case_when(z < 2^min(z_breaks) ~ 2^min(z_breaks) + 1e-10,
+                         z > 2^max(z_breaks) ~ 2^max(z_breaks) - 1e-10,
+                         TRUE ~ z)) %>%
     ggplot() +
     coord_sf(crs = 'EPSG:3005') +
     facet_grid(scenario ~ species, labeller = label_parsed) +
-    geom_raster(aes(long, lat, fill = log2(d))) +
-    scale_fill_distiller(name = 'Relative change in distance travelled',
+    geom_raster(aes(long, lat, fill = log2(z))) +
+    scale_fill_distiller(name = z_lab,
                          palette = 'PuOr', limits = range(z_breaks),
                          breaks = z_breaks,
                          labels = \(x) round(2^x, 2),
                          direction = 1) +
-    scale_x_continuous(NULL) +
-    scale_y_continuous(NULL, expand = c(0.2, 0)) +
     ggspatial::annotation_scale(style = 'ticks', text_cex = 0.6,
-                                location = 'tr', text_face = 'bold') +
+                                location = 'bl', text_face = 'bold') +
+    labs(x = NULL, y = NULL) +
     theme(legend.position = 'none', axis.ticks = element_blank(),
           axis.text = element_blank(),
           panel.background = element_rect(fill = 'grey'))
-
+  
   if(! y_facets) {
     p <- p + theme(strip.background.y = element_blank(),
                    strip.text.y = element_blank())
   }
-
+  
   if(get_legend) {
     p <- p + theme(legend.position = 'top', legend.key.width = rel(3))
     p <- get_legend(p)
   }
-
+  
   return(p)
 }
 
-plot_list <- map(sort(as.character(SPECIES_LABS)), make_plot)
-plot_list[[7]] <- make_plot('bolditalic(Ursus~arctos~horribilis)',
-                            y_facets = TRUE)
+make_full_plot <- function(variable) {
+  plot_list <- map(sort(as.character(SPECIES_LABS)),
+                   \(.sp) make_plot(sp = .sp, variable = variable))
+  plot_list[[7]] <- make_plot(sp = 'bolditalic(Ursus~arctos~horribilis)',
+                              y_facets = TRUE, variable = variable)
+  
+  plot_grid(
+    make_plot(SPECIES_LABS[1], get_legend = TRUE, variable = variable),
+    plot_grid(plotlist = plot_list, nrow = 1,
+              rel_widths = c(1, 0.95, 1.42, 1.36, 1.015, 1.23, 1.49)),
+    ncol = 1, rel_heights = c(0.05, 1))
+}
 
-# get approximate relative widths
-cc_proj %>%
-  arrange(species) %>%
-  summarize(ratio = diff(range(long)) / diff(range(lat)),
-            .by = species) %>%
-  pull(ratio) %>%
-  round(2) %>%
-  cat(sep = ', ')
+ggsave('figures/local-p-moving-2100.png', make_full_plot('p'),
+       width = 17.8, height = 12.4, units = 'in', dpi = 600, bg = 'white')
 
-plot_grid(
-  make_plot(SPECIES_LABS[1], get_legend = TRUE), 
-  plot_grid(plotlist = plot_list, nrow = 1,
-          rel_widths = c(1.32, 1.1, 1.67, 1.64, 1.57, 1.58, 1.64)),
-  ncol = 1, rel_heights = c(0.05, 1))
+ggsave('figures/local-speed-2100.png', make_full_plot('s'),
+       width = 17.8, height = 12.4, units = 'in', dpi = 600, bg = 'white')
 
-ggsave('figures/local-distance-2100.png', width = 15, height = 10,
-       units = 'in', dpi = 600, bg = 'white', scale = 1.5)
+ggsave('figures/local-distance-2100.png', make_full_plot('d'),
+       width = 17.8, height = 12.4, units = 'in', dpi = 600, bg = 'white')
