@@ -70,6 +70,76 @@ knitr::opts_chunk$set(echo = FALSE, out.width = '\\textwidth',
 knitr::include_graphics('../figures/moving-0-1-split.png')
 ```
 
+\noindent The two models for the probability of moving and speed when moving were fit using the code below:
+
+\footnotesize
+
+\singlespacing
+
+```{r hgam_1, eval=FALSE, echo=TRUE}
+m_moving <- bam(moving ~ # model estimating probability of moving
+                  # random intercept for each animal
+                  s(animal, bs = 're') +
+                  # fixed intercept for each species
+                  species +
+                  # to account for changes in behavior within days
+                  s(tod_pdt, by = species, k = 5, bs = 'cc') +
+                  # to account for changes in behavior within years
+                  s(doy, by = species, k = 5, bs = 'cc') +
+                  # species-level effect of temperature
+                  s(temp_c, by = species, k = 5, bs = 'tp') +
+                  # to account for seasonal changes in day length
+                  ti(doy, tod_pdt, by = species, k = 5, bs = c('cc', 'cc')) +
+                  # to account for changes in day nocturnality with temperature
+                  ti(temp_c, tod_pdt, by = species, k = 5, bs = c('tp', 'cc')) +
+                  # to account for changes in fur coats seasonally
+                  ti(temp_c, doy, by = species, k = 5, bs = c('tp', 'cc')) +
+                  # larger sampling intervals underestimate movement speed
+                  s(log(dt), k = 3) +
+                  s(log(dt), species, k = 3, bs = 'fs'),
+                family = binomial(link = 'logit'),
+                data = d,
+                method = 'fREML', # fast REML
+                discrete = TRUE, # discretize the covariates for faster computation
+                knots = list(tod_pdt = c(0, 1), doy = c(0.5, 366.5)), #' for `bs = 'cc'`
+                control = gam.control(trace = TRUE))
+```
+
+\clearpage
+
+```{r hgam_2, eval=FALSE, echo=TRUE}
+m_speed <- bam(speed_est ~ # model estimating speed when moving (i.e., speed > 0)
+                 # random intercept for each animal
+                 s(animal, bs = 're') +
+                 # fixed intercept for each species
+                 species +
+                 # to account for changes in behavior within days
+                 s(tod_pdt, by = species, k = 5, bs = 'cc') +
+                 # to account for changes in behavior within years
+                 s(doy, by = species, k = 5, bs = 'cc') +
+                 # species-level effect of temperature
+                 s(temp_c, by = species, k = 5, bs = 'tp') +
+                 # to account for seasonal changes in day length
+                 ti(doy, tod_pdt, by = species, k = 5, bs = c('cc', 'cc')) +
+                 # to account for changes in day nocturnality with temperature
+                 ti(temp_c, tod_pdt, by = species, k = 5, bs = c('tp', 'cc')) +
+                 # to account for changes in fur coats seasonally
+                 ti(temp_c, doy, by = species, k = 5, bs = c('tp', 'cc')) +
+                 # larger sampling intervals underestimate movement speed
+                 s(log(dt), k = 3) +
+                 s(log(dt), species, k = 3, bs = 'fs'),
+               family = Gamma(link = 'log'), # can use Gamma because no zeros
+               data = d_2,
+               method = 'fREML', # fast REML
+               discrete = TRUE, # discretize the covariates for faster computation
+               knots = list(tod_pdt = c(0, 1), doy = c(0.5, 366.5)), #' for `bs = 'cc'`
+               control = gam.control(trace = TRUE))
+```
+
+\normalsize
+
+\doublespacing
+
 ```{r data-hist, fig.cap="Histograms of the number of states (\\textbf{A}) and speed estimates (\\textbf{B}) over time of day (Pacific Daylight Time, PDT), day of year (Julian date), and air temperature."}
 knitr::include_graphics('../figures/temperature-movement-rates-hist.png')
 ```
@@ -112,6 +182,44 @@ knitr::include_graphics('../figures/speed-local-cc-predictions.png')
 
 # Effects of temperature on habitat selection
 
+\noindent Each species had a Hierarchical Resource Selection Function fit with the code below. See @aarts_estimating_2008 for additional information on fitting Resource Selection Functions using Poisson models.
+
+\singlespacing
+
+\footnotesize
+
+```{r rsf, eval=FALSE, echo=TRUE}
+rsf <- bam(detected ~ # 1 for telemetry locations, 0 for quadrature points
+             # species-level average resource preference
+             s(forest_perc, k = 4, bs = 'cr') +
+             s(elevation_m, k = 4, bs = 'cr') +
+             s(dist_water_m, k = 4, bs = 'cr') +
+             # animal-level deviations from the species-level average
+             s(animal, bs = 're') +
+             s(forest_perc, animal, k = 4, bs = 'fs', xt = list(bc = 'cr')) +
+             s(elevation_m, animal, k = 4, bs = 'fs', xt = list(bc = 'cr')) +
+             s(dist_water_m, animal, k = 4, bs = 'fs', xt = list(bc = 'cr')) +
+             # changes in preference with temperature
+             ti(forest_perc, temperature_C, k = 4, bs = 'cr') +
+             ti(elevation_m, temperature_C, k = 4, bs = 'cr') +
+             ti(dist_water_m, temperature_C, k = 4, bs = 'cr') +
+             # include marginals of temperature to post-stratify over afterwards
+             s(temperature_C, k = 4, bs = 'cr') +
+             s(temperature_C, animal, k = 4, bs = 'fs', xt = list(bc = 'cr')),
+           family = poisson(link = 'log'),
+           data = d,
+           weights = weight, # based on AKDE
+           subset = species == sp, # subset to the species of interest
+           method = 'fREML',
+           discrete = TRUE)
+```
+
+\normalsize
+
+\doublespacing
+
+\clearpage
+
 ```{r kept-hrsf}
 readr::read_csv('../data/tracking-data/telemetry-metadata.csv',
                 show_col_types = FALSE) %>%
@@ -133,9 +241,8 @@ readr::read_csv('../data/tracking-data/telemetry-metadata.csv',
                         n = sum(n)) %>%
               mutate(prop = n / sum(n))) %>%
   rename(Species = species, `Kept` = keep_for_RSF, Proportion = prop) %>%
-  knitr::kable(format = 'markdown', caption = "Number of animals (n) and proportion of animals (Proportion) used or excluded (Kept) when fitting the hierarchical resource selection function. The models only used animals that showed stationary range residency or two clear seasonal ranges within the tracking period. We excluded animals with insufficient data to estimate a range size and animals that migrated but did not establish clear ranges within the tracking period.")
+  knitr::kable(format = 'markdown', digits = 3, caption = "Number of animals (n) and proportion of animals (Proportion) used or excluded (Kept) when fitting the hierarchical resource selection function. The models only used animals that showed stationary range residency or two clear seasonal ranges within the tracking period. We excluded animals with insufficient data to estimate a range size and animals that migrated but did not establish clear ranges within the tracking period.")
 ```
-
 
 ```{r resources, fig.cap="Resource rasters used for each species' hierarchical resource selection function."}
 knitr::include_graphics('../figures/local-resources.png')
