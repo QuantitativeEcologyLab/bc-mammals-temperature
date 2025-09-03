@@ -161,9 +161,14 @@ p <-
   # elevation are extreme
   group_by(species, variable) %>%
   mutate(lambda = lambda / median(lambda),
-         lambda = if_else(species == 'Rangifer tarandus (boreal)' &
-                            variable == 'bold(Elevation~"(km)")',
-                          lambda / exp(4), lambda)) %>%
+         lambda = case_when(
+           species == 'Cervus canadensis' & variable == 'bold(Elevation~"(km)")' ~ lambda / exp(1),
+           species == 'Oreamnos americanus' & variable == 'bold(Elevation~"(km)")' ~ lambda * exp(0.5),
+           species == 'Rangifer tarandus (boreal)' & variable == 'bold(Elevation~"(km)")' ~ lambda / exp(4),
+           species == 'Oreamnos americanus' & variable == 'bold(Distance~from~water~"(km)")' ~ lambda * exp(0.5),
+           species == 'Rangifer tarandus (s. mountain)' & variable == 'bold(Distance~from~water~"(km)")' ~ lambda * exp(0.2),
+           species == 'Ursus arctos horribilis' & variable == 'bold(Distance~from~water~"(km)")' ~ lambda * exp(0.5),
+           .default = lambda)) %>%
   ungroup() %>%
   # cap at 2^(+/-LIM)
   mutate(log2_lambda = log2(lambda),
