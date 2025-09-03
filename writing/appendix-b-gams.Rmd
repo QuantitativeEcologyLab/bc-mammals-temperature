@@ -244,7 +244,7 @@ readr::read_csv('../data/tracking-data/telemetry-metadata.csv',
   knitr::kable(format = 'markdown', digits = 3, caption = "Number of animals (n) and proportion of animals (Proportion) used or excluded (Kept) when fitting the hierarchical resource selection function. The models only used animals that showed stationary range residency or two clear seasonal ranges within the tracking period. We excluded animals with insufficient data to estimate a range size and animals that migrated but did not establish clear ranges within the tracking period.")
 ```
 
-```{r resources, fig.cap="Resource rasters used for each species' hierarchical resource selection function."}
+```{r resources, fig.cap="Resource rasters used for each species' hierarchical resource selection function. All maps are shown in the BC Albers Equal Area Conic projection (EPSG:3005)."}
 knitr::include_graphics('../figures/local-resources.png')
 ```
 
