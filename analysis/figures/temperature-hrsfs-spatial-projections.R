@@ -188,7 +188,7 @@ cc_proj %>%
   facet_wrap(~ lab, scales = 'free_y', labeller = label_parsed, nrow = 2) +
   geom_density(alpha = 0.25) +
   geom_vline(xintercept = 1, color = 'black', lty = 'dashed') +
-  scale_x_continuous('Pixel-level relative change in RSS in 2100') +
+  scale_x_continuous('Relative change in RSS in 2100') +
   ylab('Density') +
   scale_color_brewer('Climate change scenario', type = 'div', palette = 5,
                      direction = -1, aesthetics = c('color', 'fill')) +
