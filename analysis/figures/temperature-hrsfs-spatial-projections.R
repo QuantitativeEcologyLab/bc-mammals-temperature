@@ -179,6 +179,24 @@ plot_grid(make_plot(SPECIES_LABS[1], get_legend = TRUE),
 ggsave('figures/local-rss-2100.png',
        width = 17.8, height = 12.4, units = 'in', dpi = 600, bg = 'white')
 
+# make density plots of the current range
+cc_proj %>%
+  mutate(l = if_else(l > 1.3, 1.3, l)) %>%
+  mutate(scenario = factor(gsub('"', '', scenario),
+                           levels = gsub('"', '', levels(scenario)))) %>%
+  ggplot(aes(x = l, fill = scenario, color = scenario)) +
+  facet_wrap(~ lab, scales = 'free_y', labeller = label_parsed, nrow = 2) +
+  geom_density(alpha = 0.25) +
+  geom_vline(xintercept = 1, color = 'black', lty = 'dashed') +
+  scale_x_continuous('Pixel-level relative change in RSS in 2100') +
+  ylab('Density') +
+  scale_color_brewer('Climate change scenario', type = 'div', palette = 5,
+                     direction = -1, aesthetics = c('color', 'fill')) +
+  theme(legend.position = 'inside', legend.position.inside = c(7/8, 1/4))
+
+ggsave('figures/local-rss-2100-density.png',
+       width = 12, height = 6.67, dpi = 600, bg = 'white')
+
 # maps of resources ----
 plot_resources <- function(sp, resource) {
   .d <-
