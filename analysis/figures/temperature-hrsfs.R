@@ -164,7 +164,7 @@ p <-
          lambda = case_when(
            species == 'Cervus canadensis' & variable == 'bold(Elevation~"(km)")' ~ lambda / exp(1),
            species == 'Oreamnos americanus' & variable == 'bold(Elevation~"(km)")' ~ lambda * exp(0.25),
-           species == 'Rangifer tarandus (boreal)' & variable == 'bold(Elevation~"(km)")' ~ lambda / exp(4),
+           species == 'Rangifer tarandus (boreal)' & variable == 'bold(Elevation~"(km)")' ~ lambda / exp(2),
            species == 'Oreamnos americanus' & variable == 'bold(Distance~from~water~"(km)")' ~ lambda * exp(0.5),
            species == 'Rangifer tarandus (s. mountain)' & variable == 'bold(Distance~from~water~"(km)")' ~ lambda * exp(0.2),
            species == 'Ursus arctos horribilis' & variable == 'bold(Distance~from~water~"(km)")' ~ lambda * exp(0.5),
