@@ -14,3 +14,11 @@ SPECIES_LABS <- gsub(' ', '~', SPECIES) %>%
   gsub(')$', ')"', .) %>%
   paste0('bolditalic(', ., ')')
 N_SPECIES <- length(SPECIES)
+
+COMMON_NAMES <- c('Wolves', 'Elk', 'Mountain goats', 'Cougars',
+                  'Caribou (boreal)', 'Caribou (southern mountain)',
+                  'Grizzly bears')
+
+PAL <- PAL[order(COMMON_NAMES)] # rearrange based on order of common names
+SPECIES <- SPECIES[order(SPECIES)]
+COMMON_NAMES <- factor(COMMON_NAMES) # keep the vector in the species order

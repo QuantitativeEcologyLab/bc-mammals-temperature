@@ -11,20 +11,14 @@ source('data/bc-shapefile.R')
 
 d <- readRDS('models/movement-models-akdes-2024-06-06.rds') %>%
   mutate(dataset_name = case_when(
-    dataset_name == 'Canis_lupus_boreal' ~ 'Canis lupus',
-    dataset_name == 'Rangifer_tarandus_boreal' ~ 'Rangifer tarandus (boreal)',
-    dataset_name == 'Rangifer_tarandus_southern_mountain' ~ 'Rangifer tarandus (southern mountain)',
-    dataset_name == 'Puma_concolor_2' ~ 'Puma concolor',
-    dataset_name == 'Puma_concolor_4' ~ 'Puma concolor',
-    dataset_name == 'Elk in southwestern Alberta' ~ 'Cervus canadensis',
-    dataset_name == 'Oreamnos_americanus' ~ 'Oreamnos americanus',
-    dataset_name == 'Ursus_arctos_horribilis' ~ 'Ursus arctos horribilis')) %>%
-  mutate(dataset_name = gsub(' ', '~', dataset_name) %>%
-           gsub('southern~', 'southern ', .) %>%
-           gsub('~\\(', '\\)~bold\\("(', .),
-         dataset_name = if_else(grepl('bold\\(', dataset_name),
-                                paste0('bolditalic(', dataset_name, '")'),
-                                paste0('bolditalic(', dataset_name, ')')))
+    dataset_name == 'Canis_lupus_boreal' ~ 'Wolves',
+    dataset_name == 'Rangifer_tarandus_boreal' ~ 'Caribou (boreal)',
+    dataset_name == 'Rangifer_tarandus_southern_mountain' ~ 'Caribou (southern mountain)',
+    dataset_name == 'Puma_concolor_2' ~ 'Cougars',
+    dataset_name == 'Puma_concolor_4' ~ 'Cougars',
+    dataset_name == 'Elk in southwestern Alberta' ~ 'Elk',
+    dataset_name == 'Oreamnos_americanus' ~ 'Mountain goats',
+    dataset_name == 'Ursus_arctos_horribilis' ~ 'Grizzly bears'))
 
 tels <- transmute(d,
                   dataset_name,
@@ -79,17 +73,18 @@ dem <- mutate(dem, elev_m = if_else(elev_m < 0, 0, elev_m))
 p_dem <-
   ggplot() +
   geom_raster(aes(x, y, fill = elev_m), dem) +
+  geom_sf(data = na, color = 'white', fill = 'transparent', lwd = 0.1) +
   geom_sf(aes(geometry = geometry, color = dataset_name), tels,
           size = 0.1) +
   coord_sf(xlim = c(100e4, 110e4), clip = 'off',
            ylim = c(33e4, 185e4), crs = 'EPSG:3005') +
-  scale_color_manual(name = ' ', values = PAL, labels = parse_format()) +
+  scale_color_manual(name = ' ', values = PAL) +
   scale_fill_distiller(name = '\nElevation (m)', palette = 6) +
   labs(x = NULL, y = NULL) +
   theme_void() +
   theme(legend.position = 'inside', legend.position.inside = c(-3, 0.05),
-        legend.justification = c(1, 0)) +
-  guides(color = guide_legend(override.aes = list(alpha = 1, size = 1,
+        legend.justification = c(1, 0), text = element_text(face = 'bold')) +
+  guides(color = guide_legend(override.aes = list(alpha = 1, size = 2,
                                                   order = 2)),
          fill = guide_colorbar(order = 1))
 
@@ -102,13 +97,13 @@ p_tels <-
   geom_sf(data = bc) +
   geom_sf(aes(geometry = geometry, color = dataset_name), tels,
           size = 0.1) +
-  scale_fill_manual(name = NULL, values = PAL, labels = parse_format(),
+  scale_fill_manual(name = NULL, values = PAL,
                     aesthetics = c('color', 'fill')) +
   labs(x = NULL, y = NULL) +
   theme_void() +
   theme(legend.position = 'inside', legend.position.inside = c(-0.025, 0.5),
-        legend.justification = c(0, 0)) +
-  guides(color = guide_legend(override.aes = list(alpha = 1, size = 1)))
+        legend.justification = c(0, 0), text = element_text(face = 'bold')) +
+  guides(color = guide_legend(override.aes = list(alpha = 1, size = 2)))
 
 ggsave('figures/tels-map.png', plot = p_tels,
        width = 10, height = 8.5, units = 'in', dpi = 600, bg = 'white')
@@ -119,12 +114,12 @@ p_uds <-
   geom_sf(data = bc) +
   geom_sf(aes(geometry = akde, fill = dataset_name, color = dataset_name),
           uds, alpha = 0.3) +
-  scale_fill_manual(name = NULL, values = PAL, labels = parse_format(),
+  scale_fill_manual(name = NULL, values = PAL,
                     aesthetics = c('color', 'fill')) +
   labs(x = NULL, y = NULL) +
   theme_void() +
   theme(legend.position = 'inside', legend.position.inside = c(0, 0.45),
-        legend.justification = c(0, 0))
+        legend.justification = c(0, 0), text = element_text(face = 'bold'))
 
 ggsave('figures/uds-map.png', plot = p_uds,
        width = 10, height = 10.5, units = 'in', dpi = 600, bg = 'white')

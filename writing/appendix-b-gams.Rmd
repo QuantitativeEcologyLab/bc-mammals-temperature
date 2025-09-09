@@ -1,5 +1,5 @@
 ---
-title: "\\Large The heat is on: Rising temperatures alter when, how, and where large terrestrial mammals move"
+title: "\\Large The heat is on: Rising temperatures alter how and where mammals move"
 subtitle: "\\Large Appendix B: Modeling"
 author:
   - name: Stefano Mezzini
@@ -144,7 +144,7 @@ m_speed <- bam(speed_est ~ # model estimating speed when moving (i.e., speed > 0
 knitr::include_graphics('../figures/temperature-movement-rates-hist.png')
 ```
 
-```{r pred-vs-pred-hgams, fig.cap="Hexplot of the fitted values from the HGAMs with and without including temperature for the probability of movement (\\textbf{A}) and speed when moving (\\textbf{B})."}
+```{r pred-vs-pred-hgams, fig.cap="Hexplot of the fitted values from the HGAMs with and without including temperature for the probability of moving (\\textbf{A}) and speed when moving (\\textbf{B})."}
 knitr::include_graphics('../figures/hgam-with-without-temp-prediction-agreement.png')
 ```
 
@@ -162,7 +162,7 @@ knitr::include_graphics('../figures/speed-full.png')
 knitr::include_graphics('../figures/distance-travelled-full.png')
 ```
 
-```{r op, fig.cap="Relationsips between the observed and predicted values for probability of movement (\\textbf{A}) and speed given that an animal was moving (\\textbf{B}). The color in panel \\textbf{A} indicates the number of points used to calculate the estimate (on the $\\log_{2}$ scale), while the grey lines in both panels indicate perfect prediction (i.e., the 1:1 line)."}
+```{r op, fig.cap="Relationsips between the observed and predicted values for probability of moving (\\textbf{A}) and speed given that an animal was moving (\\textbf{B}). The color in panel \\textbf{A} indicates the number of points used to calculate the estimate (on the $\\log_{2}$ scale), while the grey lines in both panels indicate perfect prediction (i.e., the 1:1 line)."}
 knitr::include_graphics('../figures/p-and-speed-observed-vs-predicted.png')
 ```
 
@@ -292,7 +292,7 @@ if(FALSE) {
 colnames(temp_comp)[colnames(temp_comp) == 'DAIC'] <- paste0('\U0394', 'AIC')
 colnames(temp_comp)[colnames(temp_comp) == 'DDE'] <- paste0('\U0394', 'DE')
 
-knitr::kable(temp_comp, digits = 1, format = 'markdown', caption = "Changes in deviance expained ($\\Delta$DE) and Akaike Information Criterion ($\\Delta$AIC) from including temperature in the models estimating probability of movement ($P(M)$) and speed when moving (Speed) as well as in species-level Hierarchical Resource Selection Functions (HRSF). Unlike conventional marginal AIC [@akaike_new_1974], The AIC values provided by the `mgcv` package for `R` are calculated using the models' estimated effective degrees of freedom and the Bayesian variance-covariance matrices, which avoids issues related to random effects or Restricted Maximum Likelihood (REML).")
+knitr::kable(temp_comp, digits = 1, format = 'markdown', caption = "Changes in deviance expained ($\\Delta$DE) and Akaike Information Criterion ($\\Delta$AIC) from including temperature in the models estimating probability of moving ($P(M = 1)$) and speed when moving (Speed) as well as in species-level Hierarchical Resource Selection Functions (HRSF). Unlike conventional marginal AIC [@akaike_new_1974], The AIC values provided by the `mgcv` package for `R` are calculated using the models' estimated effective degrees of freedom and the Bayesian variance-covariance matrices, which avoids issues related to random effects or Restricted Maximum Likelihood (REML).")
 ```
 
 \clearpage

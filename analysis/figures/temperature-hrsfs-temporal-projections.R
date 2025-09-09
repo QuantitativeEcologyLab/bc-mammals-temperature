@@ -123,11 +123,17 @@ if(file.exists('data/cc-hrsf-projections.rds')) {
   saveRDS(cc_proj, 'data/cc-hrsf-projections.rds')
 }
 
+# add common species names
+cc_proj <- cc_proj %>%
+  mutate(lab = COMMON_NAMES[map_int(lab, \(.s) {
+    which(sort(SPECIES_LABS) == .s)
+  })])
+
 # figures of habitat selection strength ----
 cc_proj %>%
   filter(year >= 2025) %>% # 2025 is the reference year
   ggplot(aes(x = year, group = scenario)) +
-  facet_wrap(~ lab, scales = 'fixed', labeller = label_parsed, nrow = 2) +
+  facet_wrap(~ lab, scales = 'fixed', nrow = 2) +
   geom_hline(yintercept = 1, color = 'black', lty = 'dashed') +
   geom_line(aes(y = l_median, color = scenario), lwd = 0) +
   geom_ribbon(aes(ymin = l_05, ymax = l_95,
@@ -148,12 +154,12 @@ cc_proj %>%
   filter(year >= 2025) %>% # 2025 is the reference year
   pivot_longer(l_05:l_95, values_to = 'l', names_to = 'percentile',
                names_prefix = 'l_') %>%
-  mutate(percentile = case_when(percentile == '05' ~ '"Bottom 5% RSS"',
-                                percentile == 'median' ~ '"Median RSS"',
-                                percentile == '95' ~ '"Top 5% RSS"') %>%
+  mutate(percentile = case_when(percentile == '05' ~ 'Bottom 5% RSS',
+                                percentile == 'median' ~ 'Median RSS',
+                                percentile == '95' ~ 'Top 5% RSS') %>%
            factor(., levels = rev(sort(unique(.))))) %>%
   ggplot() +
-  facet_grid(percentile ~ lab, scales = 'fixed', labeller = label_parsed) +
+  facet_grid(percentile ~ lab, scales = 'fixed') +
   geom_line(aes(year, l, color = scenario), lwd = 0.5) +
   geom_hline(yintercept = 1, color = 'black', lty = 'dashed') +
   scale_x_continuous(NULL, breaks = c(2025, 2050, 2075, 2100)) +

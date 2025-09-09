@@ -76,27 +76,31 @@ if(file.exists('data/cc-hgam-projections-local-2100.rds')) {
   beepr::beep(2)
 }
 
+# add common species names
+cc_proj <- cc_proj %>%
+  mutate(lab = COMMON_NAMES[map_int(species, \(.s) {
+    which(sort(SPECIES_LABS) == .s)
+  })],
+  scenario = gsub('"', '', scenario) %>%
+    factor(., levels = unique(.)))
+
 # figure of estimated speeds for each species ----
 range(c(range(cc_proj$p), range(cc_proj$s), range(cc_proj$d)))
 
 z_breaks <- seq(log2(0.75), -log2(0.75), length.out = 5)
 
-make_plot <- function(sp, y_facets = FALSE, get_legend = FALSE,
+make_plot <- function(.lab, y_facets = FALSE, get_legend = FALSE,
                       reproject = TRUE, variable) {
+  sp_data <- filter(cc_proj, lab == .lab)
+  
   if(variable == 'p') {
-    sp_data <- cc_proj %>%
-      filter(species == sp) %>%
-      select(scenario, species, long, lat, p)
+    sp_data <- sp_data %>% select(scenario, lab, long, lat, p)
     z_lab <- 'probability of moving'
   } else if(variable == 's') {
-    sp_data <- cc_proj %>%
-      filter(species == sp) %>%
-      select(scenario, species, long, lat, s)
+    sp_data <- sp_data %>% select(scenario, lab, long, lat, s)
     z_lab <- 'speed when moving'
   } else if(variable == 'd') {
-    sp_data <- cc_proj %>%
-      filter(species == sp) %>%
-      select(scenario, species, long, lat, d)
+    sp_data <- sp_data %>% select(scenario, lab, long, lat, d)
     z_lab <- 'distance travelled'
   } else stop('Please choose a variable among p, s, or d.')
   
@@ -105,7 +109,7 @@ make_plot <- function(sp, y_facets = FALSE, get_legend = FALSE,
   
   if(reproject) {
     sp_data <- sp_data %>%
-      nest(rast = ! c(scenario, species)) %>%
+      nest(rast = ! c(scenario, lab)) %>%
       mutate(rast = map(rast, function(.r) {
         rast(.r) %>%
           `crs<-`('EPSG:4326') %>%
@@ -124,7 +128,7 @@ make_plot <- function(sp, y_facets = FALSE, get_legend = FALSE,
                          TRUE ~ z)) %>%
     ggplot() +
     coord_sf(crs = 'EPSG:3005') +
-    facet_grid(scenario ~ species, labeller = label_parsed) +
+    facet_grid(scenario ~ lab) +
     geom_raster(aes(long, lat, fill = log2(z))) +
     scale_fill_distiller(name = z_lab,
                          palette = 'PuOr', limits = range(z_breaks),
@@ -152,16 +156,18 @@ make_plot <- function(sp, y_facets = FALSE, get_legend = FALSE,
 }
 
 make_full_plot <- function(variable) {
-  plot_list <- map(sort(as.character(SPECIES_LABS)),
-                   \(.sp) make_plot(sp = .sp, variable = variable))
-  plot_list[[7]] <- make_plot(sp = 'bolditalic(Ursus~arctos~horribilis)',
+  plot_list <- map(sort(COMMON_NAMES),
+                   \(.cn) make_plot(.lab = .cn, variable = variable))
+  
+  # add y facets to rightmost plot
+  plot_list[[7]] <- make_plot(.lab = levels(COMMON_NAMES)[7],
                               y_facets = TRUE, variable = variable)
   
   plot_grid(
-    make_plot(SPECIES_LABS[1], get_legend = TRUE, variable = variable),
+    make_plot(COMMON_NAMES[1], get_legend = TRUE, variable = variable),
     plot_grid(plotlist = plot_list, nrow = 1,
-              rel_widths = c(1, 0.95, 1.42, 1.36, 1.015, 1.23, 1.49)),
-    ncol = 1, rel_heights = c(0.05, 1))
+              rel_widths = c(1.015, 1.23, 1.36, 0.95, 1.35, 1.42, 1.1)),
+  ncol = 1, rel_heights = c(0.05, 1))
 }
 
 ggsave('figures/local-p-moving-2100.png', make_full_plot('p'),

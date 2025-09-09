@@ -68,16 +68,15 @@ marginal <- function(newd, term) {
   
   # add columns of distance travelled
   bind_cols(newd, preds_1, preds_2) %>%
-    mutate(species = gsub(' ', '~', species),
-           species = gsub('~\\(', '\\)~bold\\((', species),
-           species = paste0('bolditalic(', species, ')'),
-           d_mu = p_mu * s_mu,
+    mutate(d_mu = p_mu * s_mu,
            d_lwr = p_lwr * s_lwr,
            d_upr = p_upr * s_upr) %>%
     group_by(species) %>%
     mutate(across(c(s_mu, s_lwr, s_upr), \(.col) .col / mean(s_mu)),
            across(c(d_mu, d_lwr, d_upr), \(.col) .col / mean(d_mu))) %>%
     ungroup() %>%
+    mutate(lab = COMMON_NAMES[map_int(species,
+                                      \(.s) which(SPECIES == .s))]) %>%
     return()
 }
 
@@ -104,16 +103,16 @@ p_mov_tod <-
   mutate(p_upr = if_else(p_upr > 0.75, 0.75, p_upr)) %>%
   ggplot() +
   coord_polar() +
-  facet_wrap(~ lab, nrow = 1, labeller = label_parsed) +
+  facet_wrap(~ lab, nrow = 1) +
   geom_area(aes(x, 0.75, group = g), tod, fill = 'black', alpha = 0.2) +
-  geom_line(aes(tod_pdt, p_mu, color = species), linewidth = 1) +
-  geom_ribbon(aes(tod_pdt, ymin = p_lwr, ymax = p_upr, fill = species),
+  geom_line(aes(tod_pdt, p_mu, color = lab), linewidth = 1) +
+  geom_ribbon(aes(tod_pdt, ymin = p_lwr, ymax = p_upr, fill = lab),
               alpha = 0.2) +
   scale_color_manual('Species', values = PAL,
                      aesthetics = c('color', 'fill')) +
   scale_x_continuous(expand = c(0, 0), limits = c(0, 24),
                      breaks = c(0, 6, 12, 18),
-                     labels = c('00:00', '06:00', '12:00', '18:00')) +
+                     labels = c('00:00', '06:00  ', '12:00', '  18:00')) +
   scale_y_continuous(limits = c(0, 0.75), expand = c(0, 0),
                      breaks = c(0, 0.25, 0.5, 0.75)) +
   labs(x = 'Time of day (PDT)', y = 'P(moving)') +
@@ -124,16 +123,16 @@ p_mov_tod <-
 speed_tod <-
   ggplot(preds_tod) +
   coord_polar() +
-  facet_wrap(~ lab, nrow = 1, labeller = label_parsed) +
+  facet_wrap(~ lab, nrow = 1) +
   geom_area(aes(x, 1.5, group = g), tod, fill = 'black', alpha = 0.2) +
-  geom_line(aes(tod_pdt, s_mu, color = species), linewidth = 1) +
-  geom_ribbon(aes(tod_pdt, ymin = s_lwr, ymax = s_upr, fill = species),
+  geom_line(aes(tod_pdt, s_mu, color = lab), linewidth = 1) +
+  geom_ribbon(aes(tod_pdt, ymin = s_lwr, ymax = s_upr, fill = lab),
               alpha = 0.2) +
   scale_color_manual('Species', values = PAL,
                      aesthetics = c('color', 'fill')) +
   scale_x_continuous(expand = c(0, 0), limits = c(0, 24),
                      breaks = c(0, 6, 12, 18),
-                     labels = c('00:00', '06:00', '12:00', '18:00')) +
+                     labels = c('00:00', '06:00  ', '12:00', '  18:00')) +
   scale_y_continuous(limits = c(0, 1.5), expand = c(0, 0)) +
   labs(x = 'Time of day (PDT)', y = 'Relative change in speed') +
   theme(legend.position = 'none',
@@ -145,16 +144,16 @@ distance_tod <-
   mutate(d_upr = if_else(d_upr > 3, 3, d_upr)) %>%
   ggplot() +
   coord_polar() +
-  facet_wrap(~ lab, nrow = 1, labeller = label_parsed) +
+  facet_wrap(~ lab, nrow = 1) +
   geom_area(aes(x, 3, group = g), tod, fill = 'black', alpha = 0.2) +
-  geom_line(aes(tod_pdt, d_mu, color = species), linewidth = 1) +
-  geom_ribbon(aes(tod_pdt, ymin = d_lwr, ymax = d_upr, fill = species),
+  geom_line(aes(tod_pdt, d_mu, color = lab), linewidth = 1) +
+  geom_ribbon(aes(tod_pdt, ymin = d_lwr, ymax = d_upr, fill = lab),
               alpha = 0.2) +
   scale_color_manual('Species', values = PAL,
                      aesthetics = c('color', 'fill')) +
   scale_x_continuous(expand = c(0, 0), limits = c(0, 24),
                      breaks = c(0, 6, 12, 18),
-                     labels = c('00:00', '06:00', '12:00', '18:00')) +
+                     labels = c('00:00', '06:00  ', '12:00', '  18:00')) +
   scale_y_continuous(limits = c(0, 3), expand = c(0, 0)) +
   labs(x = 'Time of day (PDT)', y = 'Relative change in distance travelled') +
   theme(legend.position = 'none',
@@ -174,14 +173,14 @@ preds_doy <- marginal(newd = newd_doy, term = 'doy')
 p_mov_doy <-
   ggplot(preds_doy) +
   coord_polar(start = 11 / 366 * 2 * pi) + # offset to make axes vertical
-  facet_wrap(~ lab, nrow = 1, labeller = label_parsed) +
+  facet_wrap(~ lab, nrow = 1) +
   geom_area(aes(x, 0.75, fill = season), seasons, alpha = 0.3,
             show.legend = FALSE) +
   scale_fill_manual(values = PAL_SEASONS) +
   ggnewscale::new_scale('fill') + # to remove the season scale for fill
-  geom_ribbon(aes(doy, ymin = p_lwr, ymax = p_upr, fill = species),
+  geom_ribbon(aes(doy, ymin = p_lwr, ymax = p_upr, fill = lab),
               alpha = 0.2) +
-  geom_line(aes(doy, p_mu, color = species), linewidth = 1) +
+  geom_line(aes(doy, p_mu, color = lab), linewidth = 1) +
   scale_color_manual('Species', values = PAL,
                      aesthetics = c('color', 'fill')) +
   scale_x_continuous(breaks = yday(season_breaks),
@@ -199,14 +198,14 @@ speed_doy <-
   mutate(s_upr = if_else(s_upr > 1.5, 1.5, s_upr)) %>%
   ggplot() +
   coord_polar(start = 11 / 366 * 2 * pi) + # offset to make axes vertical
-  facet_wrap(~ lab, nrow = 1, labeller = label_parsed) +
+  facet_wrap(~ lab, nrow = 1) +
   geom_area(aes(x, 1.5, fill = season), seasons, alpha = 0.3,
             show.legend = FALSE) +
   scale_fill_manual(values = PAL_SEASONS) +
   ggnewscale::new_scale('fill') + # to remove the season scale for fill
-  geom_ribbon(aes(doy, ymin = s_lwr, ymax = s_upr, fill = species),
+  geom_ribbon(aes(doy, ymin = s_lwr, ymax = s_upr, fill = lab),
               alpha = 0.2) +
-  geom_line(aes(doy, s_mu, color = species), linewidth = 1) +
+  geom_line(aes(doy, s_mu, color = lab), linewidth = 1) +
   scale_color_manual('Species', values = PAL,
                      aesthetics = c('color', 'fill')) +
   scale_x_continuous(breaks = yday(season_breaks),
@@ -221,14 +220,14 @@ speed_doy <-
 distance_doy <-
   ggplot(preds_doy) +
   coord_polar(start = 11 / 366 * 2 * pi) + # offset to make axes vertical
-  facet_wrap(~ lab, nrow = 1, labeller = label_parsed) +
+  facet_wrap(~ lab, nrow = 1) +
   geom_area(aes(x, 4, fill = season), seasons, alpha = 0.3,
             show.legend = FALSE) +
   scale_fill_manual(values = PAL_SEASONS) +
   ggnewscale::new_scale('fill') + # to remove the season scale for fill
-  geom_ribbon(aes(doy, ymin = d_lwr, ymax = d_upr, fill = species),
+  geom_ribbon(aes(doy, ymin = d_lwr, ymax = d_upr, fill = lab),
               alpha = 0.2) +
-  geom_line(aes(doy, d_mu, color = species), linewidth = 1) +
+  geom_line(aes(doy, d_mu, color = lab), linewidth = 1) +
   scale_color_manual('Species', values = PAL,
                      aesthetics = c('color', 'fill')) +
   scale_x_continuous(breaks = yday(season_breaks),
@@ -258,14 +257,11 @@ newd_temp_c <- tibble(animal = m_2$model$animal[1],
 preds_temp_c <- marginal(newd = newd_temp_c, term = 'temp_c')
 
 # change species names for rug plots
-d <- mutate(d,
-            species = gsub(' ', '~', species),
-            species = gsub('~\\(', '\\)~bold\\((', species),
-            species = paste0('bolditalic(', species, ')'))
+d$lab <- COMMON_NAMES[map_int(d$species, \(.s) which(SPECIES == .s))]
 
 p_mov_temp <-
   ggplot(preds_temp_c) +
-  facet_wrap(~ lab, nrow = 1, labeller = label_parsed,
+  facet_wrap(~ lab, nrow = 1,
              scales = 'free') +
   geom_rug(aes(temp_c), alpha = 0.1,
            filter(d, doy == DOY & doy == DOY)) +
@@ -280,7 +276,7 @@ p_mov_temp <-
 
 speed_temp <-
   ggplot(preds_temp_c) +
-  facet_wrap(~ lab, nrow = 1, labeller = label_parsed) +
+  facet_wrap(~ lab, nrow = 1) +
   geom_rug(aes(temp_c), filter(d, moving, doy == DOY & doy == DOY),
            alpha = 0.1) +
   geom_hline(yintercept = 1, color = 'grey90') +
@@ -295,7 +291,7 @@ speed_temp <-
 
 distance_temp <-
   ggplot(preds_temp_c) +
-  facet_wrap(~ lab, nrow = 1, labeller = label_parsed,
+  facet_wrap(~ lab, nrow = 1,
              scales = 'free_y') +
   geom_hline(yintercept = 1, color = 'grey90') +
   geom_ribbon(aes(temp_c, ymin = d_lwr, ymax = d_upr, fill = lab),
@@ -354,13 +350,12 @@ surface <- function(newd, term) {
   
   # add columns of distance travelled
   bind_cols(newd, preds_1, preds_2) %>%
-    mutate(species = gsub(' ', '~', species),
-           species = gsub('~\\(', '\\)~bold\\((', species),
-           species = paste0('bolditalic(', species, ')'),
-           d_mu = p_mu * s_mu) %>%
+    mutate(d_mu = p_mu * s_mu) %>%
     group_by(species) %>%
     mutate(s_mu = s_mu / mean(s_mu),
-           d_mu = d_mu / mean(d_mu)) %>%
+           d_mu = d_mu / mean(d_mu),
+           lab = COMMON_NAMES[map_int(species,
+                                      \(.s) which(SPECIES == .s))]) %>%
     ungroup() %>%
     return()
 }
@@ -389,7 +384,7 @@ ti_tod <- surface(newd_tod, term = 'tod_pdt')
 
 p_mov_tod_int <-
   ggplot(ti_tod, aes(temp_c, tod_pdt, fill = p_mu)) +
-  facet_wrap(~ lab, labeller = label_parsed, nrow = 1) +
+  facet_wrap(~ lab, nrow = 1) +
   geom_raster() +
   geom_contour(aes(temp_c, tod_pdt, z = log2(p_mu)), color = 'grey90',
                inherit.aes = FALSE) +
@@ -405,7 +400,7 @@ p_mov_tod_int <-
 # E(speed | moving)
 s_tod_int <-
   ggplot(ti_tod, aes(temp_c, tod_pdt, fill = log2(s_mu))) +
-  facet_wrap(~ lab, labeller = label_parsed, nrow = 1) +
+  facet_wrap(~ lab, nrow = 1) +
   geom_raster() +
   geom_contour(aes(temp_c, tod_pdt, z = log2(s_mu)), color = 'black',
                inherit.aes = FALSE, bins = 5) +
@@ -427,7 +422,7 @@ d_tod_int <-
                           d_mu > 4 ~ 4,
                           TRUE ~ d_mu)) %>%
   ggplot(aes(temp_c, tod_pdt, fill = log2(d_mu))) +
-  facet_wrap(~ lab, labeller = label_parsed, nrow = 1) +
+  facet_wrap(~ lab, nrow = 1) +
   geom_raster() +
   geom_contour(aes(temp_c, tod_pdt, z = log2(d_mu)), color = 'black',
                inherit.aes = FALSE, bins = 5) +
@@ -464,7 +459,7 @@ ti_doy <- surface(newd_doy, term = 'doy')
 
 p_mov_doy_int <-
   ggplot(ti_doy, aes(temp_c, doy, fill = p_mu)) +
-  facet_wrap(~ lab, labeller = label_parsed, nrow = 1) +
+  facet_wrap(~ lab, nrow = 1) +
   geom_raster() +
   geom_contour(aes(temp_c, doy, z = log2(p_mu)), color = 'grey90',
                inherit.aes = FALSE, bins = 5) +
@@ -480,7 +475,7 @@ p_mov_doy_int <-
 # E(speed | moving)
 s_doy_int <-
   ggplot(ti_doy, aes(temp_c, doy, fill = log2(s_mu))) +
-  facet_wrap(~ lab, labeller = label_parsed, nrow = 1) +
+  facet_wrap(~ lab, nrow = 1) +
   geom_raster() +
   geom_contour(aes(temp_c, doy, z = log2(s_mu)), color = 'black',
                inherit.aes = FALSE, bins = 5) +
@@ -502,7 +497,7 @@ d_doy_int <-
                           d_mu > 4 ~ 4,
                           TRUE ~ d_mu)) %>%
   ggplot(aes(temp_c, doy, fill = log2(d_mu))) +
-  facet_wrap(~ lab, labeller = label_parsed, nrow = 1) +
+  facet_wrap(~ lab, nrow = 1) +
   geom_raster() +
   geom_contour(aes(temp_c, doy, z = log2(d_mu)), color = 'black',
                inherit.aes = FALSE, bins = 5) +
@@ -543,7 +538,7 @@ p_mov_full <- plot_grid(
   p_mov_temp, p_mov_tod, p_mov_doy,
   get_legend(p_mov_tod_int), p_mov_tod_int, p_mov_doy_int,
   labels = c('A', 'B', 'C', '', 'D', 'E'),
-  ncol = 1, rel_heights = c(1, 1, 1, 0.2, 1, 1))
+  ncol = 1, rel_heights = c(0.9, 0.9, 0.9, 0.2, 1, 1))
 ggsave('figures/p-moving-full.png', p_mov_full,
        width = 20, height = 20, dpi = 300, bg = 'white')
 
@@ -551,7 +546,7 @@ speed_full <- plot_grid(
   speed_temp, speed_tod, speed_doy,
   get_legend(s_tod_int), s_tod_int, s_doy_int,
   labels = c('A', 'B', 'C', '', 'D', 'E'),
-  ncol = 1, rel_heights = c(1, 1, 1, 0.2, 1, 1))
+  ncol = 1, rel_heights = c(0.9, 0.9, 0.9, 0.2, 1, 1))
 ggsave('figures/speed-full.png', speed_full,
        width = 20, height = 20, dpi = 300, bg = 'white')
 

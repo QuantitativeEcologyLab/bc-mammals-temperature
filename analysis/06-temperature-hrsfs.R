@@ -448,7 +448,8 @@ fits <- tibble(
     gsub('\\(s\\.', 'southern', .) %>%
     gsub('\\(', '', .) %>%
     gsub('\\)', '', .),
-  lab = SPECIES_LABS,
+  lab = sort(SPECIES_LABS),
+  name = COMMON_NAMES,
   w = map_chr(species, \(.sp) {
     list.files(path = 'models',
                pattern = paste0('rsf-', .sp, '-2025-'),
@@ -476,7 +477,7 @@ p_fits <-
   mutate(fits_wo = if_else(fits_wo < -15, -15, fits_wo),
          fits_w = if_else(fits_w < -15, -15, fits_w)) %>%
   ggplot(aes(fits_wo, fits_w)) +
-  facet_wrap(~ lab, labeller = label_parsed, scales = 'free', nrow = 2) +
+  facet_wrap(~ name, scales = 'free', nrow = 2) +
   geom_hex(aes(fill = log10(after_stat(count)))) +
   geom_abline(slope = 1, intercept = 0, color = 'black') +
   labs(x = 'log(RSS) without temperature',

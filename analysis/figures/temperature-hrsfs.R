@@ -138,11 +138,27 @@ if(file.exists('models/temperature-hrsf-preds.rds')) {
   saveRDS(preds, 'models/temperature-hrsf-preds.rds')
 }
 
+# add common species names
+preds <- preds %>%
+  mutate(lab = COMMON_NAMES[map_int(species, \(.s) {
+    which(sort(SPECIES) == .s)
+  })],
+  variable = variable %>%
+    gsub('bold\\(', '', .) %>%
+    gsub('~', ' ', .) %>%
+    gsub('"', '', .) %>%
+    gsub('\\)\\)', '\\)', .) %>%
+    factor(levels = c('Forest cover (%)',
+                      'Elevation (km)',
+                      'Distance from water (km)')))
+
+slice(preds, 1, .by = lab)
+
 # plot of RSS ----
 # need to divide by median lambda within each variable to get interpretable results
 preds %>%
   filter(! too_far_1) %>%
-  group_by(species, variable) %>%
+  group_by(lab, variable) %>%
   summarize(min_lambda = min(lambda),
             median_lambda = median(lambda),
             max_lambda = max(lambda))
@@ -152,22 +168,22 @@ LIM <- 2
 p <-
   preds %>%
   filter((! too_far_2)) %>%
-  select(species, lab, x, temperature_C, variable, lambda, too_far_1) %>%
+  select(lab, x, temperature_C, variable, lambda, too_far_1) %>%
   # make detection rates homogeneous across temperature
-  group_by(species, variable, temperature_C) %>%
+  group_by(lab, variable, temperature_C) %>%
   mutate(lambda = lambda / mean(lambda)) %>%
   # re-scale the center (lambda = 1) relative to the median in the data.
   # doing this because some estimated effects of distance from water and
   # elevation are extreme
-  group_by(species, variable) %>%
+  group_by(lab, variable) %>%
   mutate(lambda = lambda / median(lambda),
          lambda = case_when(
-           species == 'Cervus canadensis' & variable == 'bold(Elevation~"(km)")' ~ lambda / exp(1),
-           species == 'Oreamnos americanus' & variable == 'bold(Elevation~"(km)")' ~ lambda * exp(0.25),
-           species == 'Rangifer tarandus (boreal)' & variable == 'bold(Elevation~"(km)")' ~ lambda / exp(2),
-           species == 'Oreamnos americanus' & variable == 'bold(Distance~from~water~"(km)")' ~ lambda * exp(0.5),
-           species == 'Rangifer tarandus (s. mountain)' & variable == 'bold(Distance~from~water~"(km)")' ~ lambda * exp(0.2),
-           species == 'Ursus arctos horribilis' & variable == 'bold(Distance~from~water~"(km)")' ~ lambda * exp(0.5),
+           lab == 'Elk' & variable == 'bold(Elevation~"(km)")' ~ lambda / exp(1),
+           lab == 'Mountain goats' & variable == 'bold(Elevation~"(km)")' ~ lambda * exp(0.25),
+           lab == 'Caribou (boreal)' & variable == 'bold(Elevation~"(km)")' ~ lambda / exp(2),
+           lab == 'Mountain goats' & variable == 'bold(Distance~from~water~"(km)")' ~ lambda * exp(0.5),
+           lab == 'Caribou (s. mountain)' & variable == 'bold(Distance~from~water~"(km)")' ~ lambda * exp(0.2),
+           lab == 'Grizzly bears' & variable == 'bold(Distance~from~water~"(km)")' ~ lambda * exp(0.5),
            .default = lambda)) %>%
   ungroup() %>%
   # cap at 2^(+/-LIM)
@@ -176,8 +192,7 @@ p <-
                                  log2_lambda < -LIM ~ -LIM,
                                  TRUE ~ log2_lambda)) %>%
   ggplot() +
-  facet_grid(variable ~ lab, scales = 'free', labeller = label_parsed,
-             switch = 'y') +
+  facet_grid(variable ~ lab, scales = 'free', switch = 'y') +
   geom_raster(aes(temperature_C, x, fill = log2_lambda)) +
   geom_contour(aes(temperature_C, x, z = as.numeric(too_far_1)),
                color = 'grey50', linewidth = 0.25) +
@@ -201,11 +216,10 @@ ggsave('figures/hrsf-surface-plots.png', p, width = 17.5, height = 8,
 p_se <-
   preds %>%
   filter((! too_far_2)) %>%
-  select(species, lab, x, temperature_C, variable, se.fit, too_far_1) %>%
+  select(lab, x, temperature_C, variable, se.fit, too_far_1) %>%
   mutate(se.fit = if_else(se.fit > 3, 3, se.fit)) %>%
   ggplot() +
-  facet_grid(variable ~ lab, scales = 'free', labeller = label_parsed,
-             switch = 'y') +
+  facet_grid(variable ~ lab, scales = 'free', switch = 'y') +
   geom_raster(aes(temperature_C, x, fill = se.fit)) +
   geom_contour(aes(temperature_C, x, z = as.numeric(too_far_1)),
                color = 'black', linewidth = 0.25) +

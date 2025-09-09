@@ -66,11 +66,16 @@ if(file.exists('data/hgam-speed-data.rds')) {
   saveRDS(d, 'data/hgam-speed-data.rds')
 }
 
+# add common names
+d <- d %>%
+  mutate(name = COMMON_NAMES[map_int(species,
+                                     \(.s) which(sort(SPECIES) == .s))])
+
 #' `kmeans()` splits data poorly
 splits <-
   tibble(species = SPECIES,
-         lab = SPECIES_LABS,
-         manual = c(0.06, 0.05, 0.08, 0.07, 0.10, 0.20, 0.05),
+         lab = COMMON_NAMES,
+         manual = c(0.20, 0.07, 0.05, 0.08, 0.10, 0.06, 0.05),
          `k means` = map_dbl(species, \(sp) {
            km <- kmeans(filter(d, species == sp)$speed_est, centers = 2)
            max(min(filter(d, species == sp) %>%
@@ -83,7 +88,8 @@ splits <-
   ) %>%
   pivot_longer(c(manual, `k means`), values_to = 'split_m_s',
                names_to = 'method') %>%
-  mutate(split_km_h = 'km/h' %#% split_m_s)
+  mutate(split_km_h = 'km/h' %#% split_m_s) %>%
+  arrange(lab)
 
 hists <- list()
 for(i in (1:N_SPECIES)[order(SPECIES)]) {
@@ -107,14 +113,14 @@ for(i in (1:N_SPECIES)[order(SPECIES)]) {
                    lty = method), filter(splits, species == sp), lwd = 0.75) +
     coord_cartesian(xlim = XLIM, ylim = YLIM) +
     labs(x = 'Speed (km/h)', y = 'Count',
-         title = scales::parse_format()(SPECIES_LABS[i])) +
+         title = COMMON_NAMES[i]) +
     scale_color_bright(name = 'Method') +
     scale_linetype_manual(name = 'Method', values = c(2, 1)) +
     theme(legend.position = 'none')
   rm(sp, XLIM, YLIM)
 }
 
-hists[1:7] <- hists[order(SPECIES)]
+hists[1:7] <- hists[order(COMMON_NAMES)]
 hists[[8]] <-
   get_legend(
     ggplot() +
@@ -144,6 +150,15 @@ d %>%
   summarise(prop_moving = mean(moving),
             min_speed = min(speed_est[moving]))
 
+d <- mutate(d,
+            lab = case_when(species == SPECIES[1] ~ sort(SPECIES_LABS)[1],
+                            species == SPECIES[2] ~ sort(SPECIES_LABS)[2],
+                            species == SPECIES[3] ~ sort(SPECIES_LABS)[3],
+                            species == SPECIES[4] ~ sort(SPECIES_LABS)[4],
+                            species == SPECIES[5] ~ sort(SPECIES_LABS)[5],
+                            species == SPECIES[6] ~ sort(SPECIES_LABS)[6],
+                            species == SPECIES[7] ~ sort(SPECIES_LABS)[7]))
+
 # dataset of non-zero speeds only
 d_2 <- filter(d, moving)
 
@@ -151,38 +166,21 @@ ggplot(d_2) +
   facet_wrap(~ species, scales = 'free', ncol = 2) +
   geom_density(aes(speed_est), fill = 'grey')
 
-d <- mutate(d,
-            lab = case_when(species == SPECIES[1] ~ SPECIES_LABS[1],
-                            species == SPECIES[2] ~ SPECIES_LABS[2],
-                            species == SPECIES[3] ~ SPECIES_LABS[3],
-                            species == SPECIES[4] ~ SPECIES_LABS[4],
-                            species == SPECIES[5] ~ SPECIES_LABS[5],
-                            species == SPECIES[6] ~ SPECIES_LABS[6],
-                            species == SPECIES[7] ~ SPECIES_LABS[7]))
-
-d_2 <- mutate(d_2,
-              lab = case_when(species == SPECIES[1] ~ SPECIES_LABS[1],
-                              species == SPECIES[2] ~ SPECIES_LABS[2],
-                              species == SPECIES[3] ~ SPECIES_LABS[3],
-                              species == SPECIES[4] ~ SPECIES_LABS[4],
-                              species == SPECIES[5] ~ SPECIES_LABS[5],
-                              species == SPECIES[6] ~ SPECIES_LABS[6],
-                              species == SPECIES[7] ~ SPECIES_LABS[7]))
-
-
 # check spread for tod, doy, and temp for each species except for grizzly
 # should be ok to keep cs = 'cc'
 hist_1 <- d %>%
-  select(lab, tod_pdt, doy, temp_c, moving) %>%
-  pivot_longer(-c(lab, moving), names_to = 'variable') %>%
-  mutate(variable = case_when(
+  select(name, tod_pdt, doy, temp_c, moving) %>%
+  pivot_longer(-c(name, moving), names_to = 'variable') %>%
+  mutate(name = as.character(name) %>%
+           paste0('"', ., '"'),
+         variable = case_when(
     variable == 'doy' ~ 'Day~of~year',
     variable == 'temp_c' ~ paste0('Temperature~(degree*C)'),
     variable == 'tod_pdt' ~ 'Time~of~day~(PDT)') %>%
       paste0('bold(', ., ')') %>%
       factor(., levels = unique(.))) %>%
   ggplot(aes(value)) +
-  facet_grid(lab ~ variable, scales = 'free', switch = 'x',
+  facet_grid(name ~ variable, scales = 'free', switch = 'x',
              labeller = label_parsed) +
   geom_histogram(aes(fill = moving), position = 'stack', bins = 24) +
   scale_x_continuous(NULL, expand = c(0, 0)) +
@@ -193,16 +191,18 @@ hist_1 <- d %>%
         strip.text.x = element_text(size = 11), strip.placement = 'outside')
 
 hist_2 <- d_2 %>%
-  select(lab, tod_pdt, doy, temp_c, moving) %>%
-  pivot_longer(-c(lab, moving), names_to = 'variable') %>%
-  mutate(variable = case_when(
-    variable == 'doy' ~ 'Day~of~year',
-    variable == 'temp_c' ~ paste0('Temperature~(degree*C)'),
-    variable == 'tod_pdt' ~ 'Time~of~day~(PDT)') %>%
-      paste0('bold(', ., ')') %>%
-      factor(., levels = unique(.))) %>%
+  select(name, tod_pdt, doy, temp_c, moving) %>%
+  pivot_longer(-c(name, moving), names_to = 'variable') %>%
+  mutate(name = as.character(name) %>%
+           paste0('"', ., '"'),
+         variable = case_when(
+           variable == 'doy' ~ 'Day~of~year',
+           variable == 'temp_c' ~ paste0('Temperature~(degree*C)'),
+           variable == 'tod_pdt' ~ 'Time~of~day~(PDT)') %>%
+           paste0('bold(', ., ')') %>%
+           factor(., levels = unique(.))) %>%
   ggplot(aes(value)) +
-  facet_grid(lab ~ variable, scales = 'free', switch = 'x',
+  facet_grid(name ~ variable, scales = 'free', switch = 'x',
              labeller = label_parsed) +
   geom_histogram(fill = '#377EB8', position = 'stack', bins = 24) +
   scale_x_continuous(NULL, expand = c(0, 0)) +
@@ -264,10 +264,10 @@ if(file.exists('models/binomial-gam.rds')) {
 # check predictions ----
 p_op <-
   transmute(d,
-            lab,
+            name,
             moving,
             est = round(predict(m_1, type = 'response'), 2)) %>%
-  group_by(lab, est) %>%
+  group_by(name, est) %>%
   summarise(empirical_mean = mean(moving),
             n = n(),
             se = sd(moving) / sqrt(n),
@@ -275,7 +275,7 @@ p_op <-
             upr = empirical_mean + se,
             .groups = 'drop') %>%
   ggplot(aes(est, empirical_mean, color = log10(n))) +
-  facet_wrap(~ lab, nrow = 2, labeller = label_parsed) +
+  facet_wrap(~ name, nrow = 2) +
   geom_errorbar(aes(est, ymin = lwr, ymax = upr), width = 0, alpha = 0.3) +
   geom_point() +
   geom_abline(slope = 1, intercept = 0, color = 'black') +
@@ -387,9 +387,10 @@ if(file.exists('models/gamma-gam.rds')) {
 }
 
 s_op <-
-  mutate(d_2, mu = predict(m_2, type = 'response')) %>%
+  d_2 %>%
+  mutate(mu = predict(m_2, type = 'response')) %>%
   ggplot(aes(mu, speed_est)) +
-  facet_wrap(~ lab, scales = 'free', nrow = 2, labeller = label_parsed) +
+  facet_wrap(~ name, scales = 'free', nrow = 2) +
   geom_hex(aes(fill = log10(after_stat(count)))) +
   geom_abline(intercept = 0, slope = 1, color = 'black') +
   theme(legend.position = 'none') +
@@ -415,8 +416,8 @@ dt_labs <- round(exp(dt_breaks), c(3, 0, 0))
 
 p_dt <-
   ggplot(d) +
-  facet_wrap(~ lab, labeller = label_parsed, nrow = 1) +
-  geom_histogram(aes(log(dt), color = species, fill = species), bins = 15,
+  facet_wrap(~ name, nrow = 1) +
+  geom_histogram(aes(log(dt), color = name, fill = name), bins = 15,
                  alpha = 0.2) +
   scale_x_continuous(name = expression(bold(paste('\U0394', 't (hours, log scale)'))),
                      breaks = dt_breaks, labels = dt_labs) +
@@ -426,7 +427,7 @@ p_dt <-
 
 preds_dt <-
   d %>%
-  group_by(species, lab) %>%
+  group_by(name, species, lab) %>%
   summarize(min_log_dt = min(log(dt)),
             max_log_dt = max(log(dt)),
             animal = 'new animal',
@@ -457,10 +458,10 @@ preds_dt <-
 
 p_1_dt <-
   ggplot(preds_dt) +
-  facet_wrap(~ lab, labeller = label_parsed, nrow = 1) +
-  geom_ribbon(aes(log(dt), ymin = p_lwr, ymax = p_upr, fill = species),
+  facet_wrap(~ name, nrow = 1) +
+  geom_ribbon(aes(log(dt), ymin = p_lwr, ymax = p_upr, fill = name),
               alpha = 0.2) +
-  geom_line(aes(log(dt), p, color = species)) +
+  geom_line(aes(log(dt), p, color = name)) +
   scale_x_continuous(name = expression(bold(paste('\U0394', 't (hours, log scale)'))),
                      breaks = dt_breaks, labels = dt_labs) +
   ylab('P(moving)') +
@@ -469,11 +470,11 @@ p_1_dt <-
 
 p_2_dt <-
   ggplot(preds_dt) +
-  facet_wrap(~ lab, labeller = label_parsed, nrow = 1) +
+  facet_wrap(~ name, nrow = 1) +
   geom_hline(yintercept = 1, color = 'grey', linetype = 'dashed') +
-  geom_ribbon(aes(log(dt), ymin = s_lwr, ymax = s_upr, fill = species),
+  geom_ribbon(aes(log(dt), ymin = s_lwr, ymax = s_upr, fill = name),
               alpha = 0.2) +
-  geom_line(aes(log(dt), s, color = species)) +
+  geom_line(aes(log(dt), s, color = name)) +
   scale_x_continuous(name = expression(bold(paste('\U0394', 't (hours, log scale)'))),
                      breaks = dt_breaks, labels = dt_labs) +
   scale_y_continuous('Relative change in speed',

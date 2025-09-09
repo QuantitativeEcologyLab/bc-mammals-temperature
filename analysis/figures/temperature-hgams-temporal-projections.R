@@ -96,14 +96,20 @@ if(file.exists('data/cc-hgam-projections.rds')) {
   beepr::beep(2)
 }
 
+# add common species names
+cc_proj <- cc_proj %>%
+  mutate(lab = COMMON_NAMES[map_int(species, \(.s) {
+    which(sort(SPECIES_LABS) == .s)
+  })],
+  scenario = gsub('"', '', scenario) %>%
+    factor(., levels = unique(.)))
+
 # make figures ----
 p_p_mov <-
   ggplot(cc_proj, aes(year, p_median, group = scenario)) +
-  facet_wrap(~ species, scales = 'fixed', drop = FALSE,
-             labeller = label_parsed, nrow = 2) +
+  facet_wrap(~ lab, scales = 'fixed', drop = FALSE, nrow = 2) +
   geom_hline(aes(yintercept = 1), lty = 'dashed') +
-  geom_ribbon(aes(ymin = p_lwr_05, ymax = p_upr_95,
-                  fill = factor(scenario, levels = rev(levels(scenario))),
+  geom_ribbon(aes(ymin = p_lwr_05, ymax = p_upr_95, fill = scenario,
                   color = scenario), linewidth = 0.2, alpha = 0.25) +
   geom_line(color = 'black', lwd = 1.5) +
   geom_line(aes(color = scenario), lwd = 1) +
@@ -119,10 +125,8 @@ ggsave('figures/p-moving-local-cc-predictions.png', p_p_mov,
 
 p_s <-
   ggplot(cc_proj, aes(year, s_median, group = scenario)) +
-  facet_wrap(~ species, scales = 'fixed', drop = FALSE,
-             labeller = label_parsed, nrow = 2) +
-  geom_ribbon(aes(ymin = s_lwr_05, ymax = s_upr_95,
-                  fill = factor(scenario, levels = rev(levels(scenario))),
+  facet_wrap(~ lab, scales = 'fixed', drop = FALSE, nrow = 2) +
+  geom_ribbon(aes(ymin = s_lwr_05, ymax = s_upr_95, fill = scenario,
                   color = scenario), linewidth = 0.2, alpha = 0.25) +
   geom_hline(aes(yintercept = 1), lty = 'dashed') +
   geom_line(color = 'black', lwd = 1.5) +
@@ -139,10 +143,8 @@ ggsave('figures/speed-local-cc-predictions.png', p_s,
 
 p_d <-
   ggplot(cc_proj, aes(year, d_median, group = scenario)) +
-  facet_wrap(~ species, scales = 'fixed', drop = FALSE,
-             labeller = label_parsed, nrow = 2) +
-  geom_ribbon(aes(ymin = d_lwr_05, ymax = d_upr_95,
-                  fill = factor(scenario, levels = rev(levels(scenario))),
+  facet_wrap(~ lab, scales = 'fixed', drop = FALSE, nrow = 2) +
+  geom_ribbon(aes(ymin = d_lwr_05, ymax = d_upr_95, fill = scenario,
                   color = scenario), linewidth = 0.2, alpha = 0.25) +
   geom_hline(aes(yintercept = 1), lty = 'dashed') +
   geom_line(color = 'black', lwd = 1.5) +

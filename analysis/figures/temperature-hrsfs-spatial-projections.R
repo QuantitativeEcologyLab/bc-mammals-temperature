@@ -109,18 +109,28 @@ if(file.exists('data/cc-hrsf-projections-local-2100.rds')) {
   beepr::beep(2)
 }
 
+cc_proj <- cc_proj %>%
+  mutate(name = COMMON_NAMES[map_int(lab, \(.lab) {
+    which(sort(SPECIES_LABS) == .lab)
+  })],
+  scenario = gsub('"', '', scenario) %>%
+    factor(., levels = unique(.)))
+
+slice(cc_proj, 1, .by = lab) %>%
+  select(lab, name)
+
 # figure of estimated speeds for each species ----
 z_breaks <- seq(-log2(1.25), log2(1.25), length.out = 5)
 
-make_plot <- function(sp, y_facets = FALSE, get_legend = FALSE,
+make_plot <- function(sn, y_facets = FALSE, get_legend = FALSE,
                       reproject = TRUE) {
   sp_data <- cc_proj %>%
-    filter(lab == sp) %>%
-    select(scenario, lab, long, lat, l)
+    filter(name == sn) %>%
+    select(scenario, name, long, lat, l)
   
   if(reproject) {
     sp_data <- sp_data %>%
-      nest(rast = ! c(scenario, lab)) %>%
+      nest(rast = ! c(scenario, name)) %>%
       mutate(rast = map(rast, function(.r) {
         rast(.r) %>%
           `crs<-`('EPSG:4326') %>%
@@ -139,7 +149,7 @@ make_plot <- function(sp, y_facets = FALSE, get_legend = FALSE,
                          TRUE ~ l)) %>%
     ggplot() +
     coord_sf(crs = 'EPSG:3005') +
-    facet_grid(scenario ~ lab, labeller = label_parsed) +
+    facet_grid(scenario ~ name) +
     geom_raster(aes(long, lat, fill = log2(l))) +
     scale_fill_distiller(name = 'Pixel-level relative change in selection strength',
                          palette = 'PiYG', limits = range(z_breaks),
@@ -166,13 +176,12 @@ make_plot <- function(sp, y_facets = FALSE, get_legend = FALSE,
   return(p)
 }
 
-plot_list <- map(sort(as.character(SPECIES_LABS)), make_plot)
-plot_list[[7]] <- make_plot('bolditalic(Ursus~arctos~horribilis)',
-                            y_facets = TRUE) # add vertical facet labels
+plot_list <- map(sort(COMMON_NAMES), make_plot)
+plot_list[[7]] <- make_plot('Wolves', y_facets = TRUE) # add vertical facet labels
 
-rel_w <- c(1, 0.95, 1.42, 1.36, 1.015, 1.23, 1.49)
+rel_w <- c(1.015, 1.23, 1.36, 0.95, 1.35, 1.42, 1.1)
 
-plot_grid(make_plot(SPECIES_LABS[1], get_legend = TRUE), 
+plot_grid(make_plot(COMMON_NAMES[1], get_legend = TRUE), 
           plot_grid(plotlist = plot_list, nrow = 1, rel_widths = rel_w),
           ncol = 1, rel_heights = c(0.05, 1))
 
@@ -182,10 +191,8 @@ ggsave('figures/local-rss-2100.png',
 # make density plots of the current range
 cc_proj %>%
   mutate(l = if_else(l > 1.3, 1.3, l)) %>%
-  mutate(scenario = factor(gsub('"', '', scenario),
-                           levels = gsub('"', '', levels(scenario)))) %>%
   ggplot(aes(x = l, fill = scenario, color = scenario)) +
-  facet_wrap(~ lab, scales = 'free_y', labeller = label_parsed, nrow = 2) +
+  facet_wrap(~ name, scales = 'free_y', nrow = 2) +
   geom_density(alpha = 0.25) +
   geom_vline(xintercept = 1, color = 'black', lty = 'dashed') +
   scale_x_continuous('Relative change in RSS in 2100') +
@@ -198,24 +205,25 @@ ggsave('figures/local-rss-2100-density.png',
        width = 12, height = 6.67, dpi = 600, bg = 'white')
 
 # maps of resources ----
-plot_resources <- function(sp, resource) {
+plot_resources <- function(common_name, resource) {
   .d <-
     cc_proj %>%
-    filter(scenario == scenario[1], lab == sp)
+    filter(scenario == scenario[1], name == common_name)
   
   .d <- rast(.d[, c('long', 'lat', resource)], crs = 'EPSG:4326') %>%
     project('EPSG:3005') %>%
     as.data.frame(xy = TRUE) %>%
-    mutate(lab = unique(.d$lab))
+    mutate(name = unique(.d$name)) # add species name back in
   
   colnames(.d)[which(colnames(.d) == resource)] <- 'z'
   
-  if(resource == 'dist_water_m') .d$z <- .d$z / 1e3
+  if(resource == 'elevation_m') .d$z <- .d$z / 1e3 # convert to km
+  if(resource == 'dist_water_m') .d$z <- .d$z / 1e3 # convert to km
   
   p <-
     ggplot(.d) +
     coord_sf(crs = 'EPSG:3005') +
-    facet_grid(. ~ lab, labeller = label_parsed) +
+    facet_grid(. ~ name) +
     geom_raster(aes(x, y, fill = z)) +
     labs(x = NULL, y = NULL) +
     ggspatial::annotation_scale(style = 'ticks', text_cex = 0.6,
@@ -230,8 +238,8 @@ plot_resources <- function(sp, resource) {
                           high = 'darkgreen', limits = c(0, 100))
   } else if(resource == 'elevation_m') {
     p <- p +
-      scale_fill_distiller('Elevation (m)', palette = 6, direction = 1,
-                           limits = range(cc_proj$elevation_m))
+      scale_fill_distiller('Elevation (km)', palette = 6, direction = 1,
+                           limits = range(cc_proj$elevation_m) / 1e3)
   } else if(resource == 'dist_water_m') {
     p <- p +
       scale_fill_distiller('Distance from water (km)')
@@ -241,7 +249,7 @@ plot_resources <- function(sp, resource) {
 }
 
 make_row <- function(resource) {
-  plot_list <- map(sort(as.character(SPECIES_LABS)),
+  plot_list <- map(sort(COMMON_NAMES),
                    \(.z) plot_resources(.z, resource = resource))
   
   return(plot_list)
