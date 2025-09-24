@@ -112,7 +112,6 @@ ggsave('figures/2025-tws-edmonton/rsf-caribou-resources.png', p_resources,
        width = 12, height = 6, dpi = 600)
 
 # figure of habitat selection strength for different temperatures
-hist(log2(preds_habitat$lambda / 2.28))
 p_habitat <-
   preds_habitat %>%
   mutate(lambda = lambda * 100, # to make differences more visible
@@ -125,7 +124,7 @@ p_habitat <-
   scale_x_continuous(NULL, expand = c(0, 0)) +
   scale_y_continuous(NULL, expand = c(0, 0)) +
   scale_fill_distiller('Relative habitat preference   ', type = 'div',
-                       palette = 1, direction = 1, trans = 'log2',
+                       palette = 3, direction = 1, trans = 'log2',
                        limits = c(0.25, 4),
                        breaks = c(0.25, 0.5, 1, 2, 4),
                        labels = c(0.25, 0.5, 1, 2, 4) %>%
@@ -208,7 +207,7 @@ p_habitat_bw <-
   scale_x_continuous(NULL, expand = c(0, 0)) +
   scale_y_continuous(NULL, expand = c(0, 0)) +
   scale_fill_distiller('Relative habitat preference   ', type = 'div',
-                       palette = 1, direction = 1, trans = 'log2',
+                       palette = 3, direction = 1, trans = 'log2',
                        limits = c(0.25, 4),
                        breaks = c(0.25, 0.5, 1, 2, 4),
                        labels = c(0.25, 0.5, 1, 2, 4) %>%
