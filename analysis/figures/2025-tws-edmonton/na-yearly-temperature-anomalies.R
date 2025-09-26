@@ -17,7 +17,7 @@ p <-
   ggplot(d, aes(Date, Anomaly)) +
   geom_bar(aes(color = Anomaly > 0), stat = 'identity', fill = 'transparent') +
   geom_hline(yintercept = 0) +
-  labs(x = NULL, y = paste0('Global temperature anomaly (\U00B0', 'C)')) +
+  labs(x = NULL, y = paste0('Temperature anomaly (\U00B0', 'C)')) +
   scale_x_date(expand = c(0, 365 * 4),
                breaks = c(1910.5, 1950.5, 1985.5, 2000.5, 2025.5) %>%
                  date_decimal() %>% as.Date(), labels = year) +
