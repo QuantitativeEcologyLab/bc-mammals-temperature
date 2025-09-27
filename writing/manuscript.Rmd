@@ -1,5 +1,5 @@
 ---
-title: "\\Large The heat is on: Rising temperatures alter how and where mammals move"
+title: "\\Large Rising temperatures alter how and where mammals move"
 author:
   - name: Stefano Mezzini
     email: stefano.mezzini@ubc.ca
@@ -32,6 +32,7 @@ institute:
   - cmps: Department of Computer Science, Math, Physics, and Statistics, The University of British Columbia Okanagan, Kelowna, British Columbia, Canada.
 bibliography: 'bc-mammals-temperature.bib'
 csl: 'global-change-biology.csl'
+# csl: 'movement-ecology.csl'
 fontsize: 12pt
 indent: true
 header-includes:
@@ -64,6 +65,8 @@ knitr::opts_chunk$set(echo = FALSE, out.width = '\\textwidth',
                       message = FALSE)
 ```
 
+\newpage
+
 # Alternative titles {-}
 
 * Rising temperatures alter the movement phenology of terrestrial mammals
@@ -88,7 +91,7 @@ six-sentence abstract:
 -->
 
 ```{r abstract, echo=FALSE}
-abstract <- "Widespread warming during the last century has caused many terrestrial mammals to change how and where they move, with cascading effects on fitness, habitat selection, and community structure. Previous studies have estimated the effects of temperature on mammalian movement behaviour, but many did not disentangle them from seasonal behaviour cycles. Consequently, it is still unclear how mammals will adapt their movement behaviour in the 21^st^ century. We address this gap by using continuous-time movement models and hierarchical generalized additive models to quantify the effects of temperature on the movement rates and habitat selection of six large-bodied mammalian species throughout western Canada between 1998 and 2023. We show that temperature is a strong driver of how and where mammals move, and we predict that climate change will have significant impacts on mammals' movement rates and habitat selection throughout the 21^st^ century. We found that species did not respond uniformly to rising temperatures, so community-level responses will likely be complex as some species move more and others less. Median habitat selection strength decreased for all species, but some species showed increased selection strength for higher altitudes. Consequently, our results suggest that all six species may shift their range in the coming decades as their selection strength for their current ranges weakens. As climate change exposes mammals to novel environmental conditions, predicting changes in mammalian behaviour and community structure will become crucial for effectively and proactively understanding mammalian movement behaviour and protecting high-quality habitat. We thus present our work using a flexible approach that can be adapted for different species and spatiotemporal scales, and we conclude by providing suggestions for future research, with particular attention to the study design, statistical modeling, and forecasting."
+abstract <- "Widespread warming during the last century has caused many terrestrial mammals to change how and where they move, with cascading effects on fitness, habitat selection, and community structure. Previous studies have estimated the effects of temperature on mammalian movement behaviour, but many did not disentangle them from seasonal behaviour cycles. Consequently, it is still unclear how mammals will adapt their movement behaviour and phenology in the 21^st^ century. We address this gap by using hierarchical generalized additive models to quantify the effects of temperature on the movement rates and habitat selection of six large-bodied mammalian species throughout western Canada between 1998 and 2023. We show that temperature significantly affects of how and where mammals move, and we predict that climate change will have significant impacts on mammals' movement rates and habitat selection throughout the 21^st^ century. However, species did not respond uniformly to rising temperatures, so community-level responses will likely be complex, as climate change will cause species to alter their seasonal movement behavior and increase their chances of hyperythermia. Median habitat selection strength decreased for most species, but some species showed increased selection strength for higher altitudes. Consequently, our results suggest that all six species may shift their range in the coming decades as they begin to select against their current ranges. As climate change exposes mammals to novel environmental conditions, proactively predicting changes in mammalian movement behaviour will become crucial for effectively and proactively understanding community-level responses and protecting high-quality habitat. We thus present our work using a flexible approach that can be adapted for different species and spatiotemporal scales, and we conclude by providing suggestions for future research."
 if(FALSE){
   stringi::stri_count_words(abstract)
 }
@@ -106,7 +109,7 @@ if(FALSE){
 
 \noindent \textbf{Tables}: 3
 
-\noindent \textbf{References}: 142 (updated on 2025-06-11) <!-- counted by using movement ecology csl -->
+\noindent \textbf{References}: 165 (updated on 2025-09-25) <!-- counted by using movement ecology csl -->
 
 \noindent \textbf{Appendices}: 2
 
@@ -184,22 +187,22 @@ dt_data <-
   readRDS('models/movement-models-2024-06-06.rds') %>%
   transmute(
     Species = case_when(
-      dataset_name == 'Canis_lupus_boreal' ~ COMMON_NAMES[1],
-      dataset_name == 'Rangifer_tarandus_boreal' ~ COMMON_NAMES[2],
-      dataset_name == 'Rangifer_tarandus_southern_mountain' ~ COMMON_NAMES[3],
-      dataset_name == 'Puma_concolor_2' ~ COMMON_NAMES[4],
-      dataset_name == 'Puma_concolor_4' ~ COMMON_NAMES[4],
-      dataset_name == 'Elk in southwestern Alberta' ~ COMMON_NAMES[5],
-      dataset_name == 'Oreamnos_americanus' ~ COMMON_NAMES[6],
-      dataset_name == 'Ursus_arctos_horribilis' ~ COMMON_NAMES[7]),
+      dataset_name == 'Canis_lupus_boreal' ~ 'Wolves',
+      dataset_name == 'Rangifer_tarandus_boreal' ~ 'Caribou (boreal)',
+      dataset_name == 'Rangifer_tarandus_southern_mountain' ~ 'Caribou (southern mountain)',
+      dataset_name == 'Puma_concolor_2' ~ 'Cougars',
+      dataset_name == 'Puma_concolor_4' ~ 'Cougars',
+      dataset_name == 'Elk in southwestern Alberta' ~ 'Elk',
+      dataset_name == 'Oreamnos_americanus' ~ 'Mountain goats',
+      dataset_name == 'Ursus_arctos_horribilis' ~ 'Grizzly bears'),
     animal, # keep animal column for grouping later
     tel = map(tel, data.frame),
     na_speed = map_lgl(movement_model,
                        \(.m) suppressWarnings(speed(.m)$DOF == 0))) %>%
   unnest(tel) %>%
   group_by(Species, animal) %>%
-  summarize(Start = min(as.Date(timestamp)),
-            End = max(as.Date(timestamp)),
+  summarize(Start = min(as.Date(timestamp, tz = 'America/Vancouver')),
+            End = max(as.Date(timestamp, tz = 'America/Vancouver')),
             n = n(),
             dt = median(timestamp - lag(timestamp), na.rm = TRUE),
             animal = unique(animal),
