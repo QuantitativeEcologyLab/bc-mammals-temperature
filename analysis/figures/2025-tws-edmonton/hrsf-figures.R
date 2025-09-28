@@ -50,9 +50,7 @@ p <-
   # elevation are extreme
   group_by(lab, variable) %>%
   mutate(lambda = lambda / median(lambda),
-         lambda = if_else(
-           lab == 'Caribou (boreal)' & variable == 'bold(Elevation~"(km)")',
-           lambda / exp(2), lambda)) %>%
+         lambda = if_else(variable == 'Elevation (km)', lambda * 2^(2), lambda)) %>%
   ungroup() %>%
   # cap at 2^(+/-LIM)
   mutate(log2_lambda = log2(lambda),
@@ -76,6 +74,7 @@ p <-
         strip.text.y = element_text(size = 11), legend.position = 'top',
         panel.background = element_rect(fill = 'grey90'),
         legend.key.width = rel(2))
+p
 
 ggsave('figures/2025-tws-edmonton/boreal-caribou-hrsf-surface-plots.png',
        p, width = 10, height = 4.375, units = 'in', dpi = 600, bg = 'white')
