@@ -70,10 +70,12 @@ mean(dem$elev_m < -100)
 dem <- mutate(dem, elev_m = if_else(elev_m < 0, 0, elev_m))
 
 # tels with dem
+# Global Change Biology discourages the use of boundaries in figures:
+# https://onlinelibrary.wiley.com/page/journal/13652486/homepage/forauthors.html#4
 p_dem <-
   ggplot() +
   geom_raster(aes(x, y, fill = elev_m), dem) +
-  geom_sf(data = na, color = 'white', fill = 'transparent', lwd = 0.1) +
+  # geom_sf(data = na, color = 'white', fill = 'transparent', lwd = 0.1) +
   geom_sf(aes(geometry = geometry, color = dataset_name), tels,
           size = 0.1) +
   coord_sf(xlim = c(100e4, 110e4), clip = 'off',
@@ -90,43 +92,3 @@ p_dem <-
 
 ggsave('figures/tels-map-dem.png', plot = p_dem,
        width = 10, height = 8.5, units = 'in', dpi = 600, bg = 'white')
-
-# tels with bc map
-p_tels <-
-  ggplot() +
-  geom_sf(data = bc) +
-  geom_sf(aes(geometry = geometry, color = dataset_name), tels,
-          size = 0.1) +
-  scale_fill_manual(name = NULL, values = PAL,
-                    aesthetics = c('color', 'fill')) +
-  labs(x = NULL, y = NULL) +
-  theme_void() +
-  theme(legend.position = 'inside', legend.position.inside = c(-0.025, 0.5),
-        legend.justification = c(0, 0), text = element_text(face = 'bold')) +
-  guides(color = guide_legend(override.aes = list(alpha = 1, size = 2)))
-
-ggsave('figures/tels-map.png', plot = p_tels,
-       width = 10, height = 8.5, units = 'in', dpi = 600, bg = 'white')
-
-# UDs with bc map
-p_uds <-
-  ggplot() +
-  geom_sf(data = bc) +
-  geom_sf(aes(geometry = akde, fill = dataset_name, color = dataset_name),
-          uds, alpha = 0.3) +
-  scale_fill_manual(name = NULL, values = PAL,
-                    aesthetics = c('color', 'fill')) +
-  labs(x = NULL, y = NULL) +
-  theme_void() +
-  theme(legend.position = 'inside', legend.position.inside = c(0, 0.45),
-        legend.justification = c(0, 0), text = element_text(face = 'bold'))
-
-ggsave('figures/uds-map.png', plot = p_uds,
-       width = 10, height = 10.5, units = 'in', dpi = 600, bg = 'white')
-
-# telemetries and UDs with bc map
-p_tels <- p_uds +
-  geom_sf(aes(geometry = geometry, color = dataset_name), tels, pch = '.')
-
-ggsave('figures/tels-and-uds-map.png', plot = p_tels,
-       width = 10, height = 10.5, units = 'in', dpi = 600, bg = 'white')
