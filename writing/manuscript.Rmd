@@ -93,7 +93,7 @@ if(FALSE){
 
 \noindent \textbf{Tables}: 3
 
-\noindent \textbf{References}: 147 (updated on 2025-09-30) <!-- counted using movement ecology csl -->
+\noindent \textbf{References}: 155 (updated on 2025-10-01) <!-- counted using movement ecology csl -->
 
 \noindent \textbf{Appendices}: 2
 
@@ -228,7 +228,7 @@ sum(tels$outlier & !tels$original_outliers)
 round(mean(tels$outlier & !tels$original_outliers) * 100, 2)
 ```
 
-\noindent Boreal caribou and wolf telemetries were acquired from a data repository of the British Columbia Oil and Gas Research and Innovation Society (BC ORGIS) that was collected as part of the boreal caribou radio-collaring program of the BC OGRIS Research and Effectiveness Monitoring Board [REMB$;$ @bc_ogris_boreal_2018]. Southern mountain caribou data were obtained from the work of @ford_effects_2023. Cougar data include telemetries from @darlington_southern_2025 and @serrouya_ref. Elk data from the work of @ciuti_human_2012 were downloaded from Movebank [@kays_movebank_2022]. ***MISSING INFO ON GRIZZLY BEAR AND GOAT TELEMETRY DATA.***
+\noindent Boreal caribou and wolf telemetries were acquired from a data repository of the British Columbia Oil and Gas Research and Innovation Society (BC ORGIS) that was collected as part of the boreal caribou radio-collaring program of the BC OGRIS Research and Effectiveness Monitoring Board [REMB$;$ @bc_ogris_boreal_2018]. Southern mountain caribou data were obtained from the work of @ford_effects_2023. Cougar data include telemetries from @darlington_southern_2025 and @serrouya_ref. Elk data from the work of @ciuti_human_2012 were downloaded from Movebank [@kays_movebank_2022]. Finally, grizzly bear telemetries are from the work of @ref, while mountain goat data are from @ref.
 
 From the full set of telemetry data, we removed a total of 2396 problematic GPS locations (0.16%, including collar calibration data) after inspecting diagnostic plots of (1) distance from the median location, (2) straight-line displacement between locations, (3) turning angle, and (4) time interval between consecutive points. Particular attention was paid to points with large turning angles ($\gtrapprox 170^\circ$) and excessively high straight-line displacement, especially if antecedent and subsequent points indicated relatively stationary behaviour (Appendix A).
 
@@ -270,23 +270,24 @@ Since $\texttt{ctmm}\text{'s}$ movement models assume a single moving state with
 
 To assess the importance of including temperature as an explicit covariate (as opposed to including its effects with time of day and day of year), we fit models with and without smooth effects of temperature and compared the fits of the two sets of models via analyses of deviance (a form of generalized likelihood ratio tests) following the methods of Section 3.3 in @wood_generalized_2017. See Appendix B for additional information.
 
-```{r dags,  message=FALSE, warning=FALSE, fig.cap="Directed Acyclical Graphs (DAGs) assumed for inferring the causal effects of temperature on each species' movement behaviour. (A) Ambient temperature affects mammals' movement rates (i.e. probability of moving, speed when moving, and distance traveled), but temperature is influenced by time of day and day of year. Additionally, the effects of temperature on movement rates depend on time of day and season, since animals may respond to temperatures differently at different times of day and or days of year. Finally, the effect of time of day changes seasonally due to changes in photoperiod. (B) Similarly, habitat selection depends on the availability and selection of resources (forest cover, elevation, and distance from water), but the selection strengh for each resource is conditional on temperature. For example, an animal may avoid forested areas unless it is seeking refuge from extreme temperatures.", fig.height=8, fig.width=20, out.width='\\linewidth'}
+```{r dags,  message=FALSE, warning=FALSE, fig.cap="Directed Acyclical Graphs (DAGs) assumed for inferring the causal effects of temperature (red) on each species' movement behaviour. (A) Ambient temperature affects mammals' movement rates (i.e. probability of moving, speed when moving, and their product: distance traveled). The effects of temperature on mammals' movement rates depend on daily and seasonal phenology, since animals may respond to temperatures differently at different times of day and or days of year. Additionally, both temperature and phenology depend on time of day and day of year. Finally, daily phenology changes with seasonal phenology due to changes in photoperiod and life history (e.g, reproduction). (B) Similarly, habitat selection depends on the availability and selection of habitat variables (forest cover, elevation, and distance from water), but the selection strengh for each variable is conditional on temperature. For example, an animal may avoid forested areas unless it is seeking refuge from extreme temperatures.", fig.height=8, fig.width=20, out.width='\\linewidth'}
 library('dplyr')   # for data wrangling
 library('ggplot2') # for fancy plots
 library('cowplot') # for plots in grids
 
 # movement rates
-boxes_a <- tibble(xmin = c(0, 10, 5, 5),
+boxes_a <- tibble(xmin = c(0, 10, 5, 5, 0, 10),
                   xmax = xmin + 4,
-                  ymin = c(10, 10, 5, 0),
+                  ymin = c(10, 10, 5, 0, 3, 3),
                   ymax = ymin + 1,
-                  fill = c('#BBBBBB80', '#BBBBBB80', '#FF8C00AA', '#FF0000CC'),
-                  label = c('Time of day', 'Day of year', 'Movement rates',
-                            'Temperature'))
+                  fill = c('#BBBBBB80', '#BBBBBB80', '#FF8C00AA', '#FF0000CC',
+                           '#BBBBBB80', '#BBBBBB80'),
+                  label = c('Daily phenology', 'Seasonal phenology', 'Movement rates',
+                            'Temperature', 'Time of day', 'Day of year'))
 
-arrows_a <- tibble(id = sort(rep(1:6, 2)),
-                   x = c(10, 4, 4, 6, 10, 8, 2, 6, 7, 7, 12, 8),
-                   y = c(10.5, 10.5, 10, 6, 10, 6, 10, 1, 1, 5, 10, 1))
+arrows_a <- tibble(id = sort(rep(1:10, 2)),
+                   x = c(10, 4, 4, 6, 10, 8, 6, 2, 7, 7, 8, 12, 2, 5, 1, 1, 12, 9, 13, 13),
+                   y = c(10.5, 10.5, 10, 6, 10, 6, 1, 10, 1, 5, 1, 10, 3, 0.5, 4, 10, 3, 0.5, 4, 10))
 
 p_a <-
   ggplot() +
