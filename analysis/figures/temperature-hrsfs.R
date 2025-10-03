@@ -205,11 +205,11 @@ p <-
                   limits = c(-LIM, LIM), breaks = -LIM:LIM,
                   labels = \(x) 2^x) +
   theme(strip.placement = 'outside', strip.background.y = element_blank(),
-        strip.text.y = element_text(size = 11), legend.position = 'top',
+        strip.text = element_text(size = 11), legend.position = 'top',
         panel.background = element_rect(fill = 'grey90'),
-        legend.key.width = rel(2))
+        legend.key.width = rel(2), legend.text = element_text(size = 11))
 
-ggsave('figures/hrsf-surface-plots.png', p, width = 17.5, height = 8,
+ggsave('figures/hrsf-surface-plots.png', p, width = 16, height = 7.2,
        units = 'in', dpi = 600, bg = 'white'); beepr::beep()
 
 # figure of standard error on log link scale ----
@@ -229,9 +229,9 @@ p_se <-
   scale_y_continuous(NULL, expand = c(0, 0)) +
   scale_fill_lajolla(name = 'Standard error in log(RSS)') +
   theme(strip.placement = 'outside', strip.background.y = element_blank(),
-        strip.text.y = element_text(size = 11), legend.position = 'top',
+        strip.text = element_text(size = 11), legend.position = 'top',
         panel.background = element_rect(fill = 'grey90'),
-        legend.key.width = rel(2))
+        legend.key.width = rel(2), legend.text = element_text(size = 11))
 
-ggsave('figures/hrsf-surface-plots-se.png', p_se, width = 17.5, height = 8,
+ggsave('figures/hrsf-surface-plots-se.png', p_se, width = 16, height = 7.2,
        units = 'in', dpi = 600, bg = 'white')
