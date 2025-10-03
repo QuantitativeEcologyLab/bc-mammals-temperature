@@ -6,6 +6,7 @@ library('ctmm')    # for working with akdes
 library('ggplot2') # for fancy plots
 library('scales')  #' for `parse_format()`
 library('terra')   # for rasters
+library('cowplot') # for inset
 source('analysis/figures/default-ggplot-theme.R')
 source('data/bc-shapefile.R')
 
@@ -13,7 +14,7 @@ d <- readRDS('models/movement-models-akdes-2024-06-06.rds') %>%
   mutate(dataset_name = case_when(
     dataset_name == 'Canis_lupus_boreal' ~ 'Wolves',
     dataset_name == 'Rangifer_tarandus_boreal' ~ 'Caribou (boreal)',
-    dataset_name == 'Rangifer_tarandus_southern_mountain' ~ 'Caribou (southern mountain)',
+    dataset_name == 'Rangifer_tarandus_southern_mountain' ~ 'Caribou (s. mountain)',
     dataset_name == 'Puma_concolor_2' ~ 'Cougars',
     dataset_name == 'Puma_concolor_4' ~ 'Cougars',
     dataset_name == 'Elk in southwestern Alberta' ~ 'Elk',
@@ -34,25 +35,11 @@ tels <- transmute(d,
   unnest(tel) %>%
   st_as_sf()
 
-uds <- d %>%
-  transmute(
-    dataset_name,
-    akde =  map(akde, \(.a) {
-      SpatialPolygonsDataFrame.UD(.a, level = 0, level.UD = 0.95) %>%
-        st_as_sf() %>%
-        st_set_crs(.a@info$projection) %>%
-        filter(grepl(pattern = 'est', x = name)) %>%
-        st_transform('EPSG:3005')
-    }) %>%
-      bind_rows() %>%
-      pull(geometry))
-
 # create the figures ----
 us <- tigris::states(cb = TRUE, resolution = '5m') %>%
   st_geometry() %>%
   st_transform(crs(bc)) %>%
   st_as_sf()
-plot(us)
 
 na <- rbind(prov, us)
 
@@ -84,11 +71,26 @@ p_dem <-
   scale_fill_distiller(name = '\nElevation (m)', palette = 6) +
   labs(x = NULL, y = NULL) +
   theme_void() +
-  theme(legend.position = 'inside', legend.position.inside = c(-3, 0.05),
+  theme(legend.position = 'inside', legend.position.inside = c(-4.5, 0.2),
         legend.justification = c(1, 0), text = element_text(face = 'bold')) +
   guides(color = guide_legend(override.aes = list(alpha = 1, size = 2,
                                                   order = 2)),
          fill = guide_colorbar(order = 1))
 
-ggsave('figures/tels-map-dem.png', plot = p_dem,
-       width = 10, height = 8.5, units = 'in', dpi = 600, bg = 'white')
+p_inset <-
+  spData::world %>%
+  filter(continent == 'North America') %>%
+  st_transform('EPSG:3005') %>%
+  ggplot() +
+  geom_sf(fill = 'black', color = 'black') +
+  geom_sf(aes(geometry = geometry, color = dataset_name), tels,
+          color = 'darkorange', size = 0.1) +
+  theme_void() +
+  theme(panel.border = element_rect(colour = 'black', fill = 'transparent'))
+
+p_full <- ggdraw() +
+  draw_plot(p_dem) +
+  draw_plot(p_inset, height = 0.2, width = 0.2, x = 0.01, y = 0)
+
+ggsave('figures/tels-map-dem.png', plot = p_full,
+       width = 8, height = 6.8, units = 'in', dpi = 600, bg = 'white')
