@@ -92,7 +92,7 @@ p_resources <-
                            na.value = NA, values = c(0, 0.05, 1),
                            limits = c(0, 18), breaks = c(0, 18)) +
       theme(legend.position = 'top'),
-    nrow = 1)
+    nrow = 1, rel_widths = c(1, 1, 1.025))
 
 # predict habitat selection strength at 20 degrees C ----
 preds_habitat <-
@@ -104,7 +104,7 @@ preds_habitat <-
   nest(dat = everything()) %>%
   bind_rows(., mutate(., dat = map(dat, \(.d) {
     mutate(.d,,
-           species = c('Wolf'),
+           species = c('Wolves'),
            animal = c(rsf_bw$model$animal[1]))
   }))) %>%
   mutate(dat = map2(dat, list(rsf_bc, rsf_bw), \(.d, .m) {
