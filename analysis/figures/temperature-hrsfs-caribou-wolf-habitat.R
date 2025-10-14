@@ -68,7 +68,7 @@ p_resources <-
       geom_raster() +
       scale_x_continuous(NULL, expand = c(0, 0)) +
       scale_y_continuous(NULL, expand = c(0, 0)) +
-      scale_fill_gradient('Tree cover (%)', low = 'white', na.value = NA,
+      scale_fill_gradient('Forest cover (%)', low = 'white', na.value = NA,
                           high = 'darkgreen', limits = c(0, 100),
                           breaks = c(0, 100)) +
       theme(legend.position = 'top'),
@@ -88,11 +88,11 @@ p_resources <-
       scale_x_continuous(NULL, expand = c(0, 0)) +
       scale_y_continuous(NULL, expand = c(0, 0)) +
       scale_fill_distiller(expression(bold(atop(Distance~from,
-                                                water~(km)~phantom(om)))),
+                                                water~'(km)'~phantom(om)))),
                            na.value = NA, values = c(0, 0.05, 1),
                            limits = c(0, 18), breaks = c(0, 18)) +
       theme(legend.position = 'top'),
-    nrow = 1, rel_widths = c(1, 1, 1.025))
+    nrow = 1)
 
 # predict habitat selection strength at 20 degrees C ----
 preds_habitat <-
