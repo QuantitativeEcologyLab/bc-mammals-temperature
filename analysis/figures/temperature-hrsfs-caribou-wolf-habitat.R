@@ -66,32 +66,32 @@ p_resources <-
     ggplot(resources, aes(x, y, fill = forest_perc)) +
       coord_sf(crs = 'EPSG:3005') +
       geom_raster() +
-      scale_x_continuous(NULL, expand = c(0, 0)) +
+      scale_x_continuous(NULL, expand = c(0, 0), breaks = -c(124, 122, 120)) +
       scale_y_continuous(NULL, expand = c(0, 0)) +
       scale_fill_gradient('Forest cover (%)', low = 'white', na.value = NA,
                           high = 'darkgreen', limits = c(0, 100),
                           breaks = c(0, 100)) +
-      theme(legend.position = 'top'),
+      theme(legend.position = 'top', legend.key.width = rel(0.7)),
     ggplot(resources, aes(x, y, fill = elevation_m / 1e3)) +
       coord_sf(crs = 'EPSG:3005') +
       geom_raster() +
-      scale_x_continuous(NULL, expand = c(0, 0)) +
+      scale_x_continuous(NULL, expand = c(0, 0), breaks = -c(124, 122, 120)) +
       scale_y_continuous(NULL, expand = c(0, 0)) +
       scale_fill_distiller('Elevation (km) ', palette = 6, direction = 1,
                            breaks = round(range(resources$elevation_m / 1e3), 1),
                            labels = round(range(resources$elevation_m / 1e3), 1),
                            limits = round(range(resources$elevation_m / 1e3), 1)) +
-      theme(legend.position = 'top'),
+      theme(legend.position = 'top', legend.key.width = rel(0.7)),
     ggplot(resources, aes(x, y, fill = dist_water_m / 1e3)) +
       coord_sf(crs = 'EPSG:3005') +
       geom_raster() +
-      scale_x_continuous(NULL, expand = c(0, 0)) +
+      scale_x_continuous(NULL, expand = c(0, 0), breaks = -c(124, 122, 120)) +
       scale_y_continuous(NULL, expand = c(0, 0)) +
       scale_fill_distiller(expression(bold(atop(Distance~from,
                                                 water~'(km)'~phantom(om)))),
                            na.value = NA, values = c(0, 0.05, 1),
                            limits = c(0, 18), breaks = c(0, 18)) +
-      theme(legend.position = 'top'),
+      theme(legend.position = 'top', legend.key.width = rel(0.7)),
     nrow = 1)
 
 # predict habitat selection strength at 20 degrees C ----
@@ -123,7 +123,7 @@ preds_habitat <-
 # keeping elevations > 1200 m to make the point that predicting is hard
 p_habitat <-
   preds_habitat %>%
-  mutate(lambda = lambda * if_else(grepl('Caribou', species), 100, 5e3),
+  mutate(lambda = lambda * if_else(grepl('Caribou', species), 200, 1e4),
          lambda = if_else(lambda > 4, 4, lambda),
          lambda = if_else(lambda < 0.25, 0.25, lambda)) %>%
   ggplot(aes(x, y, fill = lambda)) +
@@ -140,8 +140,39 @@ p_habitat <-
                          as.character()) +
   theme(legend.position = 'top', legend.key.width = unit(0.7, 'in'))
 
-p <- plot_grid(p_resources, p_habitat, labels = c('A', 'B'), ncol = 1,
-               rel_heights = c(1, 2))
+p_enc <-
+  preds_habitat %>%
+  mutate(lambda = lambda * if_else(grepl('Caribou', species), 100, 5e3)) %>%
+  select(x, y, temperature_C, species, lambda) %>%
+  nest(r = ! c(species, temperature_C)) %>%
+  mutate(r = map(r, \(.r) rast(.r, crs = 'EPSG:3005'))) %>%
+  pivot_wider(names_from = species, values_from = r) %>%
+  mutate(r = map2(`Caribou (boreal)`, Wolves, \(.c, .w) {
+    as.data.frame(.c * .w, xy = TRUE) %>%
+      rename(p_encounter = lambda)
+  })) %>%
+  select(! c(`Caribou (boreal)`, Wolves)) %>%
+  unnest(r) %>%
+  mutate(p_encounter = if_else(p_encounter > 4, 4, p_encounter),
+         p_encounter = if_else(p_encounter < 0.25, 0.25, p_encounter)) %>%
+  ggplot(aes(x, y, fill = p_encounter)) +
+  coord_sf(crs = 'EPSG:3005') +
+  facet_grid(. ~ temperature_C) +
+  geom_raster() +
+  scale_x_continuous(NULL, expand = c(0, 0), breaks = -c(124, 122, 120)) +
+  scale_y_continuous(NULL, expand = c(0, 0)) +
+  scale_fill_distiller('Relative encounter rate   ', type = 'div',
+                       palette = 2, direction = 1, trans = 'log2',
+                       limits = c(0.25, 4),
+                       breaks = c(0.25, 0.5, 1, 2, 4),
+                       labels = c(0.25, 0.5, 1, 2, 4) %>%
+                         as.character()) +
+  theme(legend.position = 'top', legend.key.width = unit(0.7, 'in'))
+
+p <- plot_grid(p_habitat,
+               plot_grid(p_resources, p_enc, ncol = 1,
+                         labels = c('B', 'C'), rel_heights = c(1, 1.2)),
+               labels = c('A', ''), nrow = 1)
 
 ggsave('figures/boreal-caribou-wolf-habitat.png', p,
-       width = 11.5, height = 15, dpi = 600, bg = 'white')
+       width = 20, height = 10, dpi = 600, bg = 'white')
