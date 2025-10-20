@@ -39,4 +39,4 @@ d <- d %>%
   select(individual.local.identifier, location.long, location.lat,
          timestamp, fix, hdop, pdop)
 
-saveRDS(d, 'data/tracking-data/oreamnos-americanus.rds')
+saveRDS(d, 'data/tracking-data/oreamnos-americanus-tels.rds')
