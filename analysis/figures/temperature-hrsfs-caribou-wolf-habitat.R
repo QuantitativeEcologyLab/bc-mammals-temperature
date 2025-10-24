@@ -149,19 +149,19 @@ p_enc <-
   pivot_wider(names_from = species, values_from = r) %>%
   mutate(r = map2(`Caribou (boreal)`, Wolves, \(.c, .w) {
     as.data.frame(.c * .w, xy = TRUE) %>%
-      rename(p_encounter = lambda)
+      rename(cooccupancy = lambda)
   })) %>%
   select(! c(`Caribou (boreal)`, Wolves)) %>%
   unnest(r) %>%
-  mutate(p_encounter = if_else(p_encounter > 4, 4, p_encounter),
-         p_encounter = if_else(p_encounter < 0.25, 0.25, p_encounter)) %>%
-  ggplot(aes(x, y, fill = p_encounter)) +
+  mutate(cooccupancy = if_else(cooccupancy > 4, 4, cooccupancy),
+         cooccupancy = if_else(cooccupancy < 0.25, 0.25, cooccupancy)) %>%
+  ggplot(aes(x, y, fill = cooccupancy)) +
   coord_sf(crs = 'EPSG:3005') +
   facet_grid(. ~ temperature_C) +
   geom_raster() +
   scale_x_continuous(NULL, expand = c(0, 0), breaks = -c(124, 122, 120)) +
   scale_y_continuous(NULL, expand = c(0, 0)) +
-  scale_fill_distiller('Relative encounter rate   ', type = 'div',
+  scale_fill_distiller('Relative co-occupancy rate   ', type = 'div',
                        palette = 2, direction = 1, trans = 'log2',
                        limits = c(0.25, 4),
                        breaks = c(0.25, 0.5, 1, 2, 4),
