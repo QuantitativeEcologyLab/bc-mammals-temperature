@@ -89,6 +89,9 @@ data/ecmwf-era5-2m-temperature/*
 *.log
 *.db
 
+# ignore GCB checklist
+writing/GCB-initial-submission-checklist-REX-July-2025.pdf
+
 # do not ignore predictions without sensitive data below 100 MB
 !temperature-hrsf-preds.rds
 !climate-yearly-projections-mean-sd-2025-2100-only-2025-01-21.rds
