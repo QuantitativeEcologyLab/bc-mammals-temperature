@@ -235,3 +235,33 @@ p_se <-
 
 ggsave('figures/hrsf-surface-plots-se.png', p_se, width = 16, height = 7.2,
        units = 'in', dpi = 600, bg = 'white')
+
+# for comparing the models to the raw data
+if(FALSE) {
+  #' change index in `[[ ]]` to cycle across species
+  obs <- filter(d$rsf[[1]]$model, detected == 1)
+  
+  ggplot(obs, aes(temperature_C, forest_perc)) +
+    facet_wrap(~ animal) +
+    geom_hex() +
+    labs(x = expression(paste(bold('Temperature ('), bold(degree), bold('C)'))),
+         y = 'Forest cover (%)') +
+    scale_fill_lapaz(name = 'Count', trans = 'sqrt', reverse = TRUE) +
+    theme(legend.position = 'inside', legend.position.inside = c(0.9, 0.15))
+  
+  ggplot(obs, aes(temperature_C, elevation_m / 1e3)) +
+    facet_wrap(~ animal) +
+    geom_hex() +
+    labs(x = expression(paste(bold('Temperature ('), bold(degree), bold('C)'))),
+         y = 'Elevation (km)') +
+    scale_fill_lapaz(name = 'Count', trans = 'sqrt', reverse = TRUE) +
+    theme(legend.position = 'inside', legend.position.inside = c(0.9, 0.15))
+  
+  ggplot(obs, aes(temperature_C, dist_water_m / 1e3)) +
+    facet_wrap(~ animal) +
+    geom_hex() +
+    labs(x = expression(paste(bold('Temperature ('), bold(degree), bold('C)'))),
+         y = 'Distance from water (km)') +
+    scale_fill_lapaz(name = 'Count', trans = 'sqrt', reverse = TRUE) +
+    theme(legend.position = 'inside', legend.position.inside = c(0.9, 0.15))
+}
