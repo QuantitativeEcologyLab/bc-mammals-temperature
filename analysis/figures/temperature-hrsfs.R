@@ -14,8 +14,8 @@ if(file.exists('models/temperature-hrsf-preds.rds')) {
 } else {
   # import models for each species
   d <- tibble(
-    species = SPECIES,
-    lab = SPECIES_LABS,
+    species = sort(SPECIES),
+    lab = sort(SPECIES_LABS),
     file_name = map_chr(species, \(.sp) {
       fn <- list.files(path = 'H:/GitHub/bc-mammals-temperature/models/',
                        pattern = gsub('\\(s\\.', 'southern', .sp) %>%
@@ -71,7 +71,7 @@ if(file.exists('models/temperature-hrsf-preds.rds')) {
         bind_cols(.,
                   predict(object = m, newdata = newd, type = 'link',
                           se.fit = TRUE, discrete = TRUE,
-                          newdata.guaranteed = TRUE,
+                          # newdata.guaranteed = TRUE,
                           terms = c('s(forest_perc)',
                                     'ti(forest_perc,temperature_C)')) %>%
                     as.data.frame()),
@@ -91,7 +91,7 @@ if(file.exists('models/temperature-hrsf-preds.rds')) {
         bind_cols(.,
                   predict(object = m, newdata = newd, type = 'link',
                           se.fit = TRUE, discrete = TRUE,
-                          newdata.guaranteed = TRUE,
+                          # newdata.guaranteed = TRUE,
                           terms = c('s(elevation_m)',
                                     'ti(elevation_m,temperature_C)')) %>%
                     as.data.frame()),
@@ -111,7 +111,7 @@ if(file.exists('models/temperature-hrsf-preds.rds')) {
         bind_cols(.,
                   predict(object = m, newdata = newd, type = 'link',
                           se.fit = TRUE, discrete = TRUE,
-                          newdata.guaranteed = TRUE,
+                          # newdata.guaranteed = TRUE,
                           terms = c('s(dist_water_m)',
                                     'ti(dist_water_m,temperature_C)')) %>%
                     as.data.frame())) %>%
