@@ -231,7 +231,7 @@ sum(tels$outlier & !tels$original_outliers)
 round(mean(tels$outlier & !tels$original_outliers) * 100, 2)
 ```
 
-\noindent Boreal caribou and wolf telemetry data were acquired from a data repository of the British Columbia Oil and Gas Research and Innovation Society (BC ORGIS) that was collected as part of the boreal caribou radio-collaring program of the BC OGRIS Research and Effectiveness Monitoring Board [REMB$;$ @bc_ogris_boreal_2018]. Southern mountain caribou data were obtained from @ford_effects_2023. Cougar data are from @darlington_southern_2025 and @serrouya_ref. Elk data from the work of @ciuti_human_2012 were downloaded from Movebank [@kays_movebank_2022]. Finally, grizzly bear telemetry data are from @grizzly_ref, while mountain goat data are from the work of @balyx_human_2022 and were provided by the British Columbia Ministry of Environment and Parks.
+\noindent Boreal caribou and wolf telemetry data were acquired from a data repository of the British Columbia Oil and Gas Research and Innovation Society (BC ORGIS) that was collected as part of the boreal caribou radio-collaring program of the BC OGRIS Research and Effectiveness Monitoring Board [REMB$;$ @bc_ogris_boreal_2018]. Southern mountain caribou data were obtained from @ford_effects_2023. Cougar data are from @darlington_southern_2025 and @serrouya_ref. Elk data from the work of @ciuti_human_2012 were downloaded from Movebank [@kays_movebank_2022]. Finally, grizzly bear telemetry data are from @serrouya_grizzly_2011, while mountain goat data are from the work of @balyx_human_2022 and were provided by the British Columbia Ministry of Environment and Parks.
 
 From the full set of telemetry data, we removed 2,396 problematic GPS locations (0.16%, including collar calibration data) after inspecting diagnostic plots of (1) distance from the median location, (2) straight-line displacement between locations, (3) turning angle, and (4) time interval between consecutive points. Particular attention was paid to points with large turning angles ($\gtrapprox 170^\circ$) and excessively high straight-line displacement, especially if antecedent and subsequent points indicated relatively stationary behaviour (Appendix A).
 
@@ -381,7 +381,7 @@ Each species' model had the same structure:
 O \sim \text{Pois}(\lambda) \\
 \mathbb E(O) = \mathbb V(O) = \lambda \\
 \begin{aligned}
-\text{log}(\lambda) = & f_{1}(\texttt{forest\_perc}) + f_{2}(\texttt{elevation\_m}) + f_{3}(\texttt{dist\_water\_m}) + \\
+\text{log}(\lambda) = & \beta_0 + f_{1}(\texttt{forest\_perc}) + f_{2}(\texttt{elevation\_m}) + f_{3}(\texttt{dist\_water\_m}) + \\
 & Z_\texttt a + f_{4, \texttt{a}}(\texttt{forest\_perc}) + f_{5, \texttt{a}}(\texttt{elevation\_m}) + f_{6, \texttt{a}}(\texttt{dist\_water\_m}) + \\
 & f_{7}(\texttt{forest\_perc}, \texttt{temp\_c}) + f_{8}(\texttt{elevation\_m}, \texttt{temp\_c}) + \\
 & f_{9}(\texttt{dist\_water\_m}, \texttt{temp\_c}) + f_{10}(\texttt{temp\_c}) + f_{11,\texttt a}(\texttt{temp\_c}))
