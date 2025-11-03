@@ -74,7 +74,7 @@ nrow(d)
 ggplot(d, aes(x, y, color = hours)) +
   facet_wrap(~ animal, scales = 'free') +
   geom_path(size = 1) +
-  geom_point(aes(size = HDOP), alpha = 0.3) +
+  geom_point(aes(linewidth = HDOP), alpha = 0.3) +
   scale_size(limits = range(d$HDOP)) +
   scale_color_gradientn(colors = khroma::color('bright')(6))
 
@@ -88,7 +88,7 @@ d %>%
   filter(distance < 50) %>% # drop larger errors to focus on small patterns
   ggplot(aes(x, y, color = hours)) +
   facet_wrap(~ animal, scales = 'free') +
-  geom_path(size = 1) +
+  geom_path(lwd = 1) +
   geom_point(aes(size = HDOP), alpha = 0.3) +
   scale_size(limits = range(d$HDOP)) +
   scale_color_gradientn(colors = khroma::color('bright')(6))
