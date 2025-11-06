@@ -14,10 +14,6 @@ source('functions/get_legend.R') # doesn't work in cowplot v.1.1.3.9000
 
 theme_set(theme_get() + theme(text = element_text(size = 15)))
 
-# boreal caribou RSF
-rsf_bc <- readRDS('H:/GitHub/bc-mammals-temperature/models/rsf-Rangifer tarandus boreal-2025-01-21.rds')
-rsf_bw <- readRDS('H:/GitHub/bc-mammals-temperature/models/rsf-Canis lupus-2025-01-20.rds')
-
 # habitat selection strength for the current habitat ----
 locs <- readRDS('data/tracking-data/all-tracking-data-cleaned-2024-02-22-13-49.rds') %>%
   filter(dataset_name == 'Rangifer_tarandus_boreal') %>%
@@ -95,29 +91,41 @@ p_resources <-
     nrow = 1)
 
 # predict habitat selection strength at 20 degrees C ----
-preds_habitat <-
-  expand_grid(res = list(resources),
-              temperature_C = c(-20, 0, 20)) %>%
-  unnest(res) %>%
-  mutate(species = 'Caribou (boreal)',
-         animal = rsf_bc$model$animal[1]) %>%
-  nest(dat = everything()) %>%
-  bind_rows(., mutate(., dat = map(dat, \(.d) {
-    mutate(.d,,
-           species = c('Wolves'),
-           animal = c(rsf_bw$model$animal[1]))
-  }))) %>%
-  mutate(dat = map2(dat, list(rsf_bc, rsf_bw), \(.d, .m) {
-    .d %>%
-      mutate(lambda = predict(object = .m, newdata = .,
-                              se.fit = FALSE, type = 'response',
-                              # exclude seasonal sampling bias
-                              exclude = c('s(temperature_C)',
-                                          's(temperature_C,animal)')))
-  })) %>%
-  unnest(dat) %>%
-  mutate(temperature_C = paste0(temperature_C, '\U00B0', 'C') %>%
-           factor(., levels = unique(.)))
+if(! file.exists('models/caribou-wolf-co-occupancy-panels.rds')) {
+  preds_habitat <- readRDS('models/caribou-wolf-co-occupancy-panels.rds')
+} else {
+  # boreal caribou RSF
+  rsf_bc <- readRDS('H:/GitHub/bc-mammals-temperature/models/rsf-Rangifer tarandus boreal-2025-01-21.rds')
+  rsf_bw <- readRDS('H:/GitHub/bc-mammals-temperature/models/rsf-Canis lupus-2025-01-20.rds')
+  
+  preds_habitat <-
+    expand_grid(res = list(resources),
+                temperature_C = c(-20, 0, 20)) %>%
+    unnest(res) %>%
+    # make dataset for caribou
+    mutate(species = 'Caribou (boreal)',
+           animal = rsf_bc$model$animal[1]) %>%
+    nest(dat = everything()) %>%
+    # rowbind a dataset for wolves
+    bind_rows(., mutate(., dat = map(dat, \(.d) {
+      mutate(.d,,
+             species = c('Wolves'),
+             animal = c(rsf_bw$model$animal[1]))
+    }))) %>%
+    # add predicted RSS values
+    mutate(dat = map2(dat, list(rsf_bc, rsf_bw), \(.d, .m) {
+      .d %>%
+        mutate(lambda = predict(object = .m, newdata = .,
+                                se.fit = FALSE, type = 'response',
+                                # exclude seasonal sampling bias
+                                exclude = c('s(temperature_C)',
+                                            's(temperature_C,animal)')))
+    })) %>%
+    unnest(dat) %>%
+    mutate(temperature_C = paste0(temperature_C, '\U00B0', 'C') %>%
+             factor(., levels = unique(.)))
+  saveRDS(preds_habitat, 'models/caribou-wolf-co-occupancy-panels.rds')
+}
 
 # figure of habitat selection strength for different temperatures
 # keeping elevations > 1200 m to make the point that predicting is hard
@@ -140,7 +148,7 @@ p_habitat <-
                          as.character()) +
   theme(legend.position = 'top', legend.key.width = unit(0.7, 'in'))
 
-p_enc <-
+p_rcr <-
   preds_habitat %>%
   mutate(lambda = lambda * if_else(grepl('Caribou', species), 100, 5e3)) %>%
   select(x, y, temperature_C, species, lambda) %>%
@@ -169,10 +177,67 @@ p_enc <-
                          as.character()) +
   theme(legend.position = 'top', legend.key.width = unit(0.7, 'in'))
 
-p <- plot_grid(p_habitat,
-               plot_grid(p_resources, p_enc, ncol = 1,
-                         labels = c('B', 'C'), rel_heights = c(1, 1.2)),
-               labels = c('A', ''), nrow = 1)
+# hex plot of co-occupancy vs temperature
+if(! file.exists('models/caribou-wolf-co-occupancy-panels.rds')) {
+  preds_hex <- readRDS('models/caribou-wolf-co-occupancy-hex.rds')
+} else {
+  preds_hex <-
+  expand_grid(res = list(resources),
+              temperature_C = seq(-20, 20, by = 1)) %>%
+  unnest(res) %>%
+  mutate(species = 'Caribou (boreal)',
+         animal = rsf_bc$model$animal[1]) %>%
+  nest(dat = everything()) %>%
+  bind_rows(., mutate(., dat = map(dat, \(.d) {
+    mutate(.d,,
+           species = c('Wolves'),
+           animal = c(rsf_bw$model$animal[1]))
+  }))) %>%
+  mutate(dat = map2(dat, list(rsf_bc, rsf_bw), \(.d, .m) {
+    .d %>%
+      mutate(lambda = predict(object = .m, newdata = .,
+                              se.fit = FALSE, type = 'response',
+                              # exclude seasonal sampling bias
+                              exclude = c('s(temperature_C)',
+                                          's(temperature_C,animal)')))
+  })) %>%
+  unnest(dat) %>%
+  mutate(lambda = lambda * if_else(grepl('Caribou', species), 100, 5e3)) %>%
+  select(x, y, temperature_C, species, lambda) %>%
+  nest(r = ! c(species, temperature_C)) %>%
+  mutate(r = map(r, \(.r) rast(.r, crs = 'EPSG:3005'))) %>%
+  pivot_wider(names_from = species, values_from = r) %>%
+  mutate(r = map2(`Caribou (boreal)`, Wolves, \(.c, .w) {
+    as.data.frame(.c * .w, xy = TRUE) %>%
+      rename(cooccupancy = lambda)
+  })) %>%
+  select(! c(`Caribou (boreal)`, Wolves)) %>%
+  unnest(r) %>%
+  mutate(cooccupancy = if_else(cooccupancy > 4, 4, cooccupancy),
+         cooccupancy = if_else(cooccupancy < 0.25, 0.25, cooccupancy))
+  saveRDS(preds_hex, 'models/caribou-wolf-co-occupancy-hex.rds')
+}
+
+p_hex <- preds_hex %>%
+  filter(cooccupancy > 0.25, cooccupancy < 4) %>%
+  ggplot(aes(temperature_C, log2(cooccupancy))) +
+  geom_hex(bins = 20) +
+  scale_x_continuous(paste0('Temperature ', '\U00B0', 'C'),
+                     expand = c(0, 0)) +
+  scale_y_continuous('Relative co-occupancy rate', expand = c(0, 0),
+                     breaks = -2:2, labels = \(x) 2^x) +
+  scale_fill_lapaz(name = expression(bold('Count (log'['10']~'scale)')),
+                   trans = 'log10', reverse = TRUE) +
+  theme(legend.position = 'top', legend.key.width = rel(2))
+
+plot_grid(p_habitat,
+          plot_grid(p_resources, p_rcr, ncol = 1,
+                    labels = c('B', 'C'), rel_heights = c(1, 1.2)),
+          labels = c('A', ''), nrow = 1)
+
+p <- plot_grid(p_habitat, p_hex, p_rcr, p_resources,
+               ncol = 2, rel_heights = c(1, 0.55),
+               labels = 'AUTO')
 
 ggsave('figures/boreal-caribou-wolf-habitat.png', p,
-       width = 20, height = 10, dpi = 600, bg = 'white')
+       width = 20, height = 15, dpi = 600, bg = 'white')
