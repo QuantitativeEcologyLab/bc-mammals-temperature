@@ -176,7 +176,7 @@ p <-
   # doing this because some estimated effects of distance from water and
   # elevation are extreme
   group_by(lab, variable) %>%
-  mutate(lambda = lambda / median(lambda),
+  mutate(lambda = lambda / median(lambda[round(temperature_C) == 0]),
          lambda = case_when(
            lab == 'Elk' & variable == 'bold(Elevation~"(km)")' ~ lambda / exp(1),
            lab == 'Mountain goats' & variable == 'bold(Elevation~"(km)")' ~ lambda * exp(0.25),
