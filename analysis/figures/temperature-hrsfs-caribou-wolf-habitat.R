@@ -91,7 +91,7 @@ p_resources <-
     nrow = 1)
 
 # predict habitat selection strength at 20 degrees C ----
-if(! file.exists('models/caribou-wolf-co-occupancy-panels.rds')) {
+if(file.exists('models/caribou-wolf-co-occupancy-panels.rds')) {
   preds_habitat <- readRDS('models/caribou-wolf-co-occupancy-panels.rds')
 } else {
   # boreal caribou RSF
@@ -178,7 +178,7 @@ p_rcr <-
   theme(legend.position = 'top', legend.key.width = unit(0.7, 'in'))
 
 # hex plot of co-occupancy vs temperature
-if(! file.exists('models/caribou-wolf-co-occupancy-panels.rds')) {
+if(file.exists('models/caribou-wolf-co-occupancy-panels.rds')) {
   preds_hex <- readRDS('models/caribou-wolf-co-occupancy-hex.rds')
 } else {
   preds_hex <-
@@ -232,7 +232,7 @@ p_hex <- preds_hex %>%
                    trans = 'log10', reverse = TRUE) +
   theme(legend.position = 'top', legend.key.width = rel(2))
 
-p <- plot_grid(p_habitat, p_hex, p_rcr, p_resources,
+p <- plot_grid(p_habitat, p_hex, p_resources, p_rcr,
                ncol = 2, rel_heights = c(1, 0.55),
                labels = c('A', 'C', 'B', 'D'))
 
