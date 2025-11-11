@@ -14,8 +14,6 @@ author:
     institute: [braes, biol]
   - name: TJ Gooliaff
     institute: [forest]
-  - name: Kirk Safford
-    institute: bcp
   - name: Robert Serrouya
     institute: [braes, biol, biodiv]
   - name: Michael J. Noonan
@@ -27,7 +25,6 @@ institute:
   - ucf: Department of Biology, University of Central Florida, Orlando, Florida 32816, United States.
   - smith: Smithsonian Conservation Biology Institute, National Zoological Park, 1500 Remount Rd., Front Royal, VA 22630, United States.
   - forest: British Columbia Ministry of Forests, Lands, Natural Resource Operations and Rural Development, Penticton, BC, Canada.
-  - bcp: British Columbia Ministry of Environment and Parks, Penticton, BC, Canada.
   - biodiv: Wildlife Science Centre, Biodiversity Pathways, University of British Columbia Okanagan, Revelstoke, British Columbia, Canada.
   - cmps: Department of Computer Science, Math, Physics, and Statistics, The University of British Columbia Okanagan, Kelowna, British Columbia, Canada.
 bibliography: 'bc-mammals-temperature.bib'
@@ -87,13 +84,13 @@ if(FALSE){
 
 \noindent \textbf{Words in abstract}: `r stringi::stri_count_words(abstract)`
 
-\noindent \textbf{Words in main text}: `r suppressMessages(wordcountaddin::word_count())`
+\noindent \textbf{Words in main text}: `r suppressMessages(wordcountaddin::word_count()) - 80` <!-- does not include abstract or figure captions; "- 80" removes the stuff on page 2 -->
 
 \noindent \textbf{Figures}: 9
 
 \noindent \textbf{Tables}: 3
 
-\noindent \textbf{References}: 165 (updated on 2025-10-31) <!-- counted using movement ecology csl -->
+\noindent \textbf{References}: 178 (updated on 2025-11-11, including +1 for @serrouya_ref) <!-- counted using movement ecology csl -->
 
 \noindent \textbf{Appendices}: 2
 
@@ -668,11 +665,21 @@ Future work should develop models that account for covariates that are specific 
 
 We have demonstrated that temperature has complex and nonlinear effects on how and where boreal mammals move. Rising temperatures have impacted mammals' daily and seasonal movement cycles, and changes are expected to intensify throughout the 21^st^ century. Quantifying how temperature affects mammalian behavior and fitness is a first step towards developing an understanding of the effects of climate change on landscape dynamics and the effectiveness of protected areas in the future. By leveraging the flexibility and statistical power of Hierarchical Generalized Additive Models, we have provided researchers with malleable and data-driven methods for assessing species' responses to climate change. We hope that future work will develop more species-specific models with the intent of developing a community-level framework for quantifying and predicting how communities will respond to climate change.
 
-\ 
+# Acknowledgements {-}
+
+```{r}
+ackn <- "\\noindent We would like to thank Kirk Safford from the British Columbia Ministry of Environment and Parks (BC Parks) in Penticton, BC, Canada for providing the mountain goat telemetry data. SM would also like to thank BC Parks and Biodiversity Pathways for financial suppport, and also all those who provided feedback following presentations and poster sessions."
+```
+
+`r ackn`
 
 # Author contributions {-}
 
-\noindent SM performed the data cleaning, ran the analyses, and wrote the manuscript. CHF wrote code for estimating instantaneous movement speeds. MJN conceived of the project idea and supervised SM throughout the project. All other authors contributed telemetry data and/or reviewed the interpretation of the results for their species of interest. KH and SD contributed substantially to manuscript review. All authors contributed to reviewing the manuscript.
+```{r}
+contrib <- "\\noindent SM performed the data cleaning, ran the analyses, and wrote the manuscript. CHF wrote code for estimating instantaneous movement speeds. MJN conceived of the project idea and supervised SM throughout the project. All other authors contributed telemetry data and/or reviewed the interpretation of the results for their species of interest. KH and SD contributed substantially to manuscript review. All authors contributed to reviewing the manuscript."
+```
+
+`r contrib`
 
 \clearpage <!-- to prevent figures from floating to the references -->
 
