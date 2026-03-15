@@ -165,10 +165,17 @@ preds %>%
 
 LIM <- 2
 
+preds <- 
+
 p <-
   preds %>%
   filter((! too_far_2)) %>%
   select(lab, x, temperature_C, variable, lambda, too_far_1) %>%
+  mutate(variable = if_else(variable == 'Elevation (km)',
+                            'Elevation (m)', variable) %>%
+           factor(levels = c('Forest cover (%)', 'Elevation (m)',
+                             'Distance from water (km)')),
+         x = if_else(variable == 'Elevation (m)', x * 1000, x)) %>%
   # make detection rates homogeneous across temperature
   group_by(lab, variable, temperature_C) %>%
   mutate(lambda = lambda / mean(lambda)) %>%
@@ -178,9 +185,9 @@ p <-
   group_by(lab, variable) %>%
   mutate(lambda = lambda / median(lambda[round(temperature_C) == 0]),
          lambda = case_when(
-           lab == 'Elk' & variable == 'bold(Elevation~"(km)")' ~ lambda / exp(1),
-           lab == 'Mountain goats' & variable == 'bold(Elevation~"(km)")' ~ lambda * exp(0.25),
-           lab == 'Caribou (boreal)' & variable == 'bold(Elevation~"(km)")' ~ lambda / exp(2),
+           lab == 'Elk' & variable == 'Elevation (m)' ~ lambda / exp(1),
+           lab == 'Mountain goats' & variable == 'Elevation (m)' ~ lambda * exp(0.25),
+           lab == 'Caribou (boreal)' & variable == 'Elevation (m)' ~ lambda / exp(2),
            lab == 'Mountain goats' & variable == 'bold(Distance~from~water~"(km)")' ~ lambda * exp(0.5),
            lab == 'Caribou (s. mountain)' & variable == 'bold(Distance~from~water~"(km)")' ~ lambda * exp(0.2),
            lab == 'Grizzly bears' & variable == 'bold(Distance~from~water~"(km)")' ~ lambda * exp(0.5),
@@ -207,9 +214,10 @@ p <-
   theme(strip.placement = 'outside', strip.background.y = element_blank(),
         strip.text = element_text(size = 11), legend.position = 'top',
         panel.background = element_rect(fill = 'grey90'),
-        legend.key.width = rel(2), legend.text = element_text(size = 11))
+        legend.key.width = rel(2), legend.text = element_text(size = 11),
+        panel.spacing = rel(1.5), strip.text.x = element_text(size = rel(0.75)))
 
-ggsave('figures/hrsf-surface-plots.png', p, width = 16, height = 7.2,
+ggsave('figures/hrsf-surface-plots.png', p, width = 16, height = 8,
        units = 'in', dpi = 600, bg = 'white'); beepr::beep()
 
 # figure of standard error on log link scale ----
