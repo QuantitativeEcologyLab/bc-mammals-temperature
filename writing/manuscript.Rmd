@@ -3,7 +3,7 @@ title: "\\Large Rising temperatures alter how and where mammals move"
 author:
   - name: Stefano Mezzini
     email: stefano.mezzini@ubc.ca
-    institute: [braes, biol]
+    institute: [braes, biol, pois]
   - name: Christen H. Fleming
     institute: [ucf, smith]
   - name: Karen E. Hodges
@@ -22,6 +22,7 @@ author:
 institute:
   - braes: Okanagan Institute for Biodiversity, Resilience, and Ecosystem Services, The University of British Columbia Okanagan, Kelowna, British Columbia, Canada.
   - biol: Department of Biology, The University of British Columbia Okanagan, Kelowna, British Columbia, Canada.
+  - pois: Poisson Consulting Ltd., Nelson, British Columbia, Canada.
   - ucf: Department of Biology, University of Central Florida, Orlando, Florida 32816, United States.
   - smith: Smithsonian Conservation Biology Institute, National Zoological Park, 1500 Remount Rd., Front Royal, VA 22630, United States.
   - forest: British Columbia Ministry of Forests, Lands, Natural Resource Operations and Rural Development, Penticton, BC, Canada.
