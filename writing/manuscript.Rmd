@@ -52,6 +52,7 @@ output:
       - '--lua-filter=author-info-blocks.lua'
     toc: false
     number_sections: true
+    keep_tex: true
 editor_options: 
   chunk_output_type: console
 ---
