@@ -4,19 +4,17 @@ subtitle: "\\Large Appendix A: Cleaning Telemetry Data"
 author:
   - name: Stefano Mezzini
     email: stefano.mezzini@ubc.ca
-    institute: [braes, biol]
-  - name: Chris H. Fleming
+    institute: [braes, biol, pois]
+  - name: Christen H. Fleming
     institute: [ucf, smith]
+  - name: Karen E. Hodges
+    institute: [braes, biol]
   - name: Siobhan Darlington
     institute: [braes, biol]
   - name: Adam T. Ford
     institute: [braes, biol]
   - name: TJ Gooliaff
     institute: [forest]
-  - name: Karen E. Hodges
-    institute: [braes, biol]
-  - name: Kirk Safford
-    institute: bcp
   - name: Robert Serrouya
     institute: [braes, biol, biodiv]
   - name: Michael J. Noonan
@@ -25,10 +23,10 @@ author:
 institute:
   - braes: Okanagan Institute for Biodiversity, Resilience, and Ecosystem Services, The University of British Columbia Okanagan, Kelowna, British Columbia, Canada.
   - biol: Department of Biology, The University of British Columbia Okanagan, Kelowna, British Columbia, Canada.
+  - pois: Poisson Consulting Ltd., Nelson, British Columbia, Canada.
   - ucf: Department of Biology, University of Central Florida, Orlando, Florida 32816, United States.
   - smith: Smithsonian Conservation Biology Institute, National Zoological Park, 1500 Remount Rd., Front Royal, VA 22630, United States.
   - forest: British Columbia Ministry of Forests, Lands, Natural Resource Operations and Rural Development, Penticton, BC, Canada.
-  - bcp: British Columbia Ministry of Environment and Parks, Penticton, BC, Canada.
   - biodiv: Wildlife Science Centre, Biodiversity Pathways, University of British Columbia Okanagan, Revelstoke, British Columbia, Canada.
   - cmps: Department of Computer Science, Math, Physics, and Statistics, The University of British Columbia Okanagan, Kelowna, British Columbia, Canada.
 bibliography: 'bc-mammals-temperature.bib'
