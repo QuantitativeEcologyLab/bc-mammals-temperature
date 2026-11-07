@@ -102,8 +102,6 @@ if (stringi::stri_count_words(abstract) > 300) {
 
 \noindent \textbf{Key words:} climate change, temperature, mammals, animal movement, movement behaviour, habitat selection, projections
 
-\noindent \textbf{Contact Information:} *Corresponding author’s telephone, and email details*
-
 \ 
 
 \clearpage
@@ -521,7 +519,7 @@ knitr::include_graphics('../figures/distance.png')
 
 Species' RSS was generally strongest for elevation and weakest for forest cover, but RSS depended significantly on temperature for all species (all p-values $< 2.2\times10^{-16}$; Fig. \@ref(fig:hrsfs)). Changes in RSS with temperature were strongest for elevation and generally weakest for distance from water, but there were no common trends across all species for any of the three resources. All species except cougars exhibited clear temperature-dependent shifts in their preference for forest cover. At higher temperatures, wolves relaxed their preference for forested areas, while mountain goats relaxed their preference for open areas (cover < 50%). As temperatures warmed, elk and boreal caribou shifted towards more forest cover closer to 50%, while southern mountain caribou and grizzly bears selected for areas with 50% forest cover or less. All species shifted elevationally with temperature, but species varied in the magnitude, direction, and complexity of their responses. As temperatures warmed, elk, mountain goats, and cougars moved to higher elevations, while wolves, southern mountain caribou, and grizzly bears moved to lower elevations. Cougars' selection for higher elevation strengthened substantially at temperatures $\gtrapprox 20^\circ$C, while mountain goats and wolves showed strong switches in preferences near $10^\circ$C. Wolves, elk, and southern mountain caribou moved closer to water with warmer temperature, while mountain goats, cougars, and grizzly bears moved somewhat further away from water but remained mainly within 5-10 km of water. As with movement rates, estimated RSS was generally most uncertain at extreme temperatures, for which data were scarcer (Fig. B15).
 
-```{r hrsfs, fig.cap="\\textbf{Mammals' habitat selection depends on ambient temperature.} Estimated relative selection strength (RSS) for forest cover (\\%), elevation (km), and distance from water (km) as a function of temperature. The grey contours indicate the extent of each species' observed data. To mitigate the sampling bias across temperature (e.g., grizzly bears have few to no while hibernating in winter), RSS values at each temperature were divided by the average RSS value at that temperature within the respective panel. To further improve readability, each pannel's RSS values were centered by dividing by the median RSS value at $0^\\circ$C and capped to between 0.25 and 4 ($2^{\\pm 2}$)."}
+```{r hrsfs, fig.cap="\\textbf{Mammals' habitat selection depends on ambient temperature.} Estimated relative selection strength (RSS) for forest cover (\\%), elevation (m), and distance from water (km) as a function of temperature. The grey contours indicate the extent of each species' observed data. To mitigate the sampling bias across temperature (e.g., grizzly bears have few to no while hibernating in winter), RSS values at each temperature were divided by the average RSS value at that temperature within the respective panel. To further improve readability, each pannel's RSS values were centered by dividing by the median RSS value at $0^\\circ$C and capped to between 0.25 and 4 ($2^{\\pm 2}$)."}
 knitr::include_graphics('../figures/hrsf-surface-plots.png')
 ```
 
